@@ -1,3 +1,4 @@
+import { useT } from "@/lib/i18n";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, Undo2 } from "lucide-react";
@@ -12,6 +13,7 @@ import { formatDate, todayIso } from "@/lib/format";
 import type { LoanDto } from "@/types/domain";
 
 function LoanRow({ loan }: { loan: LoanDto }) {
+  const tx = useT();
   const queryClient = useQueryClient();
   const invalidate = () => {
     void queryClient.invalidateQueries({ queryKey: ["loans"] });
@@ -27,22 +29,29 @@ function LoanRow({ loan }: { loan: LoanDto }) {
       <div>
         <div className="font-medium">{loan.workTitle}</div>
         <div className="text-xs text-muted-foreground">
-          {loan.contactName} · lent {formatDate(loan.lentAt)}
-          {loan.dueAt ? ` · due ${formatDate(loan.dueAt)}` : ""}
-          {loan.returnedAt ? ` · returned ${formatDate(loan.returnedAt)}` : ""}
+          {loan.contactName} {tx("· lent")}
+          {formatDate(loan.lentAt)}
+          {loan.dueAt ? ` · ${tx("due")} ${formatDate(loan.dueAt)}` : ""}
+          {loan.returnedAt
+            ? ` · ${tx("returned")} ${formatDate(loan.returnedAt)}`
+            : ""}
         </div>
       </div>
       <div className="flex items-center gap-2">
         {loan.returnedAt ? (
-          <Badge variant="secondary">Returned</Badge>
+          <Badge variant="secondary">{tx("Returned")}</Badge>
         ) : loan.overdue ? (
-          <Badge variant="destructive">Overdue</Badge>
+          <Badge variant="destructive">{tx("Overdue")}</Badge>
         ) : (
-          <Badge variant="outline">Out</Badge>
+          <Badge variant="outline">{tx("Out")}</Badge>
         )}
         {!loan.returnedAt && (
-          <Button size="sm" variant="outline" onClick={() => returnLoan.mutate()}>
-            <Undo2 /> Return
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => returnLoan.mutate()}
+          >
+            <Undo2 /> {tx("Return")}
           </Button>
         )}
       </div>
@@ -51,6 +60,7 @@ function LoanRow({ loan }: { loan: LoanDto }) {
 }
 
 export default function LoansView() {
+  const tx = useT();
   const queryClient = useQueryClient();
   const today = todayIso();
   const [contactName, setContactName] = useState("");
@@ -59,7 +69,10 @@ export default function LoansView() {
     queryKey: ["loans", today],
     queryFn: () => api.listLoans(today),
   });
-  const { data: contacts } = useQuery({ queryKey: ["contacts"], queryFn: api.listContacts });
+  const { data: contacts } = useQuery({
+    queryKey: ["contacts"],
+    queryFn: api.listContacts,
+  });
 
   const addContact = useMutation({
     mutationFn: () => api.createContact({ displayName: contactName }),
@@ -75,19 +88,25 @@ export default function LoansView() {
 
   return (
     <div className="max-w-3xl space-y-6 p-6">
-      <h1 className="text-xl font-semibold">Loans</h1>
+      <h1 className="text-xl font-semibold">{tx("Loans")}</h1>
       <p className="text-sm text-muted-foreground">
-        Lend a copy from its page in My Library. Contact details stay on this computer;
-        nothing is ever sent automatically.
+        {tx(
+          "Lend a copy from its page in My Library. Contact details stay on this computer; nothing is ever sent automatically.",
+        )}
       </p>
 
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm">Active ({active.length})</CardTitle>
+          <CardTitle className="text-sm">
+            {tx("Active (")}
+            {active.length})
+          </CardTitle>
         </CardHeader>
         <CardContent>
           {active.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Nothing is out right now.</p>
+            <p className="text-sm text-muted-foreground">
+              {tx("Nothing is out right now.")}
+            </p>
           ) : (
             <ul className="space-y-2">
               {active.map((l) => (
@@ -102,7 +121,8 @@ export default function LoansView() {
         <Card className="border-destructive/50">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm text-destructive">
-              Overdue ({overdue.length})
+              {tx("Overdue (")}
+              {overdue.length})
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -117,11 +137,16 @@ export default function LoansView() {
 
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm">Returned history ({returned.length})</CardTitle>
+          <CardTitle className="text-sm">
+            {tx("Returned history (")}
+            {returned.length})
+          </CardTitle>
         </CardHeader>
         <CardContent>
           {returned.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No returned loans yet.</p>
+            <p className="text-sm text-muted-foreground">
+              {tx("No returned loans yet.")}
+            </p>
           ) : (
             <ul className="space-y-2">
               {returned.map((l) => (
@@ -134,7 +159,10 @@ export default function LoansView() {
 
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm">Contacts ({contacts?.length ?? 0})</CardTitle>
+          <CardTitle className="text-sm">
+            {tx("Contacts (")}
+            {contacts?.length ?? 0})
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           <ul className="space-y-1 text-sm">
@@ -142,17 +170,22 @@ export default function LoansView() {
               <li key={c.id} className="rounded-md border px-3 py-2">
                 {c.displayName}
                 {c.contactInfo && (
-                  <span className="text-muted-foreground"> — {c.contactInfo}</span>
+                  <span className="text-muted-foreground">
+                    {" "}
+                    — {c.contactInfo}
+                  </span>
                 )}
               </li>
             ))}
             {contacts && contacts.length === 0 && (
-              <li className="text-muted-foreground">No contacts yet.</li>
+              <li className="text-muted-foreground">
+                {tx("No contacts yet.")}
+              </li>
             )}
           </ul>
           <div className="flex items-end gap-2">
             <div className="w-64 space-y-1">
-              <Label htmlFor="contact-name">New contact</Label>
+              <Label htmlFor="contact-name">{tx("New contact")}</Label>
               <Input
                 id="contact-name"
                 value={contactName}
@@ -163,13 +196,15 @@ export default function LoansView() {
               disabled={!contactName.trim() || addContact.isPending}
               onClick={() => addContact.mutate()}
             >
-              <Plus /> Add
+              <Plus /> {tx("Add")}
             </Button>
           </div>
         </CardContent>
       </Card>
 
-      {isPending && <p className="text-sm text-muted-foreground">Loading…</p>}
+      {isPending && (
+        <p className="text-sm text-muted-foreground">{tx("Loading…")}</p>
+      )}
     </div>
   );
 }

@@ -1,3 +1,4 @@
+use crate::sqlite_db as sqlx;
 use tauri::State;
 
 use crate::domain;

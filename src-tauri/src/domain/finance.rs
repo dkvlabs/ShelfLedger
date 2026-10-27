@@ -2,6 +2,7 @@
 //! disposals, the transparent keep/sell/donate assistant, and per-currency
 //! reporting. Currencies are never summed together; no data is invented.
 
+use crate::sqlite_db as sqlx;
 use sqlx::SqlitePool;
 
 use crate::error::{AppError, AppResult};
@@ -104,7 +105,7 @@ pub async fn add_valuation(
 pub async fn list_valuations(pool: &SqlitePool, copy_id: &str) -> AppResult<Vec<ValuationDto>> {
     let rows: Vec<ValuationRow> = sqlx::query_as(
         "SELECT id, copy_id, value_minor, currency, source_type, source_note, observed_at, confidence \
-         FROM valuation_records WHERE copy_id = ?1 ORDER BY observed_at DESC",
+         FROM valuation_records WHERE copy_id = ?1 ORDER BY observed_at DESC, created_at DESC, rowid DESC",
     )
     .bind(copy_id)
     .fetch_all(pool)
@@ -142,10 +143,11 @@ pub async fn create_listing(
     input: &CreateListingInput,
 ) -> AppResult<SaleListingDto> {
     input.validate().map_err(AppError::Validation)?;
+    let mut tx = pool.begin().await?;
     let copy: Option<(String, Option<String>, Option<String>)> =
         sqlx::query_as("SELECT id, archived_at, ownership_status FROM copies WHERE id = ?1")
             .bind(&input.copy_id)
-            .fetch_optional(pool)
+            .fetch_optional(&mut *tx)
             .await?;
     let Some((_, archived_at, ownership_status)) = copy else {
         return Err(AppError::NotFound(format!("copy {}", input.copy_id)));
@@ -168,7 +170,7 @@ pub async fn create_listing(
     let active: Option<(String,)> =
         sqlx::query_as("SELECT id FROM sale_listings WHERE copy_id = ?1 AND status = 'active'")
             .bind(&input.copy_id)
-            .fetch_optional(pool)
+            .fetch_optional(&mut *tx)
             .await?;
     if active.is_some() {
         return Err(AppError::Conflict(
@@ -190,9 +192,15 @@ pub async fn create_listing(
     .bind(input.asking_price_minor)
     .bind(input.currency.to_uppercase())
     .bind(&now)
-    .execute(pool)
+    .execute(&mut *tx)
     .await?;
-    set_ownership_status(pool, &input.copy_id, "listed").await?;
+    sqlx::query("UPDATE copies SET ownership_status=?, updated_at=? WHERE id=?")
+        .bind("listed")
+        .bind(ids::now_iso())
+        .bind(&input.copy_id)
+        .execute(&mut *tx)
+        .await?;
+    tx.commit().await?;
     record_event(pool, "listing", &id, "created", &input.copy_id).await?;
     list_listings(pool, &input.copy_id)
         .await?
@@ -203,10 +211,11 @@ pub async fn create_listing(
 
 /// Withdraw an active listing; the copy returns to `owned` availability.
 pub async fn withdraw_listing(pool: &SqlitePool, listing_id: &str) -> AppResult<()> {
+    let mut tx = pool.begin().await?;
     let listing: Option<(String, String)> =
         sqlx::query_as("SELECT id, copy_id FROM sale_listings WHERE id = ?1 AND status = 'active'")
             .bind(listing_id)
-            .fetch_optional(pool)
+            .fetch_optional(&mut *tx)
             .await?;
     let Some((_, copy_id)) = listing else {
         return Err(AppError::NotFound(format!("active listing {listing_id}")));
@@ -214,9 +223,10 @@ pub async fn withdraw_listing(pool: &SqlitePool, listing_id: &str) -> AppResult<
     sqlx::query("UPDATE sale_listings SET status = 'withdrawn', updated_at = ?2 WHERE id = ?1")
         .bind(listing_id)
         .bind(ids::now_iso())
-        .execute(pool)
+        .execute(&mut *tx)
         .await?;
-    set_ownership_status(pool, &copy_id, "owned").await?;
+    sqlx::query("UPDATE copies SET ownership_status=?, updated_at=? WHERE id=? AND ownership_status='listed'").bind("owned").bind(ids::now_iso()).bind(&copy_id).execute(&mut *tx).await?;
+    tx.commit().await?;
     record_event(pool, "listing", listing_id, "withdrawn", &copy_id).await?;
     Ok(())
 }
@@ -249,25 +259,6 @@ pub async fn list_listings(pool: &SqlitePool, copy_id: &str) -> AppResult<Vec<Sa
 
 // -- Disposals ----------------------------------------------------------------
 
-async fn set_ownership_status(pool: &SqlitePool, copy_id: &str, status: &str) -> AppResult<()> {
-    sqlx::query("UPDATE copies SET ownership_status = ?2, updated_at = ?3 WHERE id = ?1")
-        .bind(copy_id)
-        .bind(status)
-        .bind(ids::now_iso())
-        .execute(pool)
-        .await?;
-    Ok(())
-}
-
-async fn active_loan_exists(pool: &SqlitePool, copy_id: &str) -> AppResult<bool> {
-    let row: Option<(String,)> =
-        sqlx::query_as("SELECT id FROM loans WHERE copy_id = ?1 AND returned_at IS NULL")
-            .bind(copy_id)
-            .fetch_optional(pool)
-            .await?;
-    Ok(row.is_some())
-}
-
 /// Record a disposal (sold/donated/traded/lost). The copy row and all history
 /// are kept; only `ownership_status` changes. Sold/donated/lost copies must
 /// not have an active loan.
@@ -276,10 +267,11 @@ pub async fn record_disposal(
     input: &RecordDisposalInput,
 ) -> AppResult<DisposalDto> {
     input.validate().map_err(AppError::Validation)?;
+    let mut tx = pool.begin().await?;
     let copy: Option<(String, Option<String>, Option<String>)> =
         sqlx::query_as("SELECT id, archived_at, ownership_status FROM copies WHERE id = ?1")
             .bind(&input.copy_id)
-            .fetch_optional(pool)
+            .fetch_optional(&mut *tx)
             .await?;
     let Some((_, archived_at, ownership_status)) = copy else {
         return Err(AppError::NotFound(format!("copy {}", input.copy_id)));
@@ -289,7 +281,14 @@ pub async fn record_disposal(
             "an archived copy cannot be disposed again".into(),
         ));
     }
-    if active_loan_exists(pool, &input.copy_id).await? {
+    if sqlx::query_scalar::<_, i64>(
+        "SELECT count(*) FROM loans WHERE copy_id=? AND returned_at IS NULL",
+    )
+    .bind(&input.copy_id)
+    .fetch_one(&mut *tx)
+    .await?
+        > 0
+    {
         return Err(AppError::Validation(
             "this copy has an active loan; record its return before disposing of it".into(),
         ));
@@ -336,19 +335,30 @@ pub async fn record_disposal(
             .filter(|s| !s.is_empty()),
     )
     .bind(ids::now_iso())
-    .execute(pool)
+    .execute(&mut *tx)
     .await?;
-    set_ownership_status(pool, &input.copy_id, &input.disposition).await?;
-    if input.disposition == "sold" {
+    sqlx::query("UPDATE copies SET ownership_status=?, updated_at=? WHERE id=?")
+        .bind(&input.disposition)
+        .bind(ids::now_iso())
+        .bind(&input.copy_id)
+        .execute(&mut *tx)
+        .await?;
+    {
         sqlx::query(
-            "UPDATE sale_listings SET status = 'sold', updated_at = ?2 \
+            "UPDATE sale_listings SET status = ?3, updated_at = ?2 \
              WHERE copy_id = ?1 AND status = 'active'",
         )
         .bind(&input.copy_id)
         .bind(ids::now_iso())
-        .execute(pool)
+        .bind(if input.disposition == "sold" {
+            "sold"
+        } else {
+            "withdrawn"
+        })
+        .execute(&mut *tx)
         .await?;
     }
+    tx.commit().await?;
     record_event(pool, "disposal", &id, &input.disposition, &input.copy_id).await?;
     list_disposals(pool, &input.copy_id)
         .await?
@@ -680,8 +690,8 @@ pub async fn finance_report(pool: &SqlitePool) -> AppResult<crate::models::Finan
         "SELECT v.currency, v.value_minor FROM valuation_records v \
          JOIN copies c ON c.id = v.copy_id \
          WHERE c.archived_at IS NULL AND c.ownership_status IN ('owned', 'lent', 'listed') \
-           AND v.observed_at = (SELECT MAX(v2.observed_at) FROM valuation_records v2 \
-                                WHERE v2.copy_id = v.copy_id)",
+           AND v.id = (SELECT v2.id FROM valuation_records v2 \
+                                WHERE v2.copy_id = v.copy_id ORDER BY v2.observed_at DESC, v2.created_at DESC, v2.rowid DESC LIMIT 1)",
     )
     .fetch_all(pool)
     .await?;
@@ -815,8 +825,8 @@ mod tests {
             &UpdateReadingSessionInput {
                 status: Some(status.to_string()),
                 started_at: None,
-                finished_at: finished.map(str::to_string),
-                rating,
+                finished_at: Some(finished.map(str::to_string)),
+                rating: Some(rating),
                 review: None,
             },
         )

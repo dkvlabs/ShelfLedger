@@ -3,6 +3,7 @@
 //!
 //! Reading state is deliberately separate from ownership/loan state.
 
+use crate::sqlite_db as sqlx;
 use sqlx::SqlitePool;
 
 use crate::error::{AppError, AppResult};
@@ -172,6 +173,16 @@ pub async fn create_session(
     {
         return Err(AppError::NotFound(format!("work {}", input.work_id)));
     }
+    if let Some(edition_id) = &input.edition_id {
+        let edition = crate::repositories::editions::get_edition(pool, edition_id)
+            .await?
+            .ok_or_else(|| AppError::Validation("edition does not exist".into()))?;
+        if edition.work_id != input.work_id {
+            return Err(AppError::Validation(
+                "edition belongs to a different work".into(),
+            ));
+        }
+    }
     // Reading status is per work; multiple sessions model rereads and DNF ->
     // restart, so no uniqueness constraint here by design.
     let id = ids::new_id();
@@ -212,16 +223,23 @@ pub async fn update_session(
     // finished/paused/dnf close the session; started_at backfills when
     // transitioning to reading without one (never silently rewritten otherwise).
     let started_at = match (&input.started_at, status.as_str()) {
-        (Some(s), _) => Some(s.clone()),
+        (Some(s), _) => s.clone(),
         (None, "reading") if existing.started_at.is_none() => Some(ids::now_iso()),
         _ => existing.started_at.clone(),
     };
     let finished_at = match (&input.finished_at, status.as_str()) {
-        (Some(f), _) => Some(f.clone()),
+        (Some(f), _) => f.clone(),
         (None, "finished") if existing.finished_at.is_none() => Some(ids::now_iso()),
         _ => existing.finished_at.clone(),
     };
 
+    if let (Some(a), Some(b)) = (&started_at, &finished_at) {
+        if a.get(..10) > b.get(..10) {
+            return Err(AppError::Validation(
+                "finish date precedes start date".into(),
+            ));
+        }
+    }
     sqlx::query(
         "UPDATE reading_sessions SET status = ?2, started_at = ?3, finished_at = ?4, \
          rating = ?5, review = ?6, updated_at = ?7 WHERE id = ?1",
@@ -230,8 +248,8 @@ pub async fn update_session(
     .bind(&status)
     .bind(started_at)
     .bind(finished_at)
-    .bind(input.rating.or(existing.rating))
-    .bind(input.review.clone().or(existing.review))
+    .bind(input.rating.unwrap_or(existing.rating))
+    .bind(input.review.clone().unwrap_or(existing.review))
     .bind(ids::now_iso())
     .execute(pool)
     .await?;
@@ -339,8 +357,8 @@ mod tests {
             &UpdateReadingSessionInput {
                 status: Some("finished".into()),
                 started_at: None,
-                finished_at: Some("2024-02-01".into()),
-                rating: Some(5),
+                finished_at: Some(Some("2024-02-01".into())),
+                rating: Some(Some(5)),
                 review: None,
             },
         )

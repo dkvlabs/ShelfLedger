@@ -1,45 +1,52 @@
+@import "@fontsource/manrope/latin-400.css";
+@import "@fontsource/manrope/latin-ext-400.css";
+@import "@fontsource/manrope/latin-500.css";
+@import "@fontsource/manrope/latin-600.css";
+@import "@fontsource/cormorant-garamond/latin-400.css";
+@import "@fontsource/cormorant-garamond/latin-ext-400.css";
 @import "tailwindcss";
 
 /* Design tokens (docs/design.md). Dark/light via .dark class on <html>. */
 :root {
-  --background: 0 0% 100%;
-  --foreground: 224 71.4% 4.1%;
-  --card: 0 0% 100%;
-  --card-foreground: 224 71.4% 4.1%;
-  --primary: 161 84% 22%;
-  --primary-foreground: 0 0% 98%;
-  --secondary: 220 14.3% 95.9%;
-  --secondary-foreground: 220.9 39.3% 11%;
-  --muted: 220 14.3% 95.9%;
-  --muted-foreground: 220 8.9% 46.1%;
-  --accent: 220 14.3% 95.9%;
-  --accent-foreground: 220.9 39.3% 11%;
-  --destructive: 0 84.2% 60.2%;
-  --destructive-foreground: 210 20% 98%;
-  --border: 220 13% 91%;
-  --input: 220 13% 91%;
-  --ring: 161 84% 22%;
+  color-scheme: light;
+  --background: 40 25% 97%;
+  --foreground: 140 5% 10%;
+  --card: 40 30% 99%;
+  --card-foreground: 140 5% 10%;
+  --primary: 25 43% 39%;
+  --primary-foreground: 40 30% 98%;
+  --secondary: 35 17% 90%;
+  --secondary-foreground: 140 5% 15%;
+  --muted: 35 17% 92%;
+  --muted-foreground: 120 3% 39%;
+  --accent: 30 23% 89%;
+  --accent-foreground: 140 5% 13%;
+  --destructive: 0 65% 43%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 35 12% 82%;
+  --input: 35 12% 78%;
+  --ring: 25 43% 45%;
   --radius: 0.5rem;
 }
-
 .dark {
-  --background: 224 71.4% 4.1%;
-  --foreground: 210 20% 98%;
-  --card: 224 71.4% 4.1%;
-  --card-foreground: 210 20% 98%;
-  --primary: 161 60% 45%;
-  --primary-foreground: 224 71.4% 4.1%;
-  --secondary: 215 27.9% 16.9%;
-  --secondary-foreground: 210 20% 98%;
-  --muted: 215 27.9% 16.9%;
-  --muted-foreground: 217.9 10.6% 64.9%;
-  --accent: 215 27.9% 16.9%;
-  --accent-foreground: 210 20% 98%;
-  --destructive: 0 62.8% 30.6%;
-  --destructive-foreground: 210 20% 98%;
-  --border: 215 27.9% 16.9%;
-  --input: 215 27.9% 16.9%;
-  --ring: 161 60% 45%;
+  color-scheme: dark;
+  --background: 140 5% 8%;
+  --foreground: 36 32% 90%;
+  --card: 140 5% 10%;
+  --card-foreground: 36 32% 90%;
+  --primary: 26 43% 58%;
+  --primary-foreground: 140 7% 7%;
+  --secondary: 30 10% 14%;
+  --secondary-foreground: 36 32% 90%;
+  --muted: 140 4% 13%;
+  --muted-foreground: 35 7% 64%;
+  --accent: 28 14% 17%;
+  --accent-foreground: 32 47% 69%;
+  --destructive: 2 70% 68%;
+  --destructive-foreground: 140 7% 7%;
+  --border: 35 6% 20%;
+  --input: 35 6% 28%;
+  --ring: 26 43% 62%;
 }
 
 @theme inline {
@@ -76,11 +83,304 @@
   }
   body {
     @apply bg-background text-foreground antialiased;
-    font-family:
-      system-ui,
-      -apple-system,
-      "Segoe UI",
-      Roboto,
-      sans-serif;
+    font-family: "Manrope", sans-serif;
+  }
+}
+
+@layer base {
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+  }
+  button,
+  [role="button"] {
+    cursor: pointer;
+  }
+  button:disabled {
+    cursor: not-allowed;
+  }
+  :focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 4px;
+  }
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+  h1 {
+    font-family: "Cormorant Garamond", Georgia, serif;
+    font-size: clamp(2.8rem, 5.4vw, 5.8rem) !important;
+    font-weight: 400 !important;
+    line-height: 1.05 !important;
+    letter-spacing: -0.045em;
+  }
+  main > section > div {
+    margin-inline: auto;
+    max-width: 1560px;
+    padding: clamp(1.25rem, 3vw, 3rem) !important;
+  }
+  main > section > div > h1 {
+    margin-bottom: 1.25rem;
+  }
+  input,
+  textarea {
+    min-width: 0;
+  }
+  table {
+    font-variant-numeric: tabular-nums;
+  }
+  th {
+    text-transform: uppercase;
+    font-size: 0.67rem;
+    letter-spacing: 0.12em;
+  }
+  td,
+  th {
+    padding-block: 1rem !important;
+  }
+  [role="dialog"] {
+    max-height: 90dvh;
+    overflow-y: auto;
+    box-shadow: 0 32px 120px #0008;
+  }
+  ::selection {
+    background: hsl(var(--primary) / 0.35);
+  }
+}
+.font-display {
+  font-family: "Cormorant Garamond", Georgia, serif;
+}
+.app-sidebar {
+  background: hsl(var(--background));
+  width: 224px;
+  padding: 28px 12px;
+  border-right: 1px solid hsl(var(--border));
+}
+.brand {
+  font-size: 1.8rem;
+  letter-spacing: -0.045em;
+}
+.sidebar-link {
+  min-height: 52px;
+  padding: 12px 18px;
+  border-left: 2px solid transparent;
+}
+.sidebar-link[aria-current] {
+  color: hsl(var(--primary));
+  background: hsl(var(--primary) / 0.09);
+  border-left-color: hsl(var(--primary));
+}
+.sidebar-link svg {
+  width: 21px;
+  height: 21px;
+  stroke-width: 1.4;
+}
+.library-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+}
+.library-heading h1 {
+  margin: 10px 0 6px;
+}
+.library-subtitle {
+  font-size: clamp(1.2rem, 1.8vw, 1.65rem);
+}
+.library-atmosphere {
+  height: clamp(155px, 20vw, 290px);
+  width: 100%;
+  object-fit: cover;
+  object-position: 50% 52%;
+  border-radius: 8px;
+  display: block;
+}
+.library-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-block: 24px 32px;
+  flex-wrap: wrap;
+}
+.library-toolbar .search-field {
+  flex: 1;
+  min-width: 220px;
+  position: relative;
+}
+.search-field svg {
+  position: absolute;
+  left: 14px;
+  top: 14px;
+  height: 18px;
+  color: hsl(var(--muted-foreground));
+}
+.search-field input {
+  padding-left: 42px;
+  height: 46px;
+}
+.library-empty {
+  padding: 32px 0 50px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+}
+.library-empty h2 {
+  font-size: clamp(1.8rem, 3vw, 2.8rem);
+  letter-spacing: -0.035em;
+  line-height: 1.1;
+}
+.library-empty p {
+  max-width: 620px;
+  font-size: 1rem;
+}
+.library-book {
+  min-height: 280px;
+  border-radius: 3px 10px 10px 3px;
+  position: relative;
+  background: linear-gradient(
+    90deg,
+    hsl(var(--primary) / 0.18),
+    hsl(var(--card)) 9%,
+    hsl(var(--card)) 95%,
+    hsl(var(--primary) / 0.09)
+  );
+  box-shadow: inset 5px 0 0 hsl(var(--primary) / 0.22);
+  overflow: hidden;
+}
+.library-book:before {
+  content: "";
+  position: absolute;
+  inset: 12px;
+  border: 1px solid hsl(var(--primary) / 0.23);
+  pointer-events: none;
+}
+.library-book:hover {
+  transform: translateY(-5px);
+  box-shadow:
+    inset 5px 0 0 hsl(var(--primary) / 0.4),
+    0 16px 32px #0002;
+}
+.library-book .book-title {
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: 2rem;
+  line-height: 1.05;
+  letter-spacing: -0.025em;
+}
+.page-enter {
+  animation: arrive 0.5s ease both;
+}
+@keyframes arrive {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.mobile-bar {
+  display: none;
+}
+@media (min-width: 900px) {
+  main > .max-w-3xl,
+  main > .max-w-4xl {
+    max-width: 1100px;
+  }
+}
+@media (max-width: 900px) {
+  .app-sidebar {
+    display: none;
+    position: fixed;
+    inset: 56px auto 0 0;
+    z-index: 40;
+    transform: translateX(-100%);
+    transition: transform 0.2s;
+    width: 236px;
+    box-shadow: 20px 0 60px #0004;
+  }
+  .app-sidebar[data-open="true"] {
+    display: flex;
+    transform: translateX(0);
+  }
+  .mobile-bar {
+    display: flex;
+    height: 56px;
+    align-items: center;
+    justify-content: space-between;
+    padding-inline: 16px;
+    border-bottom: 1px solid hsl(var(--border));
+    flex-shrink: 0;
+  }
+  .library-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 18px;
+  }
+  .library-toolbar {
+    flex-wrap: wrap;
+    margin-block: 18px;
+  }
+  .library-toolbar .search-field {
+    flex-basis: 100%;
+    order: -1;
+  }
+  .library-empty {
+    padding-top: 22px;
+  }
+  .library-empty p {
+    font-size: 0.875rem;
+  }
+  .responsive-table {
+    overflow-x: auto;
+  }
+  main .grid-cols-2 {
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+  }
+  main [class*="flex"] {
+    flex-wrap: wrap;
+  }
+  [role="dialog"] {
+    width: calc(100vw - 24px);
+    max-width: 640px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *:before,
+  *:after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@media (min-width: 901px) and (max-height: 800px) {
+  .library-heading {
+    margin-bottom: 20px;
+  }
+  .library-atmosphere {
+    height: 170px;
+  }
+  .library-toolbar {
+    margin-block: 18px;
+  }
+  .library-empty {
+    padding-top: 12px;
+    gap: 12px;
+  }
+  .library-empty > svg {
+    width: 48px;
+    height: 48px;
+  }
+  .library-empty h2 {
+    font-size: 2.2rem;
   }
 }

@@ -22,6 +22,11 @@ Only what you explicitly trigger:
 
 ## Your data
 
+Camera scanning requests video access when you open the barcode scanner. Frames
+are processed on your device and are not saved or uploaded. Closing the scanner
+releases the camera. Microphone access is not requested. You can use a photo or
+manual ISBN entry without camera access.
+
 - **Location:** OS user-data directory (e.g.
   `~/Library/Application Support/io.github.shelfledger.app` on macOS).
 - **Portability:** plain SQLite; CSV/JSON export and complete backup/restore from

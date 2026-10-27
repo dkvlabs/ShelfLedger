@@ -1,3 +1,4 @@
+import { useT } from "@/lib/i18n";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -22,10 +23,21 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { api } from "@/lib/api";
-import { formatMoney, parseMoneyToMinor, todayIso } from "@/lib/format";
+import {
+  formatDate,
+  formatMoney,
+  parseMoneyToMinor,
+  todayIso,
+} from "@/lib/format";
 import type { SellQueueItem } from "@/types/domain";
 
-const DECISION_BADGES: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
+const DECISION_BADGES: Record<
+  string,
+  {
+    label: string;
+    variant: "default" | "secondary" | "destructive" | "outline";
+  }
+> = {
   sell_candidate: { label: "Consider selling", variant: "default" },
   keep_candidate: { label: "Consider keeping", variant: "secondary" },
   donate_candidate: { label: "Consider donating", variant: "outline" },
@@ -34,30 +46,35 @@ const DECISION_BADGES: Record<string, { label: string; variant: "default" | "sec
 
 /** What-if calculator: net = asking − fee − seller-paid shipping. */
 function WhatIfCalculator({ item }: { item: SellQueueItem }) {
+  const tx = useT();
   const [asking, setAsking] = useState("");
   const [fee, setFee] = useState("");
   const [shipping, setShipping] = useState("");
   const currency =
     item.latestValuation?.currency ?? item.historicalCost?.currency ?? "RON";
-  const askingMinor = asking ? parseMoneyToMinor(asking) : null;
-  const feeMinor = fee ? parseMoneyToMinor(fee) : null;
-  const shipMinor = shipping ? parseMoneyToMinor(shipping) : null;
+  const askingMinor = asking ? parseMoneyToMinor(asking, currency) : null;
+  const feeMinor = fee ? parseMoneyToMinor(fee, currency) : null;
+  const shipMinor = shipping ? parseMoneyToMinor(shipping, currency) : null;
 
   const net =
     askingMinor != null
       ? askingMinor - (feeMinor ?? 0) - (shipMinor ?? 0)
       : null;
   const gain =
-    net != null && item.historicalCost && item.historicalCost.currency === currency
+    net != null &&
+    item.historicalCost &&
+    item.historicalCost.currency === currency
       ? net - item.historicalCost.minor
       : null;
 
   return (
     <div className="mt-3 rounded-md border p-3">
-      <div className="text-xs font-medium">What-if sale calculator (your inputs only)</div>
+      <div className="text-xs font-medium">
+        {tx("What-if sale calculator (your inputs only)")}
+      </div>
       <div className="mt-2 grid grid-cols-3 gap-2">
         <div className="space-y-1">
-          <Label htmlFor={`ask-${item.copyId}`}>Asking price</Label>
+          <Label htmlFor={`ask-${item.copyId}`}>{tx("Asking price")}</Label>
           <Input
             id={`ask-${item.copyId}`}
             inputMode="decimal"
@@ -67,7 +84,7 @@ function WhatIfCalculator({ item }: { item: SellQueueItem }) {
           />
         </div>
         <div className="space-y-1">
-          <Label htmlFor={`fee-${item.copyId}`}>Selling fee</Label>
+          <Label htmlFor={`fee-${item.copyId}`}>{tx("Selling fee")}</Label>
           <Input
             id={`fee-${item.copyId}`}
             inputMode="decimal"
@@ -77,7 +94,9 @@ function WhatIfCalculator({ item }: { item: SellQueueItem }) {
           />
         </div>
         <div className="space-y-1">
-          <Label htmlFor={`ship-${item.copyId}`}>Shipping (you pay)</Label>
+          <Label htmlFor={`ship-${item.copyId}`}>
+            {tx("Shipping (you pay)")}
+          </Label>
           <Input
             id={`ship-${item.copyId}`}
             inputMode="decimal"
@@ -89,25 +108,30 @@ function WhatIfCalculator({ item }: { item: SellQueueItem }) {
       </div>
       <div className="mt-2 text-sm">
         {net == null ? (
-          <span className="text-muted-foreground">Enter an asking price to see the estimate.</span>
+          <span className="text-muted-foreground">
+            {tx("Enter an asking price to see the estimate.")}
+          </span>
         ) : (
           <>
-            Estimated net: <strong>{formatMoney(net, currency)}</strong>
+            {tx("Estimated net:")}
+            <strong>{formatMoney(net, currency)}</strong>
             {gain != null && (
               <>
                 {" "}
-                · Estimated gain/loss:{" "}
+                {tx("· Estimated gain/loss:")}{" "}
                 <strong>{formatMoney(gain, currency)}</strong>
               </>
             )}
             {gain == null && item.historicalCost && (
               <span className="text-muted-foreground">
                 {" "}
-                · gain/loss unknown (cost currency differs)
+                {tx("· gain/loss unknown (cost currency differs)")}
               </span>
             )}
             <div className="mt-1 text-xs text-muted-foreground">
-              This is not a verified market price — it is your own input arithmetic.
+              {tx(
+                "This is not a verified market price — it is your own input arithmetic.",
+              )}
             </div>
           </>
         )}
@@ -128,6 +152,7 @@ function ListForSaleDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
+  const tx = useT();
   const queryClient = useQueryClient();
   const [asking, setAsking] = useState("");
   const [platform, setPlatform] = useState("");
@@ -135,7 +160,7 @@ function ListForSaleDialog({
 
   const list = useMutation({
     mutationFn: () => {
-      const askingMinor = parseMoneyToMinor(asking);
+      const askingMinor = parseMoneyToMinor(asking, currency);
       if (askingMinor == null || askingMinor < 0) {
         throw new Error(`could not parse asking price: ${asking}`);
       }
@@ -158,15 +183,22 @@ function ListForSaleDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>List for sale — {item.workTitle}</DialogTitle>
+          <DialogTitle>
+            {tx("List for sale —")}
+            {item.workTitle}
+          </DialogTitle>
           <DialogDescription>
-            The asking price is your hoped-for price, not revenue. Record the actual sale
-            afterwards so proceeds stay truthful.
+            {tx(
+              "The asking price is your hoped-for price, not revenue. Record the actual sale afterwards so proceeds stay truthful.",
+            )}
           </DialogDescription>
         </DialogHeader>
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1">
-            <Label htmlFor="list-asking">Asking price ({currency})</Label>
+            <Label htmlFor="list-asking">
+              {tx("Asking price (")}
+              {currency})
+            </Label>
             <Input
               id="list-asking"
               inputMode="decimal"
@@ -175,10 +207,10 @@ function ListForSaleDialog({
             />
           </div>
           <div className="space-y-1">
-            <Label htmlFor="list-platform">Platform (optional)</Label>
+            <Label htmlFor="list-platform">{tx("Platform (optional)")}</Label>
             <Input
               id="list-platform"
-              placeholder="e.g. local marketplace"
+              placeholder={tx("e.g. local marketplace")}
               value={platform}
               onChange={(e) => setPlatform(e.target.value)}
             />
@@ -191,10 +223,13 @@ function ListForSaleDialog({
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
+            {tx("Cancel")}
           </Button>
-          <Button disabled={list.isPending || !asking.trim()} onClick={() => list.mutate()}>
-            Create listing
+          <Button
+            disabled={list.isPending || !asking.trim()}
+            onClick={() => list.mutate()}
+          >
+            {tx("Create listing")}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -202,7 +237,14 @@ function ListForSaleDialog({
   );
 }
 
-function SellActions({ item, currency }: { item: SellQueueItem; currency: string }) {
+function SellActions({
+  item,
+  currency,
+}: {
+  item: SellQueueItem;
+  currency: string;
+}) {
+  const tx = useT();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [listOpen, setListOpen] = useState(false);
@@ -214,14 +256,17 @@ function SellActions({ item, currency }: { item: SellQueueItem; currency: string
 
   const record = useMutation({
     mutationFn: () => {
-      const priceMinor = disposition === "sold" ? parseMoneyToMinor(salePrice) : null;
+      const priceMinor =
+        disposition === "sold" ? parseMoneyToMinor(salePrice, currency) : null;
       return api.recordDisposal({
         copyId: item.copyId,
         disposition: disposition as "sold" | "donated" | "traded" | "lost",
         date: todayIso(),
         salePriceMinor: priceMinor,
-        feeMinor: saleFee ? parseMoneyToMinor(saleFee) : null,
-        shippingMinor: saleShipping ? parseMoneyToMinor(saleShipping) : null,
+        feeMinor: saleFee ? parseMoneyToMinor(saleFee, currency) : null,
+        shippingMinor: saleShipping
+          ? parseMoneyToMinor(saleShipping, currency)
+          : null,
         currency: priceMinor != null ? currency : null,
         notes: null,
       });
@@ -235,8 +280,10 @@ function SellActions({ item, currency }: { item: SellQueueItem; currency: string
   });
 
   const override = useMutation({
-    mutationFn: (value: string | null) => api.setSellOverride(item.copyId, value),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["sell-queue"] }),
+    mutationFn: (value: string | null) =>
+      api.setSellOverride(item.copyId, value),
+    onSuccess: () =>
+      void queryClient.invalidateQueries({ queryKey: ["sell-queue"] }),
   });
 
   const withdraw = useMutation({
@@ -244,24 +291,37 @@ function SellActions({ item, currency }: { item: SellQueueItem; currency: string
       if (!item.activeListing) throw new Error("no active listing");
       return api.withdrawListing(item.activeListing.id);
     },
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["sell-queue"] }),
+    onSuccess: () =>
+      void queryClient.invalidateQueries({ queryKey: ["sell-queue"] }),
     onError: (err) => setError((err as Error).message),
   });
 
   return (
     <>
       <div className="mt-3 flex flex-wrap gap-2">
-        <Button size="sm" variant="outline" onClick={() => override.mutate("keep")}>
-          Mark: keep
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => override.mutate("keep")}
+        >
+          {tx("Mark: keep")}
         </Button>
-        <Button size="sm" variant="outline" onClick={() => override.mutate("sell")}>
-          Mark: sell
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => override.mutate("sell")}
+        >
+          {tx("Mark: sell")}
         </Button>
-        <Button size="sm" variant="outline" onClick={() => override.mutate("donate")}>
-          Mark: donate
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => override.mutate("donate")}
+        >
+          {tx("Mark: donate")}
         </Button>
         <Button size="sm" variant="ghost" onClick={() => override.mutate(null)}>
-          Clear override
+          {tx("Clear override")}
         </Button>
         {item.activeListing ? (
           <Button
@@ -270,11 +330,20 @@ function SellActions({ item, currency }: { item: SellQueueItem; currency: string
             disabled={withdraw.isPending}
             onClick={() => withdraw.mutate()}
           >
-            Withdraw listing ({formatMoney(item.activeListing.askingPriceMinor, item.activeListing.currency)})
+            {tx("Withdraw listing (")}
+            {formatMoney(
+              item.activeListing.askingPriceMinor,
+              item.activeListing.currency,
+            )}
+            )
           </Button>
         ) : (
-          <Button size="sm" variant="secondary" onClick={() => setListOpen(true)}>
-            List for sale…
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={() => setListOpen(true)}
+          >
+            {tx("List for sale…")}
           </Button>
         )}
         <Button
@@ -282,36 +351,44 @@ function SellActions({ item, currency }: { item: SellQueueItem; currency: string
           onClick={() => setOpen(true)}
           disabled={item.decision === "needs_review"}
         >
-          Record sale/disposal…
+          {tx("Record sale/disposal…")}
         </Button>
       </div>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Record disposal — {item.workTitle}</DialogTitle>
+            <DialogTitle>
+              {tx("Record disposal —")}
+              {item.workTitle}
+            </DialogTitle>
             <DialogDescription>
-              The copy stays in your history with all its records; only its status changes.
+              {tx(
+                "The copy stays in your history with all its records; only its status changes.",
+              )}
             </DialogDescription>
           </DialogHeader>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
-              <Label htmlFor="disposition">Disposition</Label>
+              <Label htmlFor="disposition">{tx("Disposition")}</Label>
               <Select value={disposition} onValueChange={setDisposition}>
                 <SelectTrigger id="disposition">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="sold">Sold</SelectItem>
-                  <SelectItem value="donated">Donated</SelectItem>
-                  <SelectItem value="traded">Traded</SelectItem>
-                  <SelectItem value="lost">Lost</SelectItem>
+                  <SelectItem value="sold">{tx("Sold")}</SelectItem>
+                  <SelectItem value="donated">{tx("Donated")}</SelectItem>
+                  <SelectItem value="traded">{tx("Traded")}</SelectItem>
+                  <SelectItem value="lost">{tx("Lost")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             {disposition === "sold" && (
               <>
                 <div className="space-y-1">
-                  <Label htmlFor="salePrice">Sale price ({currency})</Label>
+                  <Label htmlFor="salePrice">
+                    {tx("Sale price (")}
+                    {currency})
+                  </Label>
                   <Input
                     id="salePrice"
                     inputMode="decimal"
@@ -320,7 +397,7 @@ function SellActions({ item, currency }: { item: SellQueueItem; currency: string
                   />
                 </div>
                 <div className="space-y-1">
-                  <Label htmlFor="saleFee">Fee</Label>
+                  <Label htmlFor="saleFee">{tx("Fee")}</Label>
                   <Input
                     id="saleFee"
                     inputMode="decimal"
@@ -329,7 +406,7 @@ function SellActions({ item, currency }: { item: SellQueueItem; currency: string
                   />
                 </div>
                 <div className="space-y-1">
-                  <Label htmlFor="saleShipping">Shipping paid</Label>
+                  <Label htmlFor="saleShipping">{tx("Shipping paid")}</Label>
                   <Input
                     id="saleShipping"
                     inputMode="decimal"
@@ -347,13 +424,16 @@ function SellActions({ item, currency }: { item: SellQueueItem; currency: string
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>
-              Cancel
+              {tx("Cancel")}
             </Button>
             <Button
-              disabled={record.isPending || (disposition === "sold" && !salePrice.trim())}
+              disabled={
+                record.isPending ||
+                (disposition === "sold" && !salePrice.trim())
+              }
               onClick={() => record.mutate()}
             >
-              Record
+              {tx("Record")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -369,7 +449,13 @@ function SellActions({ item, currency }: { item: SellQueueItem; currency: string
 }
 
 export default function SellView() {
-  const { data: queue, isPending, isError, error } = useQuery({
+  const tx = useT();
+  const {
+    data: queue,
+    isPending,
+    isError,
+    error,
+  } = useQuery({
     queryKey: ["sell-queue"],
     queryFn: api.getSellQueue,
   });
@@ -383,17 +469,20 @@ export default function SellView() {
 
   return (
     <div className="max-w-3xl space-y-6 p-6">
-      <h1 className="text-xl font-semibold">Sell &amp; Value</h1>
+      <h1 className="text-xl font-semibold">{tx("Sell & Value")}</h1>
       <p className="text-sm text-muted-foreground">
-        Transparent rules over your own data — no AI, no invented prices. Every suggestion
-        lists its reasons and can be overridden.
+        {tx(
+          "Transparent rules over your own data — no AI, no invented prices. Every suggestion lists its reasons and can be overridden.",
+        )}
       </p>
       {isError && (
         <p role="alert" className="text-sm text-destructive">
           {(error as Error).message}
         </p>
       )}
-      {isPending && <p className="text-sm text-muted-foreground">Loading…</p>}
+      {isPending && (
+        <p className="text-sm text-muted-foreground">{tx("Loading…")}</p>
+      )}
       {queue &&
         groups.map(({ decision, label }) => {
           const items = queue.filter((q) => q.decision === decision);
@@ -408,28 +497,34 @@ export default function SellView() {
                   <CardHeader className="pb-2">
                     <div className="flex items-start justify-between gap-2">
                       <div>
-                        <CardTitle className="text-sm">{item.workTitle}</CardTitle>
+                        <CardTitle className="text-sm">
+                          {item.workTitle}
+                        </CardTitle>
                         <div className="text-xs text-muted-foreground">
-                          {item.authorNames.join(", ")} · copy {item.copyNumber} of{" "}
-                          {item.totalCopiesOfWork} ·{" "}
-                          {item.conditionGrade.replace("_", " ")}
+                          {item.authorNames.join(", ")} {tx("· copy")}
+                          {item.copyNumber} {tx("of")} {item.totalCopiesOfWork}{" "}
+                          · {item.conditionGrade.replace("_", " ")}
                           {item.historicalCost
                             ? ` · cost ${formatMoney(item.historicalCost.minor, item.historicalCost.currency)}`
-                            : " · cost unknown"}
+                            : tx(" · cost unknown")}
                           {item.latestValuation
-                            ? ` · latest estimate ${formatMoney(item.latestValuation.valueMinor, item.latestValuation.currency)} (${item.latestValuation.sourceType}, ${item.latestValuation.observedAt})`
+                            ? ` · latest estimate ${formatMoney(item.latestValuation.valueMinor, item.latestValuation.currency)} (${item.latestValuation.sourceType}, ${formatDate(item.latestValuation.observedAt)})`
                             : ""}
                         </div>
                       </div>
-                      <Badge variant={DECISION_BADGES[decision]?.variant ?? "outline"}>
-                        {DECISION_BADGES[decision]?.label ?? decision}
+                      <Badge
+                        variant={
+                          DECISION_BADGES[decision]?.variant ?? "outline"
+                        }
+                      >
+                        {tx(DECISION_BADGES[decision]?.label ?? decision)}
                       </Badge>
                     </div>
                   </CardHeader>
                   <CardContent>
                     <ul className="list-inside list-disc text-xs text-muted-foreground">
                       {item.reasons.map((r) => (
-                        <li key={r}>{r}</li>
+                        <li key={r}>{tx(r)}</li>
                       ))}
                     </ul>
                     <WhatIfCalculator item={item} />

@@ -1,5 +1,6 @@
 //! Edition persistence.
 
+use crate::sqlite_db as sqlx;
 use sqlx::{Sqlite, SqlitePool};
 
 use crate::error::AppResult;

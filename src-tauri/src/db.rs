@@ -1,5 +1,6 @@
 //! SQLite connection setup: WAL journaling, foreign keys ON, migrations.
 
+use crate::sqlite_db as sqlx;
 use sqlx::{
     sqlite::{SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions, SqliteSynchronous},
     SqlitePool,
@@ -8,7 +9,43 @@ use std::str::FromStr;
 
 use crate::error::AppResult;
 
-pub(crate) const MIGRATOR: sqlx::migrate::Migrator = sqlx::migrate!("./migrations");
+pub(crate) static MIGRATOR: std::sync::LazyLock<sqlx::migrate::Migrator> =
+    std::sync::LazyLock::new(|| {
+        use sqlx::migrate::{Migration, MigrationType, Migrator};
+        let migrations = [
+            (1, "init", include_str!("../migrations/0001_init.sql")),
+            (
+                2,
+                "reading loans finance",
+                include_str!("../migrations/0002_reading_loans_finance.sql"),
+            ),
+            (
+                3,
+                "fts coverage attachments",
+                include_str!("../migrations/0003_fts_coverage_attachments.sql"),
+            ),
+            (
+                4,
+                "listing invariants",
+                include_str!("../migrations/0004_listing_invariants.sql"),
+            ),
+        ]
+        .into_iter()
+        .map(|(version, name, sql)| {
+            Migration::new(
+                version,
+                name.into(),
+                MigrationType::Simple,
+                sql.into(),
+                false,
+            )
+        })
+        .collect::<Vec<_>>();
+        Migrator {
+            migrations: migrations.into(),
+            ..Migrator::DEFAULT
+        }
+    });
 
 async fn connect_opts(url: &str) -> AppResult<SqlitePool> {
     let options = SqliteConnectOptions::from_str(url)?

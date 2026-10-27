@@ -1,83 +1,158 @@
+![ShelfLedger — warm light falling across books in a private library](docs/images/shelfledger-banner.png)
+
 # ShelfLedger
 
-An **offline-first, local-first, open-source desktop app** to catalog books, track reading,
-own and manage multiple physical copies, record acquisition costs, lend books to friends,
-and make informed decisions about keeping or selling each copy.
+**Every book, a story worth keeping.**
 
-**Your data belongs to you.** No account, cloud, or subscription required. The library is a
-readable SQLite database in your user data directory.
+An offline-first, open-source personal library for the books you own and the
+stories you read. Catalog editions, manage individual copies, keep a reading
+journal, lend to friends, and record the journey from purchase to resale.
 
-> Project status: **Phases 0–5 implemented** (catalog, reading, loans, resale &
-> money, import/export/backup, theme + EN/RO), plus user-requested follow-ups:
-> ISBN **barcode scanning**, a **web version** (browser UI over the same local
-> Rust core), and a real app icon. See
-> [docs/implementation.md](docs/implementation.md) for per-phase status,
-> [docs/web.md](docs/web.md) for the web version, and
-> [docs/release.md](docs/release.md) for the packaging checklist. The rest of
-> Phase 6 (e-books, sync, receipts) is deliberately not started.
+Your data stays on your device in a readable SQLite database. No account,
+subscription, hosted database, or Docker required.
 
-## Why ShelfLedger?
+[Build & run tutorial](docs/tutorial.md) · [Features](#what-you-can-do) ·
+[Development](#development) · [Privacy](PRIVACY.md) · [MIT license](LICENSE)
 
-Goodreads-style apps track reading activity; library apps track possession. ShelfLedger tracks
-the complete **per-copy lifecycle** — from acquisition, to storage, to reading, to lending,
-to selling or donating — with truthful, clearly-separated financial fields (cost, estimate,
-asking price, realized sale) and zero lock-in.
+## A quieter home for your collection
 
-## Key product principles
+![ShelfLedger library with literary typography, copper accents, search, and book cards](docs/images/library-populated.jpg)
 
-1. **Copy-first inventory:** literary *work*, published *edition*, and owned *copy* are distinct objects.
-2. **Offline and private by default:** everything important works without internet.
-3. **Truthful values:** purchase cost, estimated value, asking price, and actual sale price are distinct fields. We never fabricate price data.
-4. **Zero lock-in:** CSV/JSON export, complete backup/restore, plain SQLite, stable IDs and migrations.
-5. **Fast entry:** ISBN barcode scanning (camera or photo), ISBN lookup (Open
-   Library, cached), manual entry, duplicate detection.
-6. **Low maintenance:** single desktop app; no server, Docker, or hosted database.
+*Actual app screenshot using the bundled demo library. Light, dark, and system
+themes; English and Romanian; grid/table views; responsive browser navigation.*
 
-## Platforms
+## What you can do
 
-macOS, Windows, Linux (Tauri 2) — plus a **web version**: the same app in a
-browser against the same local database core, served over loopback HTTP by the
-`shelfledger-web` binary. See [docs/web.md](docs/web.md).
+| Your library | What ShelfLedger keeps track of |
+| --- | --- |
+| **Catalog your books** | Camera/photo ISBN scanning, manual entry, optional cached Open Library lookups, editable metadata and tags, duplicate detection, and full-text search. |
+| **Find every copy** | Multiple editions and physical copies, condition, notes, acquisition costs, and a room → bookcase → shelf → box hierarchy. Archive and restore inventory while keeping its history. |
+| **Keep a reading journal** | Want-to-read, reading, finished, paused, and DNF sessions; progress, dates, ratings, reviews, and rereads. Reading stays separate from ownership. |
+| **Lend with confidence** | Contacts, due dates, returns, and a per-copy loan history. |
+| **Understand your spending** | Purchase costs, sourced manual estimates, asking prices, and realized sales recorded separately. Integer minor units and ISO currency codes; currencies are never summed together. |
+| **Bring your collection along** | Goodreads/custom CSV mapping, preview, duplicate policies, row selection, confirmation, and import logs. |
+| **Keep control of your data** | CSV/JSON exports, consistent SQLite backups, transactional restore, and separately restored libraries you can switch between. |
 
-## Tech stack
+### Read, record, return
 
-- **Shell:** Tauri 2 (Rust backend, typed IPC commands)
-- **UI:** React + TypeScript + Vite + Tailwind CSS + shadcn/ui + TanStack Query/Table
-- **Data:** SQLite via `sqlx` with migrations, foreign keys, WAL, and FTS5 full-text search
-- **Money:** integer minor units + ISO 4217 currency (never floats)
+![Reading screen with a demo session, progress entry, pause, finish, and edit controls](docs/images/reading-desktop.jpg)
+
+Start a session from a book's detail page, log your progress, and keep each reread
+as a separate chapter in your history.
+
+### Preview before importing
+
+![Import screen previewing the bundled demo library before confirmation](docs/images/import-desktop.jpg)
+
+Review selected rows before saving. Custom CSV files support column mapping, and
+duplicates have explicit policies. See [the tutorial](docs/tutorial.md#import-a-collection)
+for the walkthrough and [import formats](docs/import-format.md) for the data contract.
+
+### Scan when you choose
+
+Select **Scan ISBN** in the library and allow camera access when your browser or
+operating system requests it. Live scanning requires permission; photo scanning
+and manual ISBN entry remain available if access is unavailable or denied.
+Camera frames are processed on your device. Open Library lookup is a separate,
+user-initiated network request.
+
+![An open book and clothbound volumes in warm afternoon light](docs/images/reading-atmosphere.png)
+
+*The banner and still life are generated decorative artwork. App screenshots are
+unmodified captures of the working browser version using disposable demo data.
+See [image provenance and prompts](docs/images/README.md).*
+
+## Built around your books
+
+A literary **work**, a published **edition**, and each physical **copy** are
+separate objects. Reading status, ownership status, and loan records stay
+separate, so finishing a book never changes who owns it.
+
+Important interactions work offline. Network metadata is optional, cached, and
+falls back to manual entry. ShelfLedger never invents metadata, prices,
+valuations, or exchange rates.
+
+## Project status
+
+Catalog, reading, loans, resale/finance, import/export/restore, and the cinematic
+redesign are implemented. A local macOS app bundle builds with the camera usage
+description and entitlement; its ad-hoc signature verifies. Windows and Linux
+are targeted through Tauri 2 but have not been executed in the latest local
+verification. The optional browser version uses the same Rust core over loopback
+HTTP; it is not a hosted cloud service.
+
+Verified on **27.10.2026**: **88 Rust tests** and **59 frontend tests** pass, along
+with strict TypeScript/production build, Rust formatting, and Clippy with warnings
+denied. Browser checks cover imports, profile switching, reading, lending,
+editing, EN/RO, and desktop/mobile layouts.
+
+The audit remediation addresses **23 of 24 findings**. Two upstream Rust advisory
+warnings remain visible. Physical webcam/OS consent, clean-machine installation,
+Windows/Linux execution, minimum-toolchain CI, and Developer ID signing/notarization
+remain release checks. See the [audit record](docs/audit-remediation.md) and
+[release checklist](docs/release.md).
+
+Phase 6 remains deferred: receipts/OCR, attachment-byte portability, ebooks/devices,
+user-assisted comparables, and optional encrypted sync. Current snapshots preserve
+attachment records and relative paths, not attachment files.
 
 ## Development
 
-Prerequisites: [Node.js ≥ 20](https://nodejs.org), [pnpm ≥ 9](https://pnpm.io),
-[Rust ≥ 1.77](https://rustup.rs), plus the [Tauri 2 prerequisites](https://tauri.app/start/prerequisites/)
+Prerequisites: [Node.js ≥ 22.12](https://nodejs.org), [pnpm 12.15](https://pnpm.io),
+[Rust ≥ 1.90](https://rustup.rs), plus the [Tauri 2 prerequisites](https://tauri.app/start/prerequisites/)
 for your OS.
 
 ```sh
-pnpm install
-pnpm tauri dev       # run the desktop app in dev mode
-pnpm test:rust       # Rust unit/integration tests (cargo test)
-pnpm test:web        # frontend tests (Vitest)
-pnpm lint            # typecheck + build
-
-# web version (browser UI over the same local core) — see docs/web.md
-pnpm web:server      # terminal 1: local server on http://127.0.0.1:8787
-pnpm dev             # terminal 2: Vite dev server (proxies /api)
+pnpm install --frozen-lockfile
+pnpm tauri dev       # desktop development
+pnpm test:rust       # Rust unit/integration tests
+pnpm test:web        # frontend tests
+pnpm lint            # typecheck + production frontend build
 ```
+
+Run the browser version from a production frontend build:
+
+```sh
+pnpm build
+pnpm web:server      # open http://127.0.0.1:8787
+```
+
+For browser UI development, keep `pnpm web:server` running in one terminal and
+run `pnpm dev` in another. Open the Vite URL printed in that second terminal;
+Vite proxies `/api` to the local core.
+
+For native bundles:
+
+```sh
+pnpm tauri build
+```
+
+The [step-by-step tutorial](docs/tutorial.md) covers prerequisites, desktop and
+browser setup, bundle output paths, first use, backups, and troubleshooting.
+
+### Stack
+
+Tauri 2 and Rust · React and strict TypeScript · Vite · Tailwind CSS and shadcn/ui ·
+TanStack Query/Table · SQLite through SQLx, with migrations, foreign keys, WAL,
+and FTS5 full-text search.
 
 ## Documentation
 
-- [docs/architecture.md](docs/architecture.md) — module boundaries and stack rationale
-- [docs/database.md](docs/database.md) — schema, constraints, currency/date policies
-- [docs/design.md](docs/design.md) — UI principles, screens, design tokens
-- [docs/implementation.md](docs/implementation.md) — phased plan and current status
-- [docs/import-format.md](docs/import-format.md) — CSV/JSON import schema
-- [docs/web.md](docs/web.md) — running the web version
-- [docs/release.md](docs/release.md) — release/signing checklist
-- [docs/decisions/](docs/decisions/) — architecture decision records
-- [PRIVACY.md](PRIVACY.md) — what leaves your computer (almost nothing)
-- [demo/demo-library.json](demo/demo-library.json) — sample dataset (import via Settings)
+- [Tutorial: build, run, and use ShelfLedger](docs/tutorial.md)
+- [Architecture](docs/architecture.md) — boundaries, stack, and transport
+- [Database](docs/database.md) — schema, invariants, money, and dates
+- [Design](docs/design.md) — visual system, workflows, and accessibility
+- [Implementation roadmap](docs/implementation.md) — phase status and deferred work
+- [Import formats](docs/import-format.md) — CSV mapping and JSON snapshots
+- [Web version](docs/web.md) — loopback server and browser setup
+- [Release checklist](docs/release.md) — packaging, signing, and acceptance checks
+- [Audit remediation](docs/audit-remediation.md) — findings, fixes, and evidence
+- [Architecture decisions](docs/decisions/) — rationale behind the model and stack
+- [Privacy](PRIVACY.md) — local processing and optional network requests
+- [Sample library](demo/demo-library.json) — demo data to import via Settings
 
 ## License
 
-[MIT](LICENSE). Third-party metadata (Open Library) and cover images are used under their own
-terms and are not redistributed with the app; see [docs/architecture.md](docs/architecture.md).
+[MIT](LICENSE). Third-party metadata and cover images remain subject to their own
+terms. The generated README artwork is decorative; it does not represent actual
+catalog records or redistributed book covers.

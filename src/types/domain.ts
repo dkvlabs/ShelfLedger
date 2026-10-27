@@ -194,7 +194,12 @@ export const OWNERSHIP_STATUSES = [
   "lost",
 ] as const;
 
-export const ACQUISITION_TYPES = ["bought", "gift", "trade", "inherited"] as const;
+export const ACQUISITION_TYPES = [
+  "bought",
+  "gift",
+  "trade",
+  "inherited",
+] as const;
 
 export const LOCATION_TYPES = ["room", "bookcase", "shelf", "box"] as const;
 
@@ -515,11 +520,13 @@ export interface ImportPreview {
 }
 
 export interface ImportCommitInput {
+  rowPolicies?: Record<number, string>;
   rowNumbers: number[];
   duplicatePolicy: "skip" | "add_copy" | "new_work";
 }
 
 export interface ImportResult {
+  rows: { rowNumber: number; status: string; message: string | null }[];
   importedWorks: number;
   importedEditions: number;
   importedCopies: number;
@@ -565,4 +572,10 @@ export interface AddBookResult {
   editionId: string;
   copyId: string | null;
   warning: string | null;
+}
+
+export interface FileImportPreview {
+  kind: "csv" | "json" | "snapshot";
+  headers: string[];
+  rows: ImportRowPreview[];
 }

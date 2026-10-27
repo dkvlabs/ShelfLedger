@@ -3,6 +3,7 @@
 //! web version, paths come from `/api/upload`). The `*_impl` functions are
 //! shared by the Tauri commands and the web dispatcher (`web::dispatch`).
 
+use crate::sqlite_db as sqlx;
 use std::path::Path;
 
 use sqlx::SqlitePool;
@@ -14,26 +15,6 @@ use crate::models::{
     BackupResult, ExportResult, ImportCommitInput, ImportPreview, ImportResult, RestoreResult,
 };
 use crate::AppState;
-
-// sqlx row shapes for the JSON export.
-type ExportEditionRow = (
-    String,
-    Option<String>,
-    Option<String>,
-    Option<String>,
-    Option<String>,
-    Option<String>,
-    Option<i64>,
-    Option<String>,
-);
-type ExportCopyRow = (
-    String,
-    String,
-    Option<String>,
-    Option<i64>,
-    Option<String>,
-    Option<String>,
-);
 
 fn data_dir(app: &tauri::AppHandle) -> AppResult<std::path::PathBuf> {
     app.path()
@@ -68,10 +49,13 @@ pub async fn export_library_csv_impl(
     .await?;
     let csv = domain::backup::build_copies_csv(rows);
 
-    let dir = data_dir.join("exports");
+    let dir = crate::paths::write_path(data_dir, &data_dir.join("exports"))?;
     std::fs::create_dir_all(&dir)?;
     let stamp = chrono::Local::now().format("%Y%m%d-%H%M%S");
-    let path = dir.join(format!("shelfledger-copies-{stamp}.csv"));
+    let path = dir.join(format!(
+        "shelfledger-copies-{stamp}-{}.csv",
+        crate::ids::new_id()
+    ));
     std::fs::write(&path, csv)?;
     Ok(ExportResult {
         path: path.to_string_lossy().to_string(),
@@ -85,70 +69,14 @@ pub async fn export_library_json_impl(
     pool: &SqlitePool,
     data_dir: &Path,
 ) -> AppResult<ExportResult> {
-    let works: Vec<(String, String, Option<String>, Option<String>)> =
-        sqlx::query_as("SELECT id, title, subtitle, original_language FROM works ORDER BY title")
-            .fetch_all(pool)
-            .await?;
-
-    let mut out: Vec<serde_json::Value> = Vec::with_capacity(works.len());
-    for (work_id, title, subtitle, original_language) in works {
-        let author_names = crate::repositories::works::list_author_names(pool, &work_id)
-            .await?
-            .join(", ");
-        let editions: Vec<ExportEditionRow> = sqlx::query_as(
-            "SELECT id, isbn10, isbn13, publisher, published_at, language, page_count, binding \
-                 FROM editions WHERE work_id = ?1 ORDER BY created_at",
-        )
-        .bind(&work_id)
-        .fetch_all(pool)
-        .await?;
-        let mut editions_json = Vec::with_capacity(editions.len());
-        for (edition_id, isbn10, isbn13, publisher, published_at, language, page_count, binding) in
-            editions
-        {
-            let copies: Vec<ExportCopyRow> = sqlx::query_as(
-                "SELECT c.condition_grade, coalesce(c.acquired_at, ''), c.note, \
-                            ac.price_minor, ac.currency, ac.store \
-                     FROM copies c LEFT JOIN acquisitions ac ON ac.copy_id = c.id \
-                     WHERE c.edition_id = ?1 AND c.archived_at IS NULL",
-            )
-            .bind(&edition_id)
-            .fetch_all(pool)
-            .await?;
-            editions_json.push(serde_json::json!({
-                "isbn10": isbn10,
-                "isbn13": isbn13,
-                "publisher": publisher,
-                "publishedAt": published_at,
-                "language": language,
-                "pageCount": page_count,
-                "binding": binding,
-                "copies": copies.into_iter().map(|(condition_grade, acquired_at, note, price_minor, currency, store)| serde_json::json!({
-                    "conditionGrade": condition_grade,
-                    "acquiredAt": if acquired_at.is_empty() { None::<String> } else { Some(acquired_at) },
-                    "note": note,
-                    "priceMinor": price_minor,
-                    "currency": currency,
-                    "store": store,
-                })).collect::<Vec<_>>(),
-            }));
-        }
-        out.push(serde_json::json!({
-            "title": title,
-            "subtitle": subtitle,
-            "originalLanguage": original_language,
-            "authorNames": author_names
-                .split(", ")
-                .filter(|s| !s.is_empty())
-                .collect::<Vec<_>>(),
-            "editions": editions_json,
-        }));
-    }
-
-    let dir = data_dir.join("exports");
+    let out = crate::repositories::snapshot::export(pool).await?;
+    let dir = crate::paths::write_path(data_dir, &data_dir.join("exports"))?;
     std::fs::create_dir_all(&dir)?;
     let stamp = chrono::Local::now().format("%Y%m%d-%H%M%S");
-    let path = dir.join(format!("shelfledger-library-{stamp}.json"));
+    let path = dir.join(format!(
+        "shelfledger-library-{stamp}-{}.json",
+        crate::ids::new_id()
+    ));
     let json = serde_json::to_string_pretty(&out)?;
     std::fs::write(&path, json)?;
     Ok(ExportResult {
@@ -202,6 +130,7 @@ pub async fn create_backup_impl(
             dir.join(format!("shelfledger-backup-{stamp}.zip"))
         }
     };
+    let target = crate::paths::write_path(data_dir, &target)?;
     let path = domain::backup::create_backup(pool, &db_path, &target).await?;
     Ok(BackupResult {
         path: path.to_string_lossy().to_string(),
@@ -209,12 +138,13 @@ pub async fn create_backup_impl(
 }
 
 pub async fn restore_backup_impl(
+    pool: &SqlitePool,
     data_dir: &Path,
     archive_path: &str,
     mode: &str,
 ) -> AppResult<RestoreResult> {
     let db_path = data_dir.join("shelfledger.db");
-    domain::backup::restore_archive(&db_path, Path::new(archive_path), mode).await
+    domain::backup::restore_archive(pool, &db_path, Path::new(archive_path), mode).await
 }
 
 // ---------------------------------------------------------------------------
@@ -278,8 +208,180 @@ pub async fn restore_backup(
     archive_path: String,
     mode: String,
 ) -> AppResult<RestoreResult> {
-    // Hold the pool across restore: the swap happens on disk and the app
-    // restarts to reopen the restored database.
-    let _ = &state;
-    restore_backup_impl(&data_dir(&app)?, &archive_path, &mode).await
+    // Restore transactionally through the live pool; WAL remains valid.
+    restore_backup_impl(&state.pool, &data_dir(&app)?, &archive_path, &mode).await
+}
+
+#[tauri::command]
+pub async fn list_libraries(
+    app: tauri::AppHandle,
+    state: State<'_, AppState>,
+) -> AppResult<Vec<domain::profiles::Profile>> {
+    domain::profiles::list(&state.pool, &data_dir(&app)?).await
+}
+#[tauri::command]
+pub async fn switch_library(
+    app: tauri::AppHandle,
+    state: State<'_, AppState>,
+    id: String,
+) -> AppResult<()> {
+    domain::profiles::switch(&state.pool, &data_dir(&app)?, &id).await
+}
+
+fn mapped_csv(
+    text: &str,
+    mapping: &std::collections::BTreeMap<String, String>,
+) -> AppResult<(String, Vec<String>)> {
+    let mut reader = csv::ReaderBuilder::new()
+        .flexible(true)
+        .from_reader(text.as_bytes());
+    let headers = reader
+        .headers()
+        .map_err(|e| AppError::Validation(e.to_string()))?
+        .clone();
+    let original = headers.iter().map(str::to_string).collect::<Vec<_>>();
+    const FIELDS: &[&str] = &[
+        "Title",
+        "Author",
+        "ISBN13",
+        "ISBN",
+        "Exclusive Shelf",
+        "Bookshelves",
+        "My Rating",
+        "My Review",
+        "Date Read",
+    ];
+    let mut sources = std::collections::BTreeSet::new();
+    for (target, source) in mapping {
+        if !FIELDS.contains(&target.as_str()) || (!source.is_empty() && !original.contains(source))
+        {
+            return Err(AppError::Validation("unknown import column mapping".into()));
+        }
+        if !source.is_empty() && !sources.insert(source) {
+            return Err(AppError::Validation(
+                "map each source column only once".into(),
+            ));
+        }
+    }
+    let renamed = headers
+        .iter()
+        .enumerate()
+        .map(|(index, name)| {
+            if let Some((target, _)) = mapping
+                .iter()
+                .find(|(_, source)| !source.is_empty() && source.as_str() == name)
+            {
+                target.to_string()
+            } else if mapping.contains_key(name) {
+                format!("__unmapped_{index}")
+            } else {
+                name.to_string()
+            }
+        })
+        .collect::<Vec<_>>();
+    let distinct = renamed.iter().collect::<std::collections::BTreeSet<_>>();
+    if distinct.len() != renamed.len() {
+        return Err(AppError::Validation(
+            "duplicate import column names; map or unmap conflicting columns".into(),
+        ));
+    }
+    let mut writer = csv::Writer::from_writer(Vec::new());
+    writer
+        .write_record(renamed)
+        .map_err(|e| AppError::Validation(e.to_string()))?;
+    for record in reader.records() {
+        writer
+            .write_record(&record.map_err(|e| AppError::Validation(e.to_string()))?)
+            .map_err(|e| AppError::Validation(e.to_string()))?;
+    }
+    let bytes = writer
+        .into_inner()
+        .map_err(|e| AppError::Validation(e.to_string()))?;
+    Ok((
+        String::from_utf8(bytes).map_err(|e| AppError::Validation(e.to_string()))?,
+        original,
+    ))
+}
+
+pub async fn preview_import_impl(
+    pool: &SqlitePool,
+    path: &str,
+    mapping: &std::collections::BTreeMap<String, String>,
+) -> AppResult<serde_json::Value> {
+    let text = std::fs::read_to_string(path)?;
+    if path.to_lowercase().ends_with(".json") {
+        let value: serde_json::Value =
+            serde_json::from_str(&text).map_err(|e| AppError::Validation(e.to_string()))?;
+        let snapshot = value.is_object();
+        let works = if snapshot {
+            value
+                .get("tables")
+                .and_then(|t| t.get("works"))
+                .and_then(|v| v.as_array())
+        } else {
+            value.as_array()
+        }
+        .ok_or_else(|| AppError::Validation("invalid JSON library".into()))?;
+        let rows=works.iter().enumerate().map(|(i,w)|serde_json::json!({"rowNumber":i+1,"title":w.get("title").and_then(|v|v.as_str()).unwrap_or(""),"author":w.get("authorNames").and_then(|v|v.as_array()).map(|a|a.iter().filter_map(|v|v.as_str()).collect::<Vec<_>>().join("; ")).unwrap_or_default(),"isbn13":null,"shelf":null,"rating":null,"dateRead":null,"review":null,"tags":[],"warnings":[],"duplicateOf":null})).collect::<Vec<_>>();
+        return Ok(
+            serde_json::json!({"kind":if snapshot {"snapshot"} else {"json"},"headers":[],"rows":rows}),
+        );
+    }
+    let (text, headers) = mapped_csv(&text, mapping)?;
+    let preview =
+        domain::import::annotate_duplicates(pool, domain::import::preview_goodreads_csv(&text)?)
+            .await?;
+    Ok(serde_json::json!({"kind":"csv","headers":headers,"rows":preview.rows}))
+}
+pub async fn commit_import_impl(
+    pool: &SqlitePool,
+    path: &str,
+    mapping: &std::collections::BTreeMap<String, String>,
+    input: &ImportCommitInput,
+) -> AppResult<ImportResult> {
+    let text = std::fs::read_to_string(path)?;
+    if path.to_lowercase().ends_with(".json") {
+        let mut value: serde_json::Value =
+            serde_json::from_str(&text).map_err(|e| AppError::Validation(e.to_string()))?;
+        if let Some(rows) = value.as_array_mut() {
+            let mut number = 0;
+            rows.retain(|_| {
+                number += 1;
+                input.row_numbers.contains(&number)
+            });
+        } else {
+            let count = value
+                .get("tables")
+                .and_then(|t| t.get("works"))
+                .and_then(|v| v.as_array())
+                .map_or(0, Vec::len);
+            if input.row_numbers.len() != count
+                || (1..=count).any(|n| !input.row_numbers.contains(&n))
+            {
+                return Err(AppError::Validation(
+                    "a complete snapshot must be imported together".into(),
+                ));
+            }
+        }
+        return domain::import::import_json(pool, &serde_json::to_string(&value)?).await;
+    }
+    let (text, _) = mapped_csv(&text, mapping)?;
+    domain::import::commit_csv_text(pool, &text, input).await
+}
+#[tauri::command]
+pub async fn preview_import(
+    state: State<'_, AppState>,
+    path: String,
+    mapping: std::collections::BTreeMap<String, String>,
+) -> AppResult<serde_json::Value> {
+    preview_import_impl(&state.pool, &path, &mapping).await
+}
+#[tauri::command]
+pub async fn commit_import(
+    state: State<'_, AppState>,
+    path: String,
+    mapping: std::collections::BTreeMap<String, String>,
+    input: ImportCommitInput,
+) -> AppResult<ImportResult> {
+    commit_import_impl(&state.pool, &path, &mapping, &input).await
 }

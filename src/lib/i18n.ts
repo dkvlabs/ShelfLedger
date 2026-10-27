@@ -2,6 +2,7 @@
 // the language preference is stored in settings as preferences.language.
 // Extend dictionaries per screen; missing keys fall back to English.
 
+import romanian from "./ro.json";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 
@@ -12,11 +13,11 @@ const dictionaries: Record<Language, Record<string, string>> = {
     "app.title": "ShelfLedger",
     "app.tagline": "Local-first library",
     "nav.dashboard": "Dashboard",
-    "nav.library": "My Library",
+    "nav.library": "Library",
     "nav.reading": "Reading",
-    "nav.loans": "Loans",
-    "nav.sell": "Sell & Value",
-    "nav.insights": "Insights",
+    "nav.loans": "Lending",
+    "nav.sell": "Sell queue",
+    "nav.insights": "Finance",
     "nav.settings": "Settings",
     "nav.wishlist": "Wishlist",
     "library.search": "Search title, author, ISBN…",
@@ -93,7 +94,57 @@ const dictionaries: Record<Language, Record<string, string>> = {
 };
 
 export function translate(language: Language, key: string): string {
-  return dictionaries[language][key] ?? dictionaries.en[key] ?? key;
+  if (language === "ro") {
+    const patterns: [RegExp, (...values: string[]) => string][] = [
+      [/^CSV written to (.+)$/, (path) => `Fișier CSV salvat în ${path}`],
+      [/^JSON written to (.+)$/, (path) => `Fișier JSON salvat în ${path}`],
+      [
+        /^Backup written to (.+)$/,
+        (path) => `Copie de rezervă salvată în ${path}`,
+      ],
+      [/^Restored library · (.+)$/, (id) => `Bibliotecă restaurată · ${id}`],
+      [
+        /^Library restored\. Previous library saved at (.+)\.$/,
+        (path) =>
+          `Bibliotecă restaurată. Biblioteca anterioară a fost salvată în ${path}.`,
+      ],
+      [
+        /^Restored a separate library\. Open it in Settings → Libraries\. Saved at (.+)\.$/,
+        (path) =>
+          `Bibliotecă restaurată separat. Deschide-o din Setări → Biblioteci. Salvată în ${path}.`,
+      ],
+      [
+        /^(\d+) copies of this work are owned$/,
+        (n) => `Deții ${n} exemplare ale acestei opere`,
+      ],
+      [
+        /^Not finished in over (\d+) year\(s\)$/,
+        (n) => `Neterminată de peste ${n} ani`,
+      ],
+      [
+        /^Personal rating is only (\d)\/5$/,
+        (n) => `Evaluare personală de doar ${n}/5`,
+      ],
+      [/^Sentimental value (\d)\/5$/, (n) => `Valoare sentimentală ${n}/5`],
+      [/^Rated (\d)\/5$/, (n) => `Evaluată cu ${n}/5`],
+      [
+        /^Condition is (.+)$/,
+        (value) => `Stare: ${value === "poor" ? "slabă" : "acceptabilă"}`,
+      ],
+    ];
+    for (const [pattern, format] of patterns) {
+      const match = key.match(pattern);
+      if (match) return format(...match.slice(1));
+    }
+  }
+  return (
+    (language === "ro"
+      ? (romanian as Record<string, string>)[key]
+      : undefined) ??
+    dictionaries[language][key] ??
+    dictionaries.en[key] ??
+    key
+  );
 }
 
 export const LANGUAGES: { value: Language; label: string }[] = [
@@ -107,6 +158,12 @@ export function useLanguage(): Language {
     queryKey: ["settings"],
     queryFn: api.getSettings,
   });
-  const lang = (settings?.["preferences"] as { language?: string } | undefined)?.language;
+  const lang = (settings?.["preferences"] as { language?: string } | undefined)
+    ?.language;
   return lang === "ro" ? "ro" : "en";
+}
+
+export function useT() {
+  const language = useLanguage();
+  return (key: string) => translate(language, key);
 }

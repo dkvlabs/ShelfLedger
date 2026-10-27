@@ -1,70 +1,70 @@
 # Architecture
 
-> Status: matches Phase 0–1 implementation. Update alongside code.
+Status: implemented catalog, reading, lending, finance, portability and local web
+transport, reviewed 27.10.2026. Release acceptance is tracked separately in
+[release.md](release.md).
 
-## Overview
+ShelfLedger stores the library on this device. The desktop application uses Tauri
+2 and named, typed commands. The optional `shelfledger-web` binary serves the same
+Rust domain over **127.0.0.1 only**; there is no cloud service, account or remote
+access feature. Both transports validate Rust DTOs before writes. Neither accepts
+SQL from the frontend.
 
-ShelfLedger is a single desktop application. There is **no server, no cloud, no account,
-no telemetry**. All state lives in a SQLite database inside the OS user-data directory.
+## Boundaries
 
-```text
-React UI (src/features/*, src/components/*)
-  → typed frontend client (src/lib/api.ts — named commands + DTOs only)
-    → Tauri IPC commands (src-tauri/src/commands — thin, no business logic)
-      → domain services (src-tauri/src/domain — invariants, transactions, events)
-        → repositories (src-tauri/src/repositories — all SQL)
-        → metadata adapters (src-tauri/src/metadata — Open Library, cached)
-          → SQLite (sqlx, migrations, foreign_keys=ON, WAL) + local file storage
-```
+- `src/features/*`: React screens; `src/components/ui`: shared accessible primitives.
+- `src/lib/api.ts` / `src/types/domain.ts`: command wrappers and matching DTOs.
+- `src-tauri/src/commands`: Tauri entry points and shared data-file operations.
+- `src-tauri/src/domain`: catalog, reading, loans, finance, imports, backup, profiles.
+- `src-tauri/src/repositories`: SQLite persistence, derived FTS index and versioned snapshots.
+- `src-tauri/src/db.rs`: WAL, foreign keys, four embedded migrations and connection pool.
+- `src-tauri/src/sqlite_db.rs`: SQLite-only SQLx facade. Direct driver/core versions
+  are pinned together at 0.8.6; upgrades must verify the facade and migration checksums.
+  Unused MySQL/Postgres drivers and their crypto dependencies are excluded.
 
-## Stack decisions (summary; see docs/decisions/)
+Works, editions and physical copies are distinct. Reading sessions belong to works
+and optionally an edition of that work. Ownership belongs to copies. Loans,
+listings and disposals retain their own history. Money uses integer minor units
+and a validated ISO currency; reports group by currency and never invent rates.
 
-- **Tauri 2 + Rust commands** instead of letting the webview run SQL: one backend layer
-  enforces invariants (valid ISBN checksums, unique ISBNs, valid references, one
-  acquisition per copy in v1), keeps file access inside the app-data directory, and
-  controls schema changes. The webview never sends SQL — only typed DTOs.
-- **SQLite via sqlx** with embedded migrations (`sqlx::migrate!`), foreign keys enabled at
-  connection level, WAL journaling. FTS5 virtual table for full-text search, kept in sync
-  by repository code on work/author/edition writes.
-- **React + TypeScript + Vite + Tailwind + shadcn/ui** with TanStack Query for the data
-  cache. DTO types are hand-mirrored in `src/types/domain.ts` — both sides must agree.
-- **Money**: integer minor units + ISO 4217 currency code everywhere. No floats. UI
-  converts user decimal input at the edge (`src/lib/format.ts`) and Rust validates.
-- **Dates**: ISO 8601 (UTC) in storage; `DD.MM.YYYY` in the UI.
+## Offline and privacy
 
-## Error model
+All core workflows use SQLite without network. Open Library lookup happens only
+on request, is cached, and leaves manual entry available after failure. Cover URLs
+are not fetched automatically. Display fonts and decorative artwork are bundled.
+Camera scanning requests video only when opened, preserves platform consent,
+handles denied/missing/busy cameras and releases streams when closed. No scanning
+image is uploaded; photo and manual ISBN input remain available.
 
-Rust commands return `Result<T, AppError>`; `AppError` serializes as
-`{ kind: "validation" | "not_found" | "conflict" | "network" | "database" | "io" | "other", message }`.
-The frontend wraps invocations in `CommandError` so the UI can branch on `kind`
-(e.g. network failures during ISBN lookup fall back to manual entry).
+Tauri permissions are enumerated in `src-tauri/capabilities/default.json`; camera
+purpose/entitlement declarations are in `Info.plist` and `Entitlements.plist`.
+Production CSP restricts content and allows the local camera preview. The web
+server checks loopback Host, Origin, JSON Content-Type and a process-session token
+for API POSTs. It sends anti-framing, no-sniff and no-store headers. Development
+allows the documented Vite origin; it does not enable permissive CORS.
 
-## Network behavior
+## Persistence and recovery
 
-The only network feature in Phase 0–1 is the user-initiated ISBN metadata lookup
-(Open Library):
+Catalog mutations update affected FTS rows with the record transaction. Copy
+patches distinguish omitted fields from explicit null clears. Active loans and
+active sale listings have partial unique indexes. Listing/disposal transitions
+are transactional; disposal closes active listings for every terminal state.
 
-- identified with a proper User-Agent including a contact URL,
-- 10-second timeout,
-- responses cached in the `metadata_cache` table,
-- fully disable-able via the `metadata.lookup_enabled` setting,
-- degrades gracefully: offline → `AppError::Network` → manual entry.
+JSON snapshot format 1 preserves every logical table, including archived copies,
+financial/reading/loan history, settings, cache and import logs. Restore first
+verifies archive hashes, SQLite integrity and migrations. Replace creates a
+consistent safety ZIP, then replaces records in a transaction on the live pool:
+**the open database, WAL and SHM files are never overwritten or removed**. No
+restart is required. Separate restore creates a selectable library profile.
 
-## Security posture
+Generated exports, backups, uploads and profile files stay under app data.
+Canonical ancestor checks reject traversal and symlink escapes before directory
+creation. Snapshot attachment paths must be relative. Binary receipt/cover
+attachments are deferred; JSON is a record interchange, not an asset package.
 
-- Tauri capabilities are least-privilege (`src-tauri/capabilities/default.json`): core
-  window/event access only. No filesystem, shell, or HTTP permissions are granted to the
-  webview.
-- All writes go through validated domain services; SQL text never crosses the IPC
-  boundary.
-- Third-party metadata (Open Library) and cover images are used under their own terms;
-  covers are not bundled or redistributed with the app.
+## Deliberate limits
 
-## Module status (Phase 1)
-
-| Module | State |
-| --- | --- |
-| catalog (works/editions/copies, search, duplicates, ISBN lookup) | implemented |
-| inventory (locations hierarchy, condition, notes) | implemented |
-| reading / loans / finance / imports | not implemented (Phase 2–4) |
-| backups | not implemented (Phase 4) |
+One local operator per running library is the supported deployment. Sync,
+accounts, remote hosting, e-books, receipt management, comparable-price collection
+and very-large-library virtualization remain outside the current phase. See
+[implementation.md](implementation.md) for verified coverage and remaining gates.

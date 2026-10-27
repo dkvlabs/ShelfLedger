@@ -2,6 +2,7 @@
 //! invariant (enforced here AND by a partial unique index in the schema).
 //! Contacts stay local; nothing is ever sent anywhere automatically.
 
+use crate::sqlite_db as sqlx;
 use sqlx::SqlitePool;
 
 use crate::error::{AppError, AppResult};
@@ -235,6 +236,13 @@ where
 }
 
 pub async fn lend_copy(pool: &SqlitePool, input: &LendCopyInput) -> AppResult<LoanDto> {
+    crate::models::validate_date(input.lent_at.as_deref()).map_err(AppError::Validation)?;
+    crate::models::validate_date(input.due_at.as_deref()).map_err(AppError::Validation)?;
+    if let (Some(lent), Some(due)) = (&input.lent_at, &input.due_at) {
+        if due < lent {
+            return Err(AppError::Validation("due date precedes loan date".into()));
+        }
+    }
     let local_today = chrono::Local::now().format("%Y-%m-%d").to_string();
 
     // Copy must exist and be lendable: not archived, owned, not already out.
@@ -313,6 +321,7 @@ pub async fn return_copy(
     loan_id: &str,
     input: &ReturnCopyInput,
 ) -> AppResult<LoanDto> {
+    crate::models::validate_date(input.returned_at.as_deref()).map_err(AppError::Validation)?;
     let local_today = chrono::Local::now().format("%Y-%m-%d").to_string();
     let loan: Option<(String, String, Option<String>)> =
         sqlx::query_as("SELECT id, copy_id, returned_at FROM loans WHERE id = ?1")

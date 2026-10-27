@@ -1,6 +1,7 @@
 //! Dashboard summary (Phase 2/3): counts, currently reading, loans, and
 //! per-currency money buckets.
 
+use crate::sqlite_db as sqlx;
 use sqlx::SqlitePool;
 
 use crate::error::AppResult;
@@ -65,16 +66,23 @@ pub async fn get_dashboard(pool: &SqlitePool, local_today: &str) -> AppResult<Da
     .await?;
 
     let report = super::finance::finance_report(pool).await?;
-    let spending_by_currency = report
-        .spending
-        .iter()
-        .flat_map(|y| y.buckets.clone())
-        .collect();
-    let proceeds_by_currency = report
-        .proceeds
-        .iter()
-        .flat_map(|y| y.buckets.clone())
-        .collect();
+    fn totals(years: &[crate::models::YearReport]) -> Vec<crate::models::ReportBucket> {
+        let mut totals = std::collections::BTreeMap::new();
+        for year in years {
+            for bucket in &year.buckets {
+                *totals.entry(bucket.currency.clone()).or_insert(0) += bucket.total_minor;
+            }
+        }
+        totals
+            .into_iter()
+            .map(|(currency, total_minor)| crate::models::ReportBucket {
+                currency,
+                total_minor,
+            })
+            .collect()
+    }
+    let spending_by_currency = totals(&report.spending);
+    let proceeds_by_currency = totals(&report.proceeds);
     let estimated_value_by_currency = report.estimated_value.clone();
 
     Ok(DashboardDto {

@@ -1,60 +1,55 @@
 # Database
 
-> Status: matches migration `0001_init` (Phase 1). Later migrations must be additive.
+Status: migrations `0001_init` through `0004_listing_invariants`, 27.10.2026.
+SQLite uses WAL, foreign keys and integer money. Existing migration SQL is never
+rewritten; the embedded migration list preserves its checksums.
 
-## Conventions
+## Logical records
 
-- **IDs**: UUID v4 text, generated in Rust — portable across machines.
-- **Money**: `INTEGER` minor units + `currency` ISO 4217 text. Never floats. Never sum
-  across currencies.
-- **Dates/timestamps**: ISO 8601 text (UTC).
-- **Pragmas** (set at connection time in `src-tauri/src/db.rs`): `foreign_keys = ON`,
-  WAL journaling, `synchronous = NORMAL`.
-
-## Tables (Phase 1)
-
-| Table | Purpose |
+| Tables | Responsibility |
 | --- | --- |
-| `works` | Literary identity: title, subtitle, original language, description |
-| `authors` / `work_authors` | People and the many-to-many link (role, sort order) |
-| `editions` | Published versions: ISBN-10/13, publisher, published date, language, page count, binding, cover path, provider IDs |
-| `copies` | Owned physical items: edition ref, inventory code, location, condition grade, ownership status, acquisition type/date, note, sentimental score, `archived_at` (soft delete) |
-| `acquisitions` | One per copy (v1): price, currency, shipping, tax, store, receipt path — all cost fields nullable (gifts, unknown provenance) |
-| `locations` | Hierarchy `room > bookcase > shelf > box`; children RESTRICT parent deletion; deleting a location nulls copy references |
-| `settings` | Key/value JSON preferences |
-| `metadata_cache` | Provider lookup cache (Open Library) |
-| `tags` / `work_tags` | Custom categorization (Phase 1 stub, used by UI later) |
-| `activity_events` | Append-only user-readable history |
-| `works_fts` | FTS5 index over title, subtitle, author names, ISBNs; maintained by repository code on writes |
+| `works`, `authors`, `work_authors` | Literary identity, ordered authors, description and original language |
+| `editions` | Work-linked publication, ISBN-10/13, publisher, language, pages and binding |
+| `copies`, `acquisitions`, `locations` | Physical inventory, ownership, location hierarchy, condition and provenance |
+| `tags`, `work_tags` | Editable categorization and searchable tags |
+| `reading_sessions`, `reading_progress_events` | Re-reads, independent reading status, dates, rating, review and progress |
+| `contacts`, `loans` | Local contacts, due dates, return and retained loan history |
+| `valuation_records` | Source/date/confidence observations, never live prices |
+| `sale_listings`, `disposals` | Listing lifecycle and retained sold/donated/traded/lost history |
+| `settings`, `metadata_cache`, `activity_events`, `import_jobs` | Preferences, fetched metadata, activity and row import logs |
+| `wishlist`, `attachments` | Reserved schema; dedicated workflows deferred |
+| `works_fts` | Derived searchable title, subtitle, authors, ISBN, notes, locations and tags |
 
-## Key constraints
+## Invariants
 
-- `editions.isbn13` / `isbn10`: unique **partial** indexes (non-null values only).
-  Manual editions without ISBNs are supported; real-world duplicate/wrong ISBNs are
-  handled by conflict reporting, not destructive merges.
-- `copies.ownership_status` CHECK: owned | lent | listed | sold | donated | traded | lost.
-  Reading status is NOT stored here — it belongs to `reading_sessions` (Phase 2). A book
-  can be *finished* and *lent* simultaneously; never merge the concepts.
-- `copies.condition_grade` CHECK: new | like_new | very_good | good | acceptable | poor.
-- `acquisitions.copy_id` UNIQUE: one acquisition record per copy in v1.
-- Deleting an edition is RESTRICTed while copies reference it; disposing a copy keeps the
-  row and history (soft delete via `archived_at`).
+IDs for newly created records are UUID v4 generated in Rust. Work, edition and
+copy identity never share a status column. Reading editions must belong to the
+session's work. At most one active loan and one active sale listing exists per
+copy. A loan must be returned before disposal. Disposal closes active listings;
+withdrawing an old listing cannot make a disposed copy owned again.
 
-## Invariants enforced in Rust (domain layer)
+Archiving preserves the record and history, removes the copy from active counts
+and note/location search, and is reversible in the detail screen. The retained
+history can be displayed explicitly. ISBN forms must pass checksums and identify
+the same edition. ISBN-10 conversion supports an `X` check digit. Page counts are
+positive. Publication precision can be YYYY, YYYY-MM or YYYY-MM-DD; other dates
+are real ISO calendar dates or RFC3339 timestamps.
 
-- ISBN checksums are validated (and 10↔13 converted) before any edition write.
-- Duplicate ISBN writes surface as `Conflict`, shown as "an edition with this ISBN
-  already exists".
-- A purchase price requires a currency, and vice versa.
-- FTS rows are rebuilt after work, author, and edition changes.
+Money is nonnegative integer minor units with a supported ISO 4217 code. Shared
+`src/lib/currencies.json` defines the accepted codes and frontend decimal scale.
+Every cost, including shipping or tax without a purchase price, requires a
+currency. Missing amounts stay unknown. Reports never mix currencies. The latest
+valuation uses observed date, creation time, then SQLite row sequence to select
+exactly one observation per copy, including same-day observations.
 
-## Search
+## Migrations and interchange
 
-`works_fts` (FTS5, standalone with `work_id UNINDEXED`) is rebuilt on writes. User queries
-are tokenized into quoted prefix terms joined with `AND` (`fts_match_query`), which is
-injection-safe for the FTS5 parser. Empty/invalid queries simply return no rows.
+Migration 0004 repairs old terminal-copy listings, withdraws duplicate active
+listings, and adds an active-listing unique index. Snapshot replacement/merge
+runs in a transaction with deferred FK checking, semantic validation and a final
+FTS rebuild. Replace rejects duplicate input rows; merge permits identical rows
+and rejects differing conflicts. Invalid input rolls the transaction back.
 
-## Migrations
-
-Embedded via `sqlx::migrate!("./migrations")` and applied on every launch. Before
-destructive migrations (future), the app must take an automatic backup (Phase 4 work).
+The snapshot contains the 22 logical tables above (excluding derived FTS and
+migration bookkeeping). Full reading, loan and finance fixture round trips are
+covered in `src-tauri/src/audit_regressions.rs`. See [import-format.md](import-format.md).

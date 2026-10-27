@@ -1,3 +1,4 @@
+import { useT } from "@/lib/i18n";
 import { useQuery } from "@tanstack/react-query";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,15 +12,18 @@ function MoneyBuckets({
   buckets: { currency: string; totalMinor: number }[];
   emptyLabel: string;
 }) {
+  const tx = useT();
   if (buckets.length === 0) {
-    return <p className="text-sm text-muted-foreground">{emptyLabel}</p>;
+    return <p className="text-sm text-muted-foreground">{tx(emptyLabel)}</p>;
   }
   return (
     <ul className="space-y-1 text-sm">
       {buckets.map((b) => (
         <li key={b.currency} className="flex justify-between">
           <span className="text-muted-foreground">{b.currency}</span>
-          <span className="font-medium">{formatMoney(b.totalMinor, b.currency)}</span>
+          <span className="font-medium">
+            {formatMoney(b.totalMinor, b.currency)}
+          </span>
         </li>
       ))}
     </ul>
@@ -27,6 +31,7 @@ function MoneyBuckets({
 }
 
 export default function InsightsView() {
+  const tx = useT();
   const { data: report } = useQuery({
     queryKey: ["finance-report"],
     queryFn: api.getFinanceReport,
@@ -34,23 +39,31 @@ export default function InsightsView() {
 
   return (
     <div className="max-w-3xl space-y-6 p-6">
-      <h1 className="text-xl font-semibold">Insights</h1>
+      <h1 className="text-xl font-semibold">{tx("Insights")}</h1>
       <p className="text-sm text-muted-foreground">
-        Currencies are never summed together — every total is per currency.
+        {tx(
+          "Currencies are never summed together — every total is per currency.",
+        )}
       </p>
 
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Purchase spending by year</CardTitle>
+            <CardTitle className="text-sm">
+              {tx("Purchase spending by year")}
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             {!report || report.spending.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No purchase costs recorded yet.</p>
+              <p className="text-sm text-muted-foreground">
+                {tx("No purchase costs recorded yet.")}
+              </p>
             ) : (
               report.spending.map((y) => (
                 <div key={y.year}>
-                  <div className="text-xs font-medium text-muted-foreground">{y.year}</div>
+                  <div className="text-xs font-medium text-muted-foreground">
+                    {y.year}
+                  </div>
                   <MoneyBuckets buckets={y.buckets} emptyLabel="" />
                 </div>
               ))
@@ -60,15 +73,21 @@ export default function InsightsView() {
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Sale proceeds by year</CardTitle>
+            <CardTitle className="text-sm">
+              {tx("Sale proceeds by year")}
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             {!report || report.proceeds.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No sales recorded yet.</p>
+              <p className="text-sm text-muted-foreground">
+                {tx("No sales recorded yet.")}
+              </p>
             ) : (
               report.proceeds.map((y) => (
                 <div key={y.year}>
-                  <div className="text-xs font-medium text-muted-foreground">{y.year}</div>
+                  <div className="text-xs font-medium text-muted-foreground">
+                    {y.year}
+                  </div>
                   <MoneyBuckets buckets={y.buckets} emptyLabel="" />
                 </div>
               ))
@@ -78,7 +97,9 @@ export default function InsightsView() {
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Estimated collectible value (owned copies)</CardTitle>
+            <CardTitle className="text-sm">
+              {tx("Estimated collectible value (owned copies)")}
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <MoneyBuckets
@@ -86,7 +107,9 @@ export default function InsightsView() {
               emptyLabel="No value estimates recorded yet."
             />
             <p className="mt-2 text-xs text-muted-foreground">
-              Based on your most recent per-copy observations only — never a live quote.
+              {tx(
+                "Based on your most recent per-copy observations only — never a live quote.",
+              )}
             </p>
           </CardContent>
         </Card>
@@ -107,7 +130,9 @@ export function StatCard({
 }) {
   return (
     <Card
-      className={onClick ? "cursor-pointer transition-colors hover:bg-accent" : undefined}
+      className={
+        onClick ? "cursor-pointer transition-colors hover:bg-accent" : undefined
+      }
       role={onClick ? "button" : undefined}
       tabIndex={onClick ? 0 : undefined}
       onClick={onClick}

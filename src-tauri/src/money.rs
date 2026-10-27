@@ -7,12 +7,13 @@
 /// We do not hard-code a currency list so any ISO currency works (RON, EUR,
 /// USD, …), matching the product requirement "other ISO currencies supported".
 pub fn validate_currency(code: &str) -> Result<(), String> {
-    if code.len() == 3 && code.chars().all(|c| c.is_ascii_alphabetic()) {
+    let currencies: serde_json::Value =
+        serde_json::from_str(include_str!("../../src/lib/currencies.json"))
+            .expect("bundled ISO currency data");
+    if currencies.get(code.to_ascii_uppercase()).is_some() {
         Ok(())
     } else {
-        Err(format!(
-            "currency must be a 3-letter ISO 4217 code, got {code:?}"
-        ))
+        Err(format!("unsupported ISO 4217 currency: {code}"))
     }
 }
 
@@ -61,7 +62,7 @@ pub fn parse_amount_minor(input: &str) -> Option<i64> {
         whole.parse().ok()?
     };
     let frac_v: i64 = frac_padded.parse().ok()?;
-    let minor = whole_v * 100 + frac_v;
+    let minor = whole_v.checked_mul(100)?.checked_add(frac_v)?;
     Some(if negative { -minor } else { minor })
 }
 

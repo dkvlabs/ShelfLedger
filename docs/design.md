@@ -1,51 +1,59 @@
 # Design
 
-> Status: Phase 0–1 UI principles and tokens. Screens grow with each phase.
+Status: cinematic library redesign implemented 27.10.2026.
 
-## UX rules (from the product spec, binding)
+The interface takes its direction from a quiet, warmly lit private library:
+ink-dark surfaces, restrained copper accents, warm ivory text, generous space
+and large literary typography. It starts with the collection rather than a
+statistics screen. Real saved records drive every count; empty states remain
+honest and actionable.
 
-- Display **title + edition + copy identifier** in any action that changes inventory.
-- Provide undo/confirmation for sales, deletion, and bulk edits (archive currently keeps
-  history by design; destructive deletes surface errors instead).
-- Never silently auto-update user-written metadata or financial values. Provider lookups
-  pre-fill editable fields and say so ("Metadata fetched from Open Library — review and
-  correct as needed").
-- Keyboard navigation and screen-reader labels on all interactive elements (`aria-label`,
-  roles, focus rings). Lists use plain rendering today; virtualization is a planned
-  optimization for libraries of thousands of books (not yet implemented).
-- Currency: localized formatting via `Intl.NumberFormat` with the record's own currency.
-  Currencies are never summed. Dates: `DD.MM.YYYY` in the UI, ISO 8601 in storage.
+## Visual system
 
-## Design tokens
+Tokens live in `src/styles/globals.css`, with paired light/dark surfaces and
+contrasting focus/destructive colors. The primary dark palette is approximately
+ink #131514, copper #bd8963 and ivory #eee7dc. Cormorant Garamond provides display
+type; Manrope provides controls and body text. Fonts are locally bundled through
+Fontsource with Latin/Latin Extended support. System theme subscribes to OS
+changes and removes its listener when preferences change.
 
-Defined once in `src/styles/globals.css` as HSL CSS variables with a light/dark pair:
+A 224px desktop sidebar anchors navigation. The library pairs a large title with
+Scan ISBN/Add book actions, warm photographic atmosphere, search/filter/sort,
+and grid/table views. Book tiles use typographic treatments of actual saved
+metadata, not fabricated covers. Smaller screens use a collapsible navigation
+menu, wrapping controls and scrollable tables. Short desktop windows reduce
+banner height. Motion is limited to brief entrance/hover transitions and respects
+`prefers-reduced-motion`.
 
-- `--background` / `--foreground`, `--card`, `--muted`, `--secondary`, `--accent`
-- `--primary`: deep green (`161 84% 22%` light) — calm, library-like
-- `--destructive`, `--border`, `--input`, `--ring`, `--radius: 0.5rem`
+## Workflows and accessibility
 
-Dark mode is a `.dark` class on `<html>`; theme switching ships in Phase 4 with
-localization.
+- Book details expose work, edition and copy editors, tags and archived history.
+- Inventory actions show the title and edition/copy identity; archives confirm
+  and offer a visible restoration action. Financial disposal has an explicit dialog.
+- Reading session editors expose want-to-read, reading, finished, paused and DNF,
+  along with editable/clearable dates, ratings and reviews.
+- Imports separate file choice, column mapping, preview, duplicate resolution
+  and confirmation. No import writes happen at preview or cancellation.
+- Inputs have labels, icons have accessible names, and dialogs retain Radix focus
+  management. Mobile navigation is removed from focus order when closed.
+- EN/RO product dictionaries cover screens, controls and state labels. User data,
+  provider data and raw diagnostic errors are preserved as supplied.
+- Dates display DD.MM.YYYY; money uses the record's currency-specific minor units.
 
-## Screens (Phase 1)
+Components live under `src/components/ui`, features under `src/features/*`, and
+formatting/localization under `src/lib`. Query invalidation refreshes relevant
+screens after writes and all screens after profile/restore changes.
 
-1. **My Library** — search box (title/author/ISBN via FTS5), cover-grid ↔ dense-table
-   toggle, "Add Book" button, empty state with first-book CTA.
-2. **Add Book dialog** — ISBN lookup (Open Library, cached, offline-degrading) or manual
-   entry; editable pre-filled metadata; duplicate warning with explicit "add anyway";
-   optional owned-copy section (condition, location, acquisition type/date, purchase
-   price + currency, store).
-3. **Work detail** — metadata card (editions with ISBNs), copy cards with condition/
-   ownership badges, location, acquisition cost, archive action (soft delete).
-4. **Settings** — preferred currency (RON/EUR/USD/GBP, others per-record), physical
-   locations manager.
-5. **Placeholder nav** for Reading, Loans, Sell & Value, Insights — labeled with their
-   roadmap phase rather than fake content.
+## Artwork provenance
 
-## Component conventions
+`public/images/library-atmosphere.png` is original generated decorative artwork,
+created with OpenAI image generation for this redesign. It contains anonymous,
+unlabelled books, not purported user inventory or fetched metadata. Prompt:
+“Wide cinematic photographic still life of antique anonymous books on a wooden
+desk beside a window, warm late-afternoon light, deep ink shadows, restrained
+copper and ivory palette, no text, no logos, no recognizable book titles; the
+right side falls into quiet darkness.” The library banner is decorative (`alt=""`).
 
-- shadcn/ui primitives in `src/components/ui` (button, card, input, label, textarea,
-  badge, dialog, select) — generated by convention, editable in place.
-- Feature screens live in `src/features/<feature>/`; shared state via TanStack Query
-  (keys: `works`, `work:<id>`, `locations`, `settings`, `stats`).
-- Formatting helpers (`src/lib/format.ts`) are the single source for money/date display.
+The generated full-screen concept informed hierarchy, palette, copy and imagery;
+implementation is validated against it with desktop/mobile screenshots. No award
+or independent accessibility certification is claimed.

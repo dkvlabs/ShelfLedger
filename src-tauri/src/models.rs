@@ -148,6 +148,7 @@ pub struct AddBookCopyInput {
 
 impl AddBookCopyInput {
     pub fn validate(&self) -> Result<(), String> {
+        validate_date(self.acquired_at.as_deref())?;
         if !CONDITION_GRADES.contains(&self.condition_grade.as_str()) {
             return Err(format!(
                 "unknown condition grade {:?}",
@@ -200,6 +201,7 @@ pub struct AddBookInput {
 
 impl AddBookInput {
     pub fn validate(&self) -> Result<(), String> {
+        validate_publication(self.published_at.as_deref(), self.page_count)?;
         if is_blank(&self.title) {
             return Err("title is required".into());
         }
@@ -295,17 +297,15 @@ pub struct CreateAcquisitionInput {
 
 impl CreateAcquisitionInput {
     pub fn validate(&self) -> Result<(), String> {
-        if let Some(price) = self.price_minor {
-            if price < 0 {
-                return Err("price cannot be negative".into());
-            }
-            match &self.currency {
-                Some(c) => crate::money::validate_currency(c)?,
-                None => return Err("currency is required when a purchase price is recorded".into()),
-            }
-        }
-        if self.currency.is_some() && self.price_minor.is_none() {
-            return Err("a purchase price is required when a currency is recorded".into());
+        validate_date(self.acquired_at.as_deref())?;
+        validate_costs(
+            &[self.price_minor, self.shipping_minor, self.tax_minor],
+            self.currency.as_deref(),
+        )?;
+        if self.receipt_path.as_ref().is_some_and(|p| {
+            std::path::Path::new(p).is_absolute() || p.split(['/', '\\']).any(|v| v == "..")
+        }) {
+            return Err("receipt path must stay inside app data".into());
         }
         if let Some(t) = &self.acquisition_type {
             if !ACQUISITION_TYPES.contains(&t.as_str()) {
@@ -337,6 +337,7 @@ fn default_condition() -> String {
 
 impl CreateCopyInput {
     pub fn validate(&self) -> Result<(), String> {
+        validate_date(self.acquired_at.as_deref())?;
         if !CONDITION_GRADES.contains(&self.condition_grade.as_str()) {
             return Err(format!(
                 "unknown condition grade {:?}",
@@ -363,23 +364,36 @@ impl CreateCopyInput {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateCopyInput {
-    pub location_id: Option<String>,
+    #[serde(default, deserialize_with = "nullable_patch")]
+    pub location_id: Option<Option<String>>,
     pub condition_grade: Option<String>,
-    pub note: Option<String>,
-    pub sentimental_score: Option<i64>,
+    #[serde(default, deserialize_with = "nullable_patch")]
+    pub note: Option<Option<String>>,
+    #[serde(default, deserialize_with = "nullable_patch")]
+    pub sentimental_score: Option<Option<i64>>,
 }
-
+fn nullable_patch<'de, D, T>(deserializer: D) -> Result<Option<Option<T>>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+    T: serde::Deserialize<'de>,
+{
+    Ok(Some(Option::<T>::deserialize(deserializer)?))
+}
 impl UpdateCopyInput {
     pub fn validate(&self) -> Result<(), String> {
-        if let Some(g) = &self.condition_grade {
-            if !CONDITION_GRADES.contains(&g.as_str()) {
-                return Err(format!("unknown condition grade {g:?}"));
-            }
+        if self
+            .condition_grade
+            .as_ref()
+            .is_some_and(|v| !CONDITION_GRADES.contains(&v.as_str()))
+        {
+            return Err("invalid condition".into());
         }
-        if let Some(score) = self.sentimental_score {
-            if !(0..=5).contains(&score) {
-                return Err("sentimental score must be between 0 and 5".into());
-            }
+        if self
+            .sentimental_score
+            .flatten()
+            .is_some_and(|v| !(0..=5).contains(&v))
+        {
+            return Err("sentimental score must be between 0 and 5".into());
         }
         Ok(())
     }
@@ -483,6 +497,7 @@ fn default_reading_status() -> String {
 
 impl CreateReadingSessionInput {
     pub fn validate(&self) -> Result<(), String> {
+        validate_date(self.started_at.as_deref())?;
         if !READING_STATUSES.contains(&self.status.as_str()) {
             return Err(format!("unknown reading status {:?}", self.status));
         }
@@ -494,23 +509,28 @@ impl CreateReadingSessionInput {
 #[serde(rename_all = "camelCase")]
 pub struct UpdateReadingSessionInput {
     pub status: Option<String>,
-    pub started_at: Option<String>,
-    pub finished_at: Option<String>,
-    pub rating: Option<i64>,
-    pub review: Option<String>,
+    #[serde(default, deserialize_with = "nullable_patch")]
+    pub started_at: Option<Option<String>>,
+    #[serde(default, deserialize_with = "nullable_patch")]
+    pub finished_at: Option<Option<String>>,
+    #[serde(default, deserialize_with = "nullable_patch")]
+    pub rating: Option<Option<i64>>,
+    #[serde(default, deserialize_with = "nullable_patch")]
+    pub review: Option<Option<String>>,
 }
-
 impl UpdateReadingSessionInput {
     pub fn validate(&self) -> Result<(), String> {
-        if let Some(s) = &self.status {
-            if !READING_STATUSES.contains(&s.as_str()) {
-                return Err(format!("unknown reading status {s:?}"));
-            }
+        validate_date(self.started_at.as_ref().and_then(|v| v.as_deref()))?;
+        validate_date(self.finished_at.as_ref().and_then(|v| v.as_deref()))?;
+        if self
+            .status
+            .as_ref()
+            .is_some_and(|v| !READING_STATUSES.contains(&v.as_str()))
+        {
+            return Err("invalid reading status".into());
         }
-        if let Some(r) = self.rating {
-            if !(0..=5).contains(&r) {
-                return Err("rating must be between 0 and 5".into());
-            }
+        if self.rating.flatten().is_some_and(|v| !(0..=5).contains(&v)) {
+            return Err("rating must be between 0 and 5".into());
         }
         Ok(())
     }
@@ -527,6 +547,10 @@ pub struct AddProgressInput {
 
 impl AddProgressInput {
     pub fn validate(&self) -> Result<(), String> {
+        validate_date(self.occurred_at.as_deref())?;
+        if self.page.is_some_and(|v| v < 0) {
+            return Err("page cannot be negative".into());
+        }
         if self.page.is_none() && self.percent.is_none() {
             return Err("progress needs a page or a percent".into());
         }
@@ -649,6 +673,7 @@ fn default_confidence() -> String {
 
 impl AddValuationInput {
     pub fn validate(&self) -> Result<(), String> {
+        validate_date(self.observed_at.as_deref())?;
         if self.value_minor < 0 {
             return Err("value cannot be negative".into());
         }
@@ -725,6 +750,11 @@ pub struct RecordDisposalInput {
 
 impl RecordDisposalInput {
     pub fn validate(&self) -> Result<(), String> {
+        validate_date(self.date.as_deref())?;
+        validate_costs(
+            &[self.sale_price_minor, self.fee_minor, self.shipping_minor],
+            self.currency.as_deref(),
+        )?;
         if !matches!(
             self.disposition.as_str(),
             "sold" | "donated" | "traded" | "lost"
@@ -860,6 +890,8 @@ pub struct ImportRowPreview {
     pub shelf: Option<String>,
     pub rating: Option<i64>,
     pub date_read: Option<String>,
+    pub review: Option<String>,
+    pub tags: Vec<String>,
     pub warnings: Vec<String>,
     /// Set when an exact-ISBN or title+author duplicate already exists.
     pub duplicate_of: Option<String>,
@@ -875,6 +907,8 @@ pub struct ImportPreview {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ImportCommitInput {
+    #[serde(default)]
+    pub row_policies: std::collections::BTreeMap<usize, String>,
     /// Which preview rows to import (by row_number), after the user resolved
     /// duplicate decisions in the UI.
     pub row_numbers: Vec<usize>,
@@ -891,9 +925,62 @@ fn default_duplicate_policy() -> String {
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ImportResult {
+    pub rows: Vec<ImportRowResult>,
     pub imported_works: i64,
     pub imported_editions: i64,
     pub imported_copies: i64,
     pub skipped: i64,
     pub errors: Vec<String>,
+}
+
+/// Accept a real ISO calendar date or RFC3339 timestamp; partial publication
+/// dates are checked separately. No locale-ambiguous dates cross IPC.
+pub fn validate_date(value: Option<&str>) -> Result<(), String> {
+    if let Some(value) = value {
+        if chrono::NaiveDate::parse_from_str(value, "%Y-%m-%d").is_err()
+            && chrono::DateTime::parse_from_rfc3339(value).is_err()
+        {
+            return Err(format!("invalid ISO date: {value}"));
+        }
+    }
+    Ok(())
+}
+pub(crate) fn validate_publication(value: Option<&str>, pages: Option<i64>) -> Result<(), String> {
+    if pages.is_some_and(|v| v <= 0 || v > 1_000_000) {
+        return Err("page count must be positive".into());
+    }
+    if let Some(v) = value {
+        let expanded = match v.len() {
+            4 => format!("{v}-01-01"),
+            7 => format!("{v}-01"),
+            _ => v.to_string(),
+        };
+        validate_date(Some(&expanded))?;
+    }
+    Ok(())
+}
+pub(crate) fn validate_costs(values: &[Option<i64>], currency: Option<&str>) -> Result<(), String> {
+    if values.iter().flatten().any(|v| *v < 0) {
+        return Err("amounts cannot be negative".into());
+    }
+    if values.iter().any(Option::is_some) && currency.is_none() {
+        return Err("currency is required with an amount".into());
+    }
+    if let Some(c) = currency {
+        crate::money::validate_currency(c)?;
+    }
+    Ok(())
+}
+impl CreateEditionInput {
+    pub fn validate(&self) -> Result<(), String> {
+        validate_publication(self.published_at.as_deref(), self.page_count)
+    }
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ImportRowResult {
+    pub row_number: usize,
+    pub status: String,
+    pub message: Option<String>,
 }

@@ -3,7 +3,24 @@
 //   currencies are never summed across codes.
 // - Dates: DD.MM.YYYY in the UI, ISO 8601 in storage.
 
-const TWO_DECIMAL_CURRENCIES = new Set(["RON", "EUR", "USD", "GBP"]);
+import currencyDigits from "./currencies.json";
+export const currencies = Object.keys(currencyDigits);
+export function minorDigits(code: string): number | null {
+  return (currencyDigits as Record<string, number>)[code.toUpperCase()] ?? null;
+}
+
+/** Decimal text for form fields, without converting stored integers to floats. */
+export function minorToDecimal(minor: number, currency: string): string {
+  const digits = minorDigits(currency);
+  if (digits === null || !Number.isSafeInteger(minor)) return "";
+  const amount = BigInt(minor);
+  const absolute = amount < 0n ? -amount : amount;
+  const scale = 10n ** BigInt(digits);
+  const fraction = digits
+    ? "." + String(absolute % scale).padStart(digits, "0")
+    : "";
+  return (amount < 0n ? "-" : "") + String(absolute / scale) + fraction;
+}
 
 /** Format integer minor units with their currency code. */
 export function formatMoney(
@@ -11,25 +28,45 @@ export function formatMoney(
   currency: string | null | undefined,
 ): string {
   if (minor === null || minor === undefined || !currency) return "—";
-  const decimals = TWO_DECIMAL_CURRENCIES.has(currency.toUpperCase()) ? 2 : 0;
-  const value = minor / 10 ** decimals;
+  const decimals = minorDigits(currency);
+  if (decimals === null || !Number.isSafeInteger(minor)) return "—";
+  const absolute = BigInt(minor < 0 ? -minor : minor);
+  const scale = 10n ** BigInt(decimals);
+  const whole = absolute / scale;
+  const signedWhole = minor < 0 ? (whole === 0n ? -0 : -whole) : whole;
   try {
-    return new Intl.NumberFormat(undefined, {
+    const formatter = new Intl.NumberFormat(undefined, {
       style: "currency",
       currency: currency.toUpperCase(),
       minimumFractionDigits: decimals,
       maximumFractionDigits: decimals,
-    }).format(value);
+    });
+    const fraction = decimals
+      ? new Intl.NumberFormat(undefined, {
+          useGrouping: false,
+          minimumIntegerDigits: decimals,
+          maximumFractionDigits: 0,
+        }).format(absolute % scale)
+      : "";
+    return formatter
+      .formatToParts(signedWhole)
+      .map((part) => (part.type === "fraction" ? fraction : part.value))
+      .join("");
   } catch {
-    return `${value.toFixed(decimals)} ${currency.toUpperCase()}`;
+    return `${minorToDecimal(minor, currency)} ${currency.toUpperCase()}`;
   }
 }
 
 /**
  * Convert a user-entered decimal string ("12.50", "12,50", "1 234,50") to
- * integer minor units for a 2-decimal currency. Returns null when unparseable.
+ * integer minor units for the selected currency. Returns null when unparseable.
  */
-export function parseMoneyToMinor(input: string): number | null {
+export function parseMoneyToMinor(
+  input: string,
+  currency = "RON",
+): number | null {
+  const decimals = minorDigits(currency);
+  if (decimals === null) return null;
   const cleaned = input.replace(/[\s'’\u00a0]/g, "");
   if (cleaned === "" || cleaned === "-" || cleaned === "." || cleaned === ",") {
     return null;
@@ -43,10 +80,15 @@ export function parseMoneyToMinor(input: string): number | null {
   } else {
     normalized = cleaned.replace(",", ".");
   }
-  if (!/^-?\d*(\.\d{0,2})?$/.test(normalized)) return null;
-  const value = Number(normalized);
-  if (!Number.isFinite(value)) return null;
-  return Math.round(value * 100);
+  if (!/^-?\d*(\.\d*)?$/.test(normalized)) return null;
+  const negative = normalized.startsWith("-");
+  const [whole, fraction = ""] = normalized.replace(/^-/, "").split(".");
+  if ((!whole && !fraction) || fraction.length > decimals) return null;
+  const amount =
+    BigInt(whole || "0") * 10n ** BigInt(decimals) +
+    BigInt(fraction.padEnd(decimals, "0") || "0");
+  const result = Number(negative ? -amount : amount);
+  return Number.isSafeInteger(result) ? result : null;
 }
 
 /** ISO 8601 (or plain YYYY-MM-DD) -> DD.MM.YYYY for display. */

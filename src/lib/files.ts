@@ -8,7 +8,7 @@
 
 import { open } from "@tauri-apps/plugin-dialog";
 
-import { CommandError } from "@/lib/api";
+import { CommandError, webToken } from "@/lib/api";
 
 function inTauri(): boolean {
   return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
@@ -19,6 +19,7 @@ async function uploadFile(file: File): Promise<string> {
   try {
     res = await fetch(`/api/upload?name=${encodeURIComponent(file.name)}`, {
       method: "POST",
+      headers: { "X-Shelfledger-Token": await webToken() },
       body: file,
     });
   } catch (err) {
@@ -54,15 +55,22 @@ export function pickFile(extensions: string[]): Promise<string | null> {
     const input = document.createElement("input");
     input.type = "file";
     input.accept = extensions.map((e) => `.${e}`).join(",");
+    input.hidden = true;
+    document.body.append(input);
+    const cleanup = () => input.remove();
     input.addEventListener("change", () => {
       const file = input.files?.[0] ?? null;
+      cleanup();
       if (!file) {
         resolve(null);
         return;
       }
       uploadFile(file).then(resolve, reject);
     });
-    input.addEventListener("cancel", () => resolve(null));
+    input.addEventListener("cancel", () => {
+      cleanup();
+      resolve(null);
+    });
     input.click();
   });
 }

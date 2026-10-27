@@ -26,7 +26,7 @@ pub fn is_valid_isbn13(s: &str) -> bool {
     let Some(digits) = digits_only(s) else {
         return false;
     };
-    if digits.len() != 13 {
+    if digits.len() != 13 || !s.starts_with("978") && !s.starts_with("979") {
         return false;
     }
     let sum: u32 = digits
@@ -34,7 +34,7 @@ pub fn is_valid_isbn13(s: &str) -> bool {
         .enumerate()
         .map(|(i, &d)| (d as u32) * if i % 2 == 0 { 1 } else { 3 })
         .sum();
-    sum % 10 == 0
+    sum.is_multiple_of(10)
 }
 
 pub fn is_valid_isbn10(s: &str) -> bool {
@@ -59,15 +59,15 @@ pub fn is_valid_isbn10(s: &str) -> bool {
         .enumerate()
         .map(|(i, v)| v * (10 - i as u32))
         .sum();
-    sum % 11 == 0
+    sum.is_multiple_of(11)
 }
 
 /// Convert a *valid* ISBN-10 to its ISBN-13 form (978 prefix).
 pub fn isbn10_to_isbn13(isbn10: &str) -> Option<String> {
-    let digits = digits_only(isbn10)?;
-    if digits.len() != 10 {
+    if !is_valid_isbn10(isbn10) {
         return None;
     }
+    let digits = digits_only(isbn10.get(..9)?)?;
     let mut first12: Vec<u8> = vec![9, 7, 8];
     first12.extend_from_slice(&digits[..9]);
     let sum: u32 = first12

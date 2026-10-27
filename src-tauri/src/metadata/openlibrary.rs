@@ -5,6 +5,7 @@
 //! disabled or the network fails, the UI falls back to manual entry. We never
 //! fabricate values for fields the provider did not return.
 
+use crate::sqlite_db as sqlx;
 use std::sync::OnceLock;
 use std::time::Duration;
 

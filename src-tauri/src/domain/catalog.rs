@@ -1,6 +1,7 @@
 //! Catalog domain services: enforce invariants (valid ISBNs, unique ISBNs,
 //! valid references) before any write, and record activity events.
 
+use crate::sqlite_db as sqlx;
 use sqlx::SqlitePool;
 
 use crate::error::{is_unique_violation, is_unique_violation_sqlx, AppError, AppResult};
@@ -126,6 +127,13 @@ fn normalize_edition_isbns(
             return Err(AppError::Validation(format!(
                 "invalid ISBN-10 (checksum failed): {s}"
             )));
+        }
+    }
+    if let (Some(a), Some(b)) = (&n10, &n13) {
+        if isbn::isbn10_to_isbn13(a).as_ref() != Some(b) {
+            return Err(AppError::Validation(
+                "ISBN-10 and ISBN-13 identify different editions".into(),
+            ));
         }
     }
     let isbn13 = n13.or_else(|| n10.as_deref().and_then(isbn::isbn10_to_isbn13));
@@ -265,6 +273,7 @@ pub async fn create_edition(
     pool: &SqlitePool,
     input: &CreateEditionInput,
 ) -> AppResult<EditionDto> {
+    input.validate().map_err(AppError::Validation)?;
     let (isbn10, isbn13) = normalize_edition_isbns(input.isbn10.as_ref(), input.isbn13.as_ref())?;
     if works::get_work(pool, &input.work_id).await?.is_none() {
         return Err(AppError::NotFound(format!("work {}", input.work_id)));
@@ -347,6 +356,11 @@ pub async fn create_copy(pool: &SqlitePool, input: &CreateCopyInput) -> AppResul
             e
         }
     })?;
+    let work_id: (String,) = sqlx::query_as("SELECT work_id FROM editions WHERE id=?")
+        .bind(&input.edition_id)
+        .fetch_one(&mut *tx)
+        .await?;
+    works::sync_fts(&mut tx, &work_id.0).await?;
     tx.commit().await?;
     record_event(
         pool,
@@ -436,6 +450,78 @@ pub async fn find_duplicates(
         matched.push(id);
     }
     works::get_work_summaries(pool, &matched).await
+}
+
+pub async fn unarchive_copy(pool: &SqlitePool, id: &str) -> AppResult<()> {
+    if !copies::unarchive_copy(pool, id).await? {
+        return Err(AppError::NotFound("archived copy".into()));
+    }
+    record_event(pool, "copy", id, "unarchived", serde_json::json!({})).await
+}
+
+pub async fn update_edition(
+    pool: &SqlitePool,
+    id: &str,
+    input: &CreateEditionInput,
+) -> AppResult<EditionDto> {
+    input.validate().map_err(AppError::Validation)?;
+    let existing = editions::get_edition(pool, id)
+        .await?
+        .ok_or_else(|| AppError::NotFound("edition".into()))?;
+    if existing.work_id != input.work_id {
+        return Err(AppError::Validation(
+            "an edition cannot be moved to another work".into(),
+        ));
+    }
+    let (isbn10, isbn13) = normalize_edition_isbns(input.isbn10.as_ref(), input.isbn13.as_ref())?;
+    crate::repositories::catalog_edits::update_edition(pool, id, input, isbn10, isbn13)
+        .await
+        .map_err(|e| {
+            if let AppError::Database(ref db) = e {
+                if is_unique_violation_sqlx(db) {
+                    return AppError::Conflict("ISBN belongs to another edition".into());
+                }
+            }
+            e
+        })?;
+    record_event(pool, "edition", id, "updated", serde_json::json!({})).await?;
+    editions::get_edition(pool, id)
+        .await?
+        .ok_or_else(|| AppError::NotFound("edition".into()))
+}
+
+pub async fn update_copy_details(
+    pool: &SqlitePool,
+    id: &str,
+    input: &CreateCopyInput,
+) -> AppResult<CopyDto> {
+    input.validate().map_err(AppError::Validation)?;
+    let existing = copies::get_copy(pool, id)
+        .await?
+        .ok_or_else(|| AppError::NotFound("copy".into()))?;
+    if existing.archived_at.is_some() || existing.edition_id != input.edition_id {
+        return Err(AppError::Validation(
+            "cannot move or edit an archived copy".into(),
+        ));
+    }
+    crate::repositories::catalog_edits::update_copy_details(pool, id, input).await?;
+    record_event(pool, "copy", id, "updated", serde_json::json!({})).await?;
+    copies::get_copy(pool, id)
+        .await?
+        .ok_or_else(|| AppError::NotFound("copy".into()))
+}
+
+pub async fn set_work_tags(pool: &SqlitePool, id: &str, tags: &[String]) -> AppResult<()> {
+    if tags.len() > 100 || tags.iter().any(|v| v.trim().is_empty() || v.len() > 100) {
+        return Err(AppError::Validation("invalid tags".into()));
+    }
+    if works::get_work(pool, id).await?.is_none() {
+        return Err(AppError::NotFound("work".into()));
+    }
+    crate::repositories::catalog_edits::set_work_tags(pool, id, tags).await
+}
+pub async fn list_work_tags(pool: &SqlitePool, id: &str) -> AppResult<Vec<String>> {
+    crate::repositories::catalog_edits::list_work_tags(pool, id).await
 }
 
 #[cfg(test)]
@@ -825,8 +911,8 @@ mod tests {
             &UpdateCopyInput {
                 location_id: None,
                 condition_grade: Some("poor".into()),
-                note: Some("water damage".into()),
-                sentimental_score: Some(1),
+                note: Some(Some("water damage".into())),
+                sentimental_score: Some(Some(1)),
             },
         )
         .await

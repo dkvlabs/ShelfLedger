@@ -12,6 +12,7 @@
 //! directory with server-generated names; downloads are restricted to the
 //! `exports/` and `backups/` directories the export commands write to.
 
+use crate::sqlite_db as sqlx;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
@@ -79,6 +80,47 @@ fn ok<T: serde::Serialize>(value: T) -> AppResult<Value> {
 pub async fn dispatch(ctx: &WebCtx, cmd: &str, args: &Value) -> AppResult<Value> {
     let pool = &ctx.pool;
     match cmd {
+        "unarchive_copy" => {
+            ok(domain::catalog::unarchive_copy(pool, &arg::<String>(args, "id")?).await?)
+        }
+        "update_edition" => ok(domain::catalog::update_edition(
+            pool,
+            &arg::<String>(args, "id")?,
+            &arg::<CreateEditionInput>(args, "input")?,
+        )
+        .await?),
+        "update_copy_details" => ok(domain::catalog::update_copy_details(
+            pool,
+            &arg::<String>(args, "id")?,
+            &arg::<CreateCopyInput>(args, "input")?,
+        )
+        .await?),
+        "list_work_tags" => {
+            ok(domain::catalog::list_work_tags(pool, &arg::<String>(args, "id")?).await?)
+        }
+        "set_work_tags" => ok(domain::catalog::set_work_tags(
+            pool,
+            &arg::<String>(args, "id")?,
+            &arg::<Vec<String>>(args, "tags")?,
+        )
+        .await?),
+        "list_libraries" => ok(domain::profiles::list(pool, &ctx.data_dir).await?),
+        "switch_library" => {
+            ok(domain::profiles::switch(pool, &ctx.data_dir, &arg::<String>(args, "id")?).await?)
+        }
+        "preview_import" => ok(commands::data::preview_import_impl(
+            pool,
+            &arg::<String>(args, "path")?,
+            &arg(args, "mapping")?,
+        )
+        .await?),
+        "commit_import" => ok(commands::data::commit_import_impl(
+            pool,
+            &arg::<String>(args, "path")?,
+            &arg(args, "mapping")?,
+            &arg::<ImportCommitInput>(args, "input")?,
+        )
+        .await?),
         // catalog
         "search_works" => {
             ok(commands::catalog::search_works_impl(pool, arg_opt(args, "query")?).await?)
@@ -273,7 +315,10 @@ pub async fn dispatch(ctx: &WebCtx, cmd: &str, args: &Value) -> AppResult<Value>
         "restore_backup" => {
             let archive_path = arg::<String>(args, "archivePath")?;
             let mode = arg::<String>(args, "mode")?;
-            ok(commands::data::restore_backup_impl(&ctx.data_dir, &archive_path, &mode).await?)
+            ok(
+                commands::data::restore_backup_impl(pool, &ctx.data_dir, &archive_path, &mode)
+                    .await?,
+            )
         }
 
         _ => Err(AppError::NotFound(format!("unknown command {cmd:?}"))),
@@ -287,12 +332,85 @@ pub async fn dispatch(ctx: &WebCtx, cmd: &str, args: &Value) -> AppResult<Value>
 pub fn router(ctx: WebCtx) -> Router {
     Router::new()
         .route("/api/health", get(health))
+        .route(
+            "/api/session",
+            get(|| async { Json(json!({"token": session_token()})) }),
+        )
         .route("/api/upload", post(upload))
         .route("/api/download", get(download))
         .route("/api/{command}", post(invoke))
         .fallback(spa)
         .layer(DefaultBodyLimit::max(MAX_BODY_BYTES))
+        .layer(axum::middleware::from_fn(guard_request))
         .with_state(Arc::new(ctx))
+}
+
+fn session_token() -> &'static str {
+    static TOKEN: std::sync::OnceLock<String> = std::sync::OnceLock::new();
+    TOKEN.get_or_init(crate::ids::new_id)
+}
+
+fn trusted_headers(headers: &axum::http::HeaderMap) -> bool {
+    let Some(host) = headers.get(header::HOST).and_then(|v| v.to_str().ok()) else {
+        return false;
+    };
+    let Ok(authority) = host.parse::<axum::http::uri::Authority>() else {
+        return false;
+    };
+    if !matches!(authority.host(), "localhost" | "127.0.0.1" | "[::1]") {
+        return false;
+    }
+    if let Some(origin) = headers.get(header::ORIGIN) {
+        let Ok(origin) = origin.to_str() else {
+            return false;
+        };
+        let same_origin = origin == format!("http://{host}");
+        let development_origin = cfg!(debug_assertions)
+            && matches!(origin, "http://localhost:1420" | "http://127.0.0.1:1420");
+        if !same_origin && !development_origin {
+            return false;
+        }
+    }
+    true
+}
+
+async fn guard_request(request: axum::extract::Request, next: axum::middleware::Next) -> Response {
+    if !trusted_headers(request.headers()) {
+        return StatusCode::FORBIDDEN.into_response();
+    }
+    if request.uri().path().starts_with("/api/") && request.method() == axum::http::Method::POST {
+        if request
+            .headers()
+            .get("x-shelfledger-token")
+            .and_then(|v| v.to_str().ok())
+            != Some(session_token())
+        {
+            return StatusCode::FORBIDDEN.into_response();
+        }
+        if request.uri().path() != "/api/upload"
+            && !request
+                .headers()
+                .get(header::CONTENT_TYPE)
+                .and_then(|v| v.to_str().ok())
+                .is_some_and(|v| v.split(';').next() == Some("application/json"))
+        {
+            return StatusCode::UNSUPPORTED_MEDIA_TYPE.into_response();
+        }
+    }
+    let mut response = next.run(request).await;
+    response
+        .headers_mut()
+        .insert(header::X_CONTENT_TYPE_OPTIONS, "nosniff".parse().unwrap());
+    response
+        .headers_mut()
+        .insert(header::REFERRER_POLICY, "no-referrer".parse().unwrap());
+    response
+        .headers_mut()
+        .insert(header::X_FRAME_OPTIONS, "DENY".parse().unwrap());
+    response
+        .headers_mut()
+        .insert(header::CACHE_CONTROL, "no-store".parse().unwrap());
+    response
 }
 
 /// Start the web version: local database under `data_dir`, loopback HTTP.
@@ -416,7 +534,7 @@ pub(crate) fn sanitize_upload_name(name: &str) -> AppResult<String> {
 
 pub(crate) async fn handle_upload(ctx: &WebCtx, name: &str, body: &[u8]) -> AppResult<String> {
     let safe = sanitize_upload_name(name)?;
-    let dir = ctx.data_dir.join("web-uploads");
+    let dir = crate::paths::write_path(&ctx.data_dir, &ctx.data_dir.join("web-uploads"))?;
     std::fs::create_dir_all(&dir)?;
     let path = dir.join(format!("{}-{}", crate::ids::new_id(), safe));
     std::fs::write(&path, body)?;
@@ -660,7 +778,7 @@ mod tests {
             .await
             .expect("upload");
         let p = PathBuf::from(&path);
-        assert!(p.starts_with(ctx.data_dir.join("web-uploads")));
+        assert!(p.starts_with(ctx.data_dir.canonicalize().unwrap().join("web-uploads")));
         assert!(p
             .file_name()
             .unwrap()
@@ -706,5 +824,70 @@ mod tests {
         assert!(serve_dist(Some(&dir), "/assets/../../Cargo.toml").is_none());
         assert!(serve_dist(None, "/").is_none());
         let _ = std::fs::remove_dir_all(&dir);
+    }
+}
+
+#[cfg(test)]
+mod security_regressions {
+    use super::*;
+    #[tokio::test]
+    async fn http_rejects_untrusted_origin_host_missing_token_and_simple_post() {
+        let root = std::env::temp_dir().join(crate::ids::new_id());
+        std::fs::create_dir_all(&root).unwrap();
+        let pool = crate::db::connect_memory().await.unwrap();
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        let server = tokio::spawn(async move {
+            axum::serve(
+                listener,
+                router(WebCtx {
+                    pool,
+                    data_dir: root.clone(),
+                    dist: None,
+                }),
+            )
+            .await
+            .unwrap()
+        });
+        let client = reqwest::Client::new();
+        let url = format!("http://{addr}/api/get_library_stats");
+        for (origin, host, token, content, status) in [
+            (
+                "https://untrusted.example",
+                addr.to_string(),
+                true,
+                "application/json",
+                403,
+            ),
+            ("", "attacker.example".into(), true, "application/json", 403),
+            ("", addr.to_string(), false, "application/json", 403),
+            ("", addr.to_string(), true, "text/plain", 415),
+            ("", addr.to_string(), true, "application/json", 200),
+        ] {
+            let mut request = client
+                .post(&url)
+                .header("host", host)
+                .header("content-type", content)
+                .body("{}");
+            if !origin.is_empty() {
+                request = request.header("origin", origin);
+            }
+            if token {
+                request = request.header("x-shelfledger-token", session_token());
+            }
+            let response = request.send().await.unwrap();
+            assert_eq!(response.status().as_u16(), status);
+        }
+        let bootstrap = client
+            .get(format!("http://{addr}/api/session"))
+            .send()
+            .await
+            .unwrap();
+        assert_eq!(bootstrap.headers().get("x-frame-options").unwrap(), "DENY");
+        assert_eq!(
+            bootstrap.json::<Value>().await.unwrap()["token"],
+            session_token()
+        );
+        server.abort();
     }
 }

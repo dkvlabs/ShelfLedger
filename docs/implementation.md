@@ -7,28 +7,28 @@ Estimates are planning ranges, not delivery promises.
 
 - [x] Repo skeleton: LICENSE (MIT), README, CONTRIBUTING, CODE_OF_CONDUCT, SECURITY, AGENTS.md
 - [x] Tauri 2 + React + TypeScript + Vite + Tailwind CSS + shadcn/ui
-- [x] Tauri capabilities least-privilege (core only); CSP set
+- [x] Tauri capabilities least-privilege (core, window-specific dialog/devtools); CSP set
 - [x] CI lint/tests workflow (GitHub Actions, macOS/Windows/Linux)
 - [x] Typed DTOs (Rust `models.rs` ↔ `src/types/domain.ts`), migration strategy, currency/date policies
 - [x] Design tokens, docs + ADRs
 
 **Acceptance:** boots locally on macOS (dev); empty local database on first launch;
-offline launch works. (Windows/Linux boot verified in CI.)
+offline launch works. Windows/Linux workflows are configured; this local audit does not certify their execution.
 
 ## Phase 1 — Core catalog and inventory ✅ (2026-10)
 
 - [x] SQLite schema: works, authors, editions, copies, locations, acquisitions (+ settings,
-      metadata cache, tags stub, activity events, FTS5)
+      metadata cache, editable tags, activity events, FTS5)
 - [x] CRUD for works, editions, owned copies (typed Tauri commands)
-- [x] Local search (FTS5 prefix matching) and sorting; cover-grid and table view
+- [x] Local search (FTS5 prefix matching) and sorting; typographic book grid and table view
 - [x] ISBN lookup with cache (Open Library) and manual fallback; offline degrades to manual
 - [x] Duplicate detection by ISBN and title+author with user confirmation
 - [x] Multiple owned copies with locations; purchase amount, currency, date, condition
 
 **Acceptance status:** the data layer and UI support entering many books/copies,
 identifying duplicates, and finding any book by ISBN/title; data persists in the
-app-data SQLite database and survives restarts offline. A scripted 100-book soak test
-and cross-OS manual verification are still open follow-ups.
+app-data SQLite database and survives restarts offline. A scripted 100-book create/reopen/search soak test passes locally. Cross-OS
+manual verification remains a release follow-up.
 
 ## Phase 2 — Reading and loans ✅ (2026-10)
 
@@ -72,7 +72,7 @@ skipped); restore is hash-verified with tamper rejection tested; the app boots
 with no network (lookup is opt-in). Cross-OS packaged install testing still
 requires real release builds — tracked in docs/release.md.
 
-## Phase 5 — Community release ✅ (2026-10, minus artifacts)
+## Phase 5 — Community release ⬜ (release gates pending)
 
 - [x] Repository docs: README, CONTRIBUTING, CODE_OF_CONDUCT, SECURITY, PRIVACY,
       CHANGELOG, issue templates, starter issues list, demo dataset
@@ -81,9 +81,8 @@ requires real release builds — tracked in docs/release.md.
 - [ ] Release artifacts for three OSs with signing/notarization — requires
       platform accounts and keys; see docs/release.md (deliberately not faked)
 
-**Acceptance status:** a new user can install (dev build), create a library,
-import, lend, sell, and back up without a terminal. Signed installers are the
-remaining manual step.
+**Acceptance status:** development users can build, create a library,
+import, lend, sell, and back up without a terminal. Signed installers, cross-OS clean installs and physical-camera checks remain release gates.
 
 
 ## Phase 6 — After feedback ⬜ (non-MVP)
@@ -96,8 +95,8 @@ pulled forward on request — see below).
 Scope beyond the original plan, implemented on explicit request:
 
 - [x] ISBN barcode scanning in Add Book — camera where the platform offers it,
-      photo scanning everywhere (incl. the macOS webview, which has no camera
-      API), USB/Bluetooth scanner input, manual fallback. Web-API-only
+      photo scanning where camera access is unavailable, USB/Bluetooth
+      scanner input, manual fallback. Web-API-only
       decoding (`BarcodeDetector` → pure-JS ZXing), checksum-validated ISBN
       extraction (plan Phase 6 item, pulled forward).
 - [x] Web version: the same Rust core served to a browser over loopback HTTP
@@ -105,6 +104,11 @@ Scope beyond the original plan, implemented on explicit request:
       `domain/` layer with the Tauri commands). See docs/web.md.
 - [x] Original app icon (`app-icon.svg` → full platform icon set) replacing the
       Tauri template icons.
+- [x] Camera access recovery: macOS camera purpose/signing declarations,
+      platform consent prompts, video-only requests, permission guidance and
+      retry, missing/busy camera messages, and camera cleanup on close.
+      Permission and lifecycle behavior is covered by frontend tests; physical
+      camera access in packaged builds still requires a device smoke test.
 
 **Acceptance status:** scanning decodes EAN-13/ISBN-10 and rejects non-book
 barcodes (unit-tested); the web version round-trips add-book → search over
@@ -122,4 +126,16 @@ at 512 px and 32 px. One pre-existing bug found and fixed along the way:
 | Search (FTS prefix, injection-safe queries) | ✅ Rust tests |
 | Locations (hierarchy, parent protection, unknown parent) | ✅ Rust tests |
 | Copies (acquisition, archive, update) | ✅ Rust tests |
-| Reading / Lending / Valuation / Import / Backup / E2E | ⬜ with their phases |
+| Reading / Lending / Valuation / Import / Backup | Rust domain and public-command regressions |
+| Browser workflows | Manual desktop/mobile verification; see audit-remediation.md |
+
+## Audit remediation and redesign — 27.10.2026
+
+The October audit found real gaps behind the phase completion markers. The current
+implementation adds lossless snapshots, live-pool restore, separate libraries,
+transactional import staging and row logs, request/path protection, deterministic
+financial reporting, safe copy patches and search refresh, complete catalog and
+reading editors, and a cinematic responsive collection interface. See
+[audit-remediation.md](audit-remediation.md) for the finding-by-finding disposition,
+validation evidence and remaining upstream/release limitations. Phase markers are
+implementation summaries, not proof of packaging or acceptance on every OS.

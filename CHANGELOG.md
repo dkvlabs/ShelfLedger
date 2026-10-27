@@ -6,6 +6,26 @@ All notable changes to ShelfLedger are documented here. Format follows
 
 ## [Unreleased]
 
+### Added — audit remediation and cinematic redesign (2026-10-27)
+- Ink, copper and ivory interface with bundled literary typography, original
+  atmospheric artwork, collection-first navigation and responsive layouts.
+- Work/edition/copy and reading-session editors, tags, archived history with
+  restoration, complete import review/mapping/row outcomes, and library profiles.
+- Versioned logical JSON snapshots preserving catalog, reading, lending and
+  financial history; regression coverage for complete interchange and live restore.
+
+### Fixed — audit remediation (2026-10-27)
+- Live WAL restore and consistent safety backups; app-data confinement and safe
+  temporary paths; atomic import rows and accurate result counts.
+- Web request-origin, Host, content-type and session-token protection.
+- Goodreads reviews/shelves/unknown dates; search-index lifecycle updates;
+  nullable patches; Rust-side date, ISBN, money and relationship validation.
+- Same-date valuations, disposal/listing transitions and per-currency dashboard
+  totals; currency-specific input/display scales; reading/lending dead ends.
+- EN/RO product copy, system-theme tracking, import-file handoff and record
+  identity in inventory dialogs. Updated dependency and toolchain declarations.
+- See `docs/audit-remediation.md` for evidence and remaining release limitations.
+
 ### Added — user-requested follow-ups (2026-10-27)
 - ISBN barcode scanning in Add Book: live camera where available, photo
   scanning everywhere, USB/Bluetooth scanner input, checksum-validated

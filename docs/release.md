@@ -12,10 +12,15 @@ in this repository; this checklist captures the manual steps per release.
 
 ## 2. Build artifacts
 
-- [ ] `pnpm tauri build` on macOS, Windows, and Linux (CI `tauri-build` job proves all three compile; release artifacts should be built on each native OS).
+- [ ] `pnpm tauri build` on macOS, Windows, and Linux (the `tauri-build` job is configured for all three; inspect its actual results before release).
 - [ ] macOS: sign with Developer ID and **notarize** (`tauri.conf.json` updater/signing config); keep the signing key in CI secrets or a local keychain — never in the repo.
 - [ ] Windows: sign the installer with an Authenticode certificate if available.
 - [ ] Linux: publish AppImage/deb; consider the flathub route later.
+- [ ] Camera scanning in each packaged app: verify first-use consent, denied
+      access guidance, retry after allowing access, and camera release on close.
+      On macOS, confirm the bundle includes `NSCameraUsageDescription` and the
+      signed app includes `com.apple.security.device.camera`. Where the webview
+      does not expose camera capture, verify the photo fallback.
 - [ ] Optional: enable the signed Tauri updater (minisign key pair; public key committed, private key in secrets).
 
 ## 3. Publish
@@ -29,3 +34,22 @@ in this repository; this checklist captures the manual steps per release.
 
 - [ ] SECURITY.md points at a live private-reporting channel.
 - [ ] Tag `good first issue` / `help wanted` starter issues for new contributors.
+
+
+## Local audit verification (27.10.2026)
+
+See `audit-remediation.md` for the 24-finding register and test evidence. Local
+checks pass: 88 Rust tests, 59 frontend tests, strict frontend production build,
+Clippy, and a macOS `.app` bundle. These do not check off the cross-platform,
+clean-machine or physical-camera release gates above.
+
+macOS builds default to the ad-hoc identity `-`, which embeds the camera
+entitlement without private credentials. For distribution, override
+`bundle.macOS.signingIdentity` with your Developer ID identity in a local/CI
+Tauri configuration and perform notarization. Verify the produced signature and
+`NSCameraUsageDescription` before testing consent on a real camera. Ad-hoc
+signing is not Developer ID signing or notarization.
+
+The JavaScript advisory scan reports zero vulnerabilities; the Rust scan has
+zero vulnerability matches but retains the glib unsoundness and proc-macro-error
+maintenance warnings described in the remediation register. Do not hide them.

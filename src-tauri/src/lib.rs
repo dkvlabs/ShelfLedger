@@ -1,3 +1,4 @@
+use crate::sqlite_db as sqlx;
 mod commands;
 mod db;
 mod domain;
@@ -7,7 +8,9 @@ mod isbn;
 mod metadata;
 mod models;
 mod money;
+mod paths;
 mod repositories;
+mod sqlite_db;
 pub mod web;
 
 use tauri::Manager;
@@ -20,6 +23,8 @@ pub struct AppState {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        // Preserve the platform's consent prompt rather than granting webview capture.
+        .on_permission_request(|_, _| tauri::webview::PermissionResponse::Default)
         .setup(|app| {
             let handle = app.handle().clone();
             tauri::async_runtime::block_on(async move {
@@ -36,6 +41,15 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            commands::catalog::unarchive_copy,
+            commands::catalog::update_edition,
+            commands::catalog::update_copy_details,
+            commands::catalog::list_work_tags,
+            commands::catalog::set_work_tags,
+            commands::data::preview_import,
+            commands::data::commit_import,
+            commands::data::list_libraries,
+            commands::data::switch_library,
             commands::catalog::search_works,
             commands::catalog::get_work,
             commands::catalog::add_book,
@@ -88,3 +102,6 @@ pub fn run() {
         .run(tauri::generate_context!())
         .expect("error while running ShelfLedger");
 }
+
+#[cfg(test)]
+mod audit_regressions;

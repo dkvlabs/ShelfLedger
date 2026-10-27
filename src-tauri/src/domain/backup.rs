@@ -2,6 +2,7 @@
 //! validated restore. Backups use SQLite's `VACUUM INTO` (crash-safe snapshot,
 //! not a naive live WAL copy) plus a hashed manifest in a zip archive.
 
+use crate::sqlite_db as sqlx;
 use std::str::FromStr;
 
 use serde::Serialize;
@@ -112,13 +113,13 @@ pub async fn create_backup(
     std::fs::create_dir_all(parent)?;
 
     // Crash-safe snapshot into a sibling temp file.
-    let snapshot = output_path.with_extension("snapshot.db");
-    let _ = std::fs::remove_file(&snapshot);
+    let snapshot = parent.join(format!("snapshot-{}.db", crate::ids::new_id()));
     let snapshot_str = snapshot
         .to_str()
         .ok_or_else(|| AppError::Validation("invalid snapshot path".into()))?
         .to_string();
-    sqlx::query(&format!("VACUUM INTO '{snapshot_str}'"))
+    sqlx::query("VACUUM INTO ?")
+        .bind(&snapshot_str)
         .execute(pool)
         .await?;
 
@@ -154,7 +155,10 @@ pub async fn create_backup(
 
     // Zip everything up (zip-slip is not applicable: we only write two fixed
     // entry names, never entries read from the archive here).
-    let file = std::fs::File::create(output_path)?;
+    let file = std::fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(output_path)?;
     let mut zip = zip::ZipWriter::new(file);
     let options: zip::write::SimpleFileOptions = zip::write::SimpleFileOptions::default();
     zip.start_file(BACKUP_DB_NAME, options)
@@ -172,9 +176,10 @@ pub async fn create_backup(
 }
 
 /// Validate a backup archive against the manifest and database integrity,
-/// then place the database. `replace` swaps the live database file (the app
-/// must restart to pick it up); `separate` restores alongside as a new file.
+/// then transactionally replace records on the live pool, or save a separate
+/// selectable profile. The live database/WAL files are never overwritten.
 pub async fn restore_archive(
+    pool: &SqlitePool,
     live_db_path: &std::path::Path,
     archive_path: &std::path::Path,
     mode: &str,
@@ -203,10 +208,13 @@ pub async fn restore_archive(
     }
 
     // Extract to a temp file and run migrations + integrity check there.
-    let work_dir = std::env::temp_dir().join(format!(
-        "shelfledger-restore-{}",
-        chrono::Utc::now().timestamp_millis()
-    ));
+    if !matches!(mode, "replace" | "separate") {
+        return Err(AppError::Validation("unknown restore mode".into()));
+    }
+    let work_dir = live_db_path
+        .parent()
+        .ok_or_else(|| AppError::Validation("invalid library path".into()))?
+        .join(format!("restore-{}", crate::ids::new_id()));
     std::fs::create_dir_all(&work_dir)?;
     let restored_path = work_dir.join(BACKUP_DB_NAME);
     std::fs::write(&restored_path, &db_bytes)?;
@@ -227,39 +235,34 @@ pub async fn restore_archive(
     }
     // Forward migrations are safe; anything older is upgraded.
     crate::db::MIGRATOR.run(&verify_pool).await?;
+    let snapshot = crate::repositories::snapshot::export(&verify_pool).await?;
     verify_pool.close().await;
 
     let result = match mode {
         "replace" => {
-            // Keep the current database as a safety copy, then swap in the
-            // restored one. The app restarts to reopen it.
-            let stamp = chrono::Utc::now().format("%Y%m%d-%H%M%S");
-            let safety = live_db_path.with_extension(format!("pre-restore-{stamp}.db"));
-            if live_db_path.exists() {
-                std::fs::copy(live_db_path, &safety)?;
-            }
-            // WAL sidecars must go with the old file, not the new one.
-            for suffix in ["-wal", "-shm"] {
-                let sidecar = live_db_path.with_extension(format!("db{suffix}"));
-                let _ = std::fs::remove_file(sidecar);
-            }
-            std::fs::copy(&restored_path, live_db_path)?;
+            let safety =
+                live_db_path.with_extension(format!("pre-restore-{}.zip", crate::ids::new_id()));
+            create_backup(pool, live_db_path, &safety).await?;
+            crate::repositories::snapshot::apply(pool, &snapshot, true).await?;
             crate::models::RestoreResult {
                 message: format!(
-                    "Library restored. Your previous database was kept at {}.",
+                    "Library restored. Previous library saved at {}.",
                     safety.display()
                 ),
-                requires_restart: true,
+                requires_restart: false,
             }
         }
         "separate" => {
-            let target = live_db_path.with_extension(format!(
-                "restored-{}.db",
-                chrono::Utc::now().format("%Y%m%d-%H%M%S")
-            ));
-            std::fs::copy(&restored_path, &target)?;
+            let root = live_db_path.parent().unwrap();
+            let dir = crate::paths::write_path(root, &root.join("profiles"))?;
+            std::fs::create_dir_all(&dir)?;
+            let target = dir.join(format!("{}.json", crate::ids::new_id()));
+            std::fs::write(&target, serde_json::to_vec_pretty(&snapshot)?)?;
             crate::models::RestoreResult {
-                message: format!("Restored as a separate library at {}.", target.display()),
+                message: format!(
+                    "Restored a separate library. Open it in Settings → Libraries. Saved at {}.",
+                    target.display()
+                ),
                 requires_restart: false,
             }
         }
@@ -474,7 +477,6 @@ mod tests {
         let archive = dir.join("backup.zip");
         let pool = connect(&db_path).await.unwrap();
         create_backup(&pool, &db_path, &archive).await.unwrap();
-        pool.close().await;
 
         // Corrupt detection: tampered archive must be rejected.
         let tampered = dir.join("tampered.zip");
@@ -482,7 +484,7 @@ mod tests {
         let len = bytes.len();
         bytes[len - 3] ^= 0xFF; // flip a manifest byte
         std::fs::write(&tampered, &bytes).unwrap();
-        let err = restore_archive(&db_path, &tampered, "replace")
+        let err = restore_archive(&pool, &db_path, &tampered, "replace")
             .await
             .unwrap_err();
         assert!(
@@ -491,10 +493,10 @@ mod tests {
         );
 
         // Legit restore restores the work.
-        let result = restore_archive(&db_path, &archive, "replace")
+        let result = restore_archive(&pool, &db_path, &archive, "replace")
             .await
             .unwrap();
-        assert!(result.requires_restart);
+        assert!(!result.requires_restart);
         let pool = connect(&db_path).await.unwrap();
         let summaries = crate::repositories::works::list_work_summaries(&pool)
             .await

@@ -1,3 +1,4 @@
+import { useT } from "@/lib/i18n";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
@@ -41,6 +42,7 @@ export default function AddCopyDialog({
   onOpenChange: (open: boolean) => void;
   editions: EditionDto[];
 }) {
+  const tx = useT();
   const queryClient = useQueryClient();
   const [editionId, setEditionId] = useState<string>(editions[0]?.id ?? "");
   const [conditionGrade, setConditionGrade] = useState("good");
@@ -62,15 +64,19 @@ export default function AddCopyDialog({
     enabled: open,
   });
   const currency =
-    (settings?.["preferences"] as { currency?: string } | undefined)?.currency ?? "RON";
+    (settings?.["preferences"] as { currency?: string } | undefined)
+      ?.currency ?? "RON";
 
   const save = useMutation({
     mutationFn: async () => {
-      const targetEdition = editions.find((e) => e.id === editionId) ?? editions[0];
+      const targetEdition =
+        editions.find((e) => e.id === editionId) ?? editions[0];
       if (!targetEdition) {
         throw new CommandError("validation", "This work has no edition yet.");
       }
-      const priceMinor = price.trim() ? parseMoneyToMinor(price) : null;
+      const priceMinor = price.trim()
+        ? parseMoneyToMinor(price, currency)
+        : null;
       if (price.trim() && priceMinor === null) {
         throw new CommandError("validation", `Could not parse price: ${price}`);
       }
@@ -82,7 +88,13 @@ export default function AddCopyDialog({
         acquiredAt: acquiredAt || null,
         acquisition:
           priceMinor !== null
-            ? { priceMinor, currency, acquiredAt: acquiredAt || null, acquisitionType, store: store.trim() || null }
+            ? {
+                priceMinor,
+                currency,
+                acquiredAt: acquiredAt || null,
+                acquisitionType,
+                store: store.trim() || null,
+              }
             : null,
       });
     },
@@ -102,15 +114,17 @@ export default function AddCopyDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Add copy</DialogTitle>
+          <DialogTitle>{tx("Add copy")}</DialogTitle>
           <DialogDescription>
-            Record another physical copy of this work with its condition and purchase details.
+            {tx(
+              "Record another physical copy of this work with its condition and purchase details.",
+            )}
           </DialogDescription>
         </DialogHeader>
         <div className="grid grid-cols-2 gap-3">
           {editions.length > 1 && (
             <div className="col-span-2 space-y-1">
-              <Label htmlFor="edition">Edition</Label>
+              <Label htmlFor="edition">{tx("Edition")}</Label>
               <Select value={editionId} onValueChange={setEditionId}>
                 <SelectTrigger id="edition">
                   <SelectValue />
@@ -118,7 +132,8 @@ export default function AddCopyDialog({
                 <SelectContent>
                   {editions.map((e) => (
                     <SelectItem key={e.id} value={e.id}>
-                      {e.publisher ?? "Unknown"} {e.isbn13 ? `(${e.isbn13})` : "(no ISBN)"}
+                      {e.publisher ?? tx("Unknown")}{" "}
+                      {e.isbn13 ? `(${e.isbn13})` : tx("(no ISBN)")}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -126,7 +141,7 @@ export default function AddCopyDialog({
             </div>
           )}
           <div className="space-y-1">
-            <Label htmlFor="copy-condition">Condition</Label>
+            <Label htmlFor="copy-condition">{tx("Condition")}</Label>
             <Select value={conditionGrade} onValueChange={setConditionGrade}>
               <SelectTrigger id="copy-condition">
                 <SelectValue />
@@ -134,30 +149,34 @@ export default function AddCopyDialog({
               <SelectContent>
                 {CONDITION_GRADES.map((g) => (
                   <SelectItem key={g} value={g}>
-                    {CONDITION_LABELS[g]}
+                    {tx(CONDITION_LABELS[g])}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
           <div className="space-y-1">
-            <Label htmlFor="copy-location">Location</Label>
-            <Select value={locationId || "none"} onValueChange={(v) => setLocationId(v === "none" ? "" : v)}>
+            <Label htmlFor="copy-location">{tx("Location")}</Label>
+            <Select
+              value={locationId || "none"}
+              onValueChange={(v) => setLocationId(v === "none" ? "" : v)}
+            >
               <SelectTrigger id="copy-location">
-                <SelectValue placeholder="Not set" />
+                <SelectValue placeholder={tx("Not set")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="none">Not set</SelectItem>
+                <SelectItem value="none">{tx("Not set")}</SelectItem>
                 {(locations ?? []).map((l) => (
                   <SelectItem key={l.id} value={l.id}>
-                    {l.name} ({LOCATION_LABELS[l.type] ?? LOCATION_TYPES[0]})
+                    {l.name} ({tx(LOCATION_LABELS[l.type] ?? LOCATION_TYPES[0])}
+                    )
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
           <div className="space-y-1">
-            <Label htmlFor="copy-acqType">Acquisition</Label>
+            <Label htmlFor="copy-acqType">{tx("Acquisition")}</Label>
             <Select value={acquisitionType} onValueChange={setAcquisitionType}>
               <SelectTrigger id="copy-acqType">
                 <SelectValue />
@@ -165,23 +184,41 @@ export default function AddCopyDialog({
               <SelectContent>
                 {ACQUISITION_TYPES.map((t) => (
                   <SelectItem key={t} value={t}>
-                    {ACQUISITION_LABELS[t]}
+                    {tx(ACQUISITION_LABELS[t])}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
           <div className="space-y-1">
-            <Label htmlFor="copy-acquiredAt">Acquired on</Label>
-            <Input id="copy-acquiredAt" type="date" value={acquiredAt} onChange={(e) => setAcquiredAt(e.target.value)} />
+            <Label htmlFor="copy-acquiredAt">{tx("Acquired on")}</Label>
+            <Input
+              id="copy-acquiredAt"
+              type="date"
+              value={acquiredAt}
+              onChange={(e) => setAcquiredAt(e.target.value)}
+            />
           </div>
           <div className="space-y-1">
-            <Label htmlFor="copy-price">Purchase price ({currency})</Label>
-            <Input id="copy-price" inputMode="decimal" placeholder="0.00" value={price} onChange={(e) => setPrice(e.target.value)} />
+            <Label htmlFor="copy-price">
+              {tx("Purchase price (")}
+              {currency})
+            </Label>
+            <Input
+              id="copy-price"
+              inputMode="decimal"
+              placeholder="0.00"
+              value={price}
+              onChange={(e) => setPrice(e.target.value)}
+            />
           </div>
           <div className="space-y-1">
-            <Label htmlFor="copy-store">Store / seller</Label>
-            <Input id="copy-store" value={store} onChange={(e) => setStore(e.target.value)} />
+            <Label htmlFor="copy-store">{tx("Store / seller")}</Label>
+            <Input
+              id="copy-store"
+              value={store}
+              onChange={(e) => setStore(e.target.value)}
+            />
           </div>
           {error && (
             <p role="alert" className="col-span-2 text-sm text-destructive">
@@ -191,10 +228,14 @@ export default function AddCopyDialog({
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
+            {tx("Cancel")}
           </Button>
-          <Button disabled={save.isPending || editions.length === 0} onClick={() => save.mutate()}>
-            {save.isPending && <Loader2 className="animate-spin" />} Save copy
+          <Button
+            disabled={save.isPending || editions.length === 0}
+            onClick={() => save.mutate()}
+          >
+            {save.isPending && <Loader2 className="animate-spin" />}{" "}
+            {tx("Save copy")}
           </Button>
         </DialogFooter>
       </DialogContent>

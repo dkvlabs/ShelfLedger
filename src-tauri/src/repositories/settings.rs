@@ -1,5 +1,6 @@
 //! Key/value local preferences stored as JSON.
 
+use crate::sqlite_db as sqlx;
 use serde_json::Value;
 use sqlx::SqlitePool;
 

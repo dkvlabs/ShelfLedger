@@ -2,6 +2,7 @@
 //! generic JSON import used for portable exports and the demo dataset.
 //! No Goodreads API, no scraping — the user brings their own exported file.
 
+use crate::sqlite_db as sqlx;
 use serde::Deserialize;
 use sqlx::SqlitePool;
 
@@ -40,8 +41,10 @@ fn parse_goodreads_date(raw: &str) -> Option<String> {
     if let Ok(d) = chrono::NaiveDate::parse_from_str(s, "%Y/%m/%d") {
         return Some(d.to_string());
     }
-    if chrono::NaiveDate::parse_from_str(&s[..s.len().min(10)], "%Y-%m-%d").is_ok() {
-        return Some(s[..10].to_string());
+    for format in ["%Y-%m-%d", "%d.%m.%Y"] {
+        if let Ok(d) = chrono::NaiveDate::parse_from_str(s.get(..10).unwrap_or(s), format) {
+            return Some(d.to_string());
+        }
     }
     None
 }
@@ -65,12 +68,18 @@ pub fn preview_goodreads_csv(csv_text: &str) -> AppResult<ImportPreview> {
 
         let title = field("Title").unwrap_or("").to_string();
         let author = field("Author").unwrap_or("").to_string();
-        let raw_isbn = field("ISBN").or_else(|| field("ISBN13")).unwrap_or("");
+        let raw_isbn = field("ISBN13")
+            .filter(|v| isbn::parse(&clean_isbn(v)).is_some())
+            .or_else(|| field("ISBN"))
+            .or_else(|| field("ISBN13"))
+            .unwrap_or("");
         let cleaned = clean_isbn(raw_isbn);
         let parsed_isbn = (!cleaned.is_empty())
             .then(|| isbn::parse(&cleaned))
             .flatten();
-        let shelf = field("Bookshelves").map(str::to_string);
+        let shelf = field("Exclusive Shelf")
+            .or_else(|| field("Bookshelves"))
+            .map(str::to_string);
         let rating = field("My Rating")
             .and_then(|r| r.parse::<i64>().ok())
             .filter(|r| (0..=5).contains(r));
@@ -100,6 +109,16 @@ pub fn preview_goodreads_csv(csv_text: &str) -> AppResult<ImportPreview> {
             shelf,
             rating,
             date_read,
+            review: field("My Review").map(str::to_string),
+            tags: field("Bookshelves")
+                .unwrap_or("")
+                .split(',')
+                .map(str::trim)
+                .filter(|v| {
+                    !v.is_empty() && !matches!(*v, "read" | "to-read" | "currently-reading")
+                })
+                .map(str::to_string)
+                .collect(),
             warnings,
             duplicate_of: None,
         });
@@ -144,7 +163,24 @@ pub async fn commit_goodreads_csv(
 ) -> AppResult<ImportResult> {
     let csv_text = std::fs::read_to_string(csv_path)
         .map_err(|e| AppError::Validation(format!("could not read import file: {e}")))?;
-    let preview = preview_goodreads_csv(&csv_text)?;
+    commit_csv_text(pool, &csv_text, input).await
+}
+pub async fn commit_csv_text(
+    pool: &SqlitePool,
+    csv_text: &str,
+    input: &ImportCommitInput,
+) -> AppResult<ImportResult> {
+    if !matches!(
+        input.duplicate_policy.as_str(),
+        "skip" | "add_copy" | "new_work"
+    ) || input
+        .row_policies
+        .values()
+        .any(|v| !matches!(v.as_str(), "skip" | "add_copy" | "new_work"))
+    {
+        return Err(AppError::Validation("invalid duplicate policy".into()));
+    }
+    let preview = preview_goodreads_csv(csv_text)?;
     let preview = annotate_duplicates(pool, preview).await?;
 
     let job_id = ids::new_id();
@@ -155,6 +191,7 @@ pub async fn commit_goodreads_csv(
         .await?;
 
     let mut result = ImportResult {
+        rows: Vec::new(),
         imported_works: 0,
         imported_editions: 0,
         imported_copies: 0,
@@ -172,10 +209,24 @@ pub async fn commit_goodreads_csv(
             .any(|w| w.contains("row will be skipped"))
         {
             result.skipped += 1;
+            result.rows.push(crate::models::ImportRowResult {
+                row_number: row.row_number,
+                status: "skipped".into(),
+                message: Some(row.warnings.join("; ")),
+            });
             continue;
         }
         match import_one_row(pool, row, input).await {
             Ok((work_created, edition_created, copy_created)) => {
+                let skipped = !work_created && !edition_created && !copy_created;
+                result.rows.push(crate::models::ImportRowResult {
+                    row_number: row.row_number,
+                    status: if skipped { "skipped" } else { "imported" }.into(),
+                    message: None,
+                });
+                if skipped {
+                    result.skipped += 1;
+                }
                 if work_created {
                     result.imported_works += 1;
                 }
@@ -187,7 +238,13 @@ pub async fn commit_goodreads_csv(
                 }
             }
             Err(e) => {
+                result.rows.push(crate::models::ImportRowResult {
+                    row_number: row.row_number,
+                    status: "failed".into(),
+                    message: Some(e.to_string()),
+                });
                 result.errors.push(format!("row {}: {}", row.row_number, e));
+                result.skipped += 1;
             }
         }
     }
@@ -209,7 +266,7 @@ pub async fn commit_goodreads_csv(
 /// Creates a reading session from shelf/rating when present; never fabricates
 /// dates. Duplicate policy: "skip" drops the row, "add_copy" attaches a copy
 /// to the existing edition, "new_work" creates a fresh work.
-async fn import_one_row(
+async fn import_one_row_staged(
     pool: &SqlitePool,
     row: &ImportRowPreview,
     input: &ImportCommitInput,
@@ -230,7 +287,12 @@ async fn import_one_row(
     let mut copy_created = false;
 
     let (work_id, edition_id) = if let Some(existing) = dup.first() {
-        match input.duplicate_policy.as_str() {
+        match input
+            .row_policies
+            .get(&row.row_number)
+            .unwrap_or(&input.duplicate_policy)
+            .as_str()
+        {
             "skip" => return Ok((false, false, false)),
             "add_copy" => {
                 // Merge-as-copy: attach to the edition that matches the ISBN,
@@ -302,28 +364,31 @@ async fn import_one_row(
                     &crate::models::CreateReadingSessionInput {
                         work_id: work_id.clone(),
                         edition_id: edition_for_session.clone(),
-                        status: status.to_string(),
-                        started_at: (status == "reading").then(ids::now_iso),
+                        status: status.into(),
+                        started_at: None,
                     },
                 )
                 .await?;
-                if status == "finished" {
-                    crate::domain::reading::update_session(
-                        pool,
-                        &session.id,
-                        &crate::models::UpdateReadingSessionInput {
-                            status: None,
-                            started_at: None,
-                            finished_at: row.date_read.clone(),
-                            rating: row.rating,
-                            review: None,
-                        },
-                    )
-                    .await?;
-                }
+                sqlx::query("UPDATE reading_sessions SET started_at=NULL, finished_at=?, rating=?, review=? WHERE id=?")
+                    .bind(if status=="finished" { row.date_read.as_deref() } else { None })
+                    .bind(row.rating).bind(&row.review).bind(&session.id).execute(pool).await?;
             }
         }
     }
+    for name in &row.tags {
+        sqlx::query("INSERT INTO tags (id,name) VALUES (?,?) ON CONFLICT(name) DO NOTHING")
+            .bind(ids::new_id())
+            .bind(name)
+            .execute(pool)
+            .await?;
+        sqlx::query("INSERT OR IGNORE INTO work_tags SELECT ?,id FROM tags WHERE name=?")
+            .bind(&work_id)
+            .bind(name)
+            .execute(pool)
+            .await?;
+    }
+    let mut conn = pool.acquire().await?;
+    crate::repositories::works::sync_fts(&mut conn, &work_id).await?;
     Ok((work_created, edition_created, copy_created))
 }
 
@@ -340,7 +405,7 @@ async fn create_work_and_edition(
             description: None,
             author_names: row
                 .author
-                .split(',')
+                .split(';')
                 .map(|s| s.trim().to_string())
                 .filter(|s| !s.is_empty())
                 .collect(),
@@ -366,7 +431,24 @@ async fn create_work_and_edition(
         .await
         {
             Ok(e) => Some(e.id),
-            Err(AppError::Conflict(_)) => None, // raced with another row
+            Err(AppError::Conflict(_)) => {
+                let mut manual = crate::models::CreateEditionInput {
+                    work_id: detail.work.id.clone(),
+                    isbn10: None,
+                    isbn13: None,
+                    publisher: None,
+                    published_at: None,
+                    language: None,
+                    page_count: None,
+                    binding: None,
+                };
+                manual.isbn13 = None;
+                Some(
+                    crate::domain::catalog::create_edition(pool, &manual)
+                        .await?
+                        .id,
+                )
+            }
             Err(e) => return Err(e),
         }
     } else {
@@ -416,9 +498,6 @@ pub struct JsonCopy {
     pub currency: Option<String>,
     pub store: Option<String>,
     pub acquisition_type: Option<String>,
-    /// Location is matched against existing locations in later UI work; the
-    /// demo dataset carries it for fidelity.
-    #[allow(dead_code)]
     pub location_name: Option<String>,
     pub note: Option<String>,
     pub sentimental_score: Option<i64>,
@@ -429,6 +508,7 @@ pub struct JsonCopy {
 pub struct JsonWork {
     pub title: String,
     pub subtitle: Option<String>,
+    pub description: Option<String>,
     #[serde(default)]
     pub author_names: Vec<String>,
     pub original_language: Option<String>,
@@ -439,6 +519,23 @@ pub struct JsonWork {
 /// Import a JSON library snapshot. Rows are committed per-work; a failing work
 /// is reported and skipped, never silently dropped.
 pub async fn import_json(pool: &SqlitePool, json_text: &str) -> AppResult<ImportResult> {
+    if json_text.trim_start().starts_with('{') {
+        let snapshot: crate::repositories::snapshot::Snapshot = serde_json::from_str(json_text)
+            .map_err(|e| AppError::Validation(format!("invalid snapshot: {e}")))?;
+        let before = crate::repositories::snapshot::export(pool).await?;
+        crate::repositories::snapshot::apply(pool, &snapshot, false).await?;
+        let after = crate::repositories::snapshot::export(pool).await?;
+        let delta =
+            |table: &str| after.tables[table].len() as i64 - before.tables[table].len() as i64;
+        return Ok(ImportResult {
+            rows: vec![],
+            imported_works: delta("works"),
+            imported_editions: delta("editions"),
+            imported_copies: delta("copies"),
+            skipped: 0,
+            errors: vec![],
+        });
+    }
     let works: Vec<JsonWork> = serde_json::from_str(json_text)
         .map_err(|e| AppError::Validation(format!("invalid import JSON: {e}")))?;
 
@@ -450,6 +547,7 @@ pub async fn import_json(pool: &SqlitePool, json_text: &str) -> AppResult<Import
         .await?;
 
     let mut result = ImportResult {
+        rows: Vec::new(),
         imported_works: 0,
         imported_editions: 0,
         imported_copies: 0,
@@ -460,11 +558,25 @@ pub async fn import_json(pool: &SqlitePool, json_text: &str) -> AppResult<Import
     for (i, work) in works.into_iter().enumerate() {
         match import_json_work(pool, work).await {
             Ok((w, e, c)) => {
+                let skipped = !w && e == 0 && c == 0;
+                result.rows.push(crate::models::ImportRowResult {
+                    row_number: i + 1,
+                    status: if skipped { "skipped" } else { "imported" }.into(),
+                    message: None,
+                });
+                if skipped {
+                    result.skipped += 1;
+                }
                 result.imported_works += w as i64;
                 result.imported_editions += e as i64;
                 result.imported_copies += c as i64;
             }
             Err(err) => {
+                result.rows.push(crate::models::ImportRowResult {
+                    row_number: i + 1,
+                    status: "failed".into(),
+                    message: Some(err.to_string()),
+                });
                 result.errors.push(format!("work {}: {}", i + 1, err));
                 result.skipped += 1;
             }
@@ -480,7 +592,10 @@ pub async fn import_json(pool: &SqlitePool, json_text: &str) -> AppResult<Import
     Ok(result)
 }
 
-async fn import_json_work(pool: &SqlitePool, work: JsonWork) -> AppResult<(bool, usize, usize)> {
+async fn import_json_work_staged(
+    pool: &SqlitePool,
+    work: JsonWork,
+) -> AppResult<(bool, usize, usize)> {
     if work.title.trim().is_empty() {
         return Err(AppError::Validation("missing title".into()));
     }
@@ -505,7 +620,7 @@ async fn import_json_work(pool: &SqlitePool, work: JsonWork) -> AppResult<(bool,
             title: work.title,
             subtitle: work.subtitle,
             original_language: work.original_language,
-            description: None,
+            description: work.description,
             author_names: work.author_names,
         },
     )
@@ -535,7 +650,36 @@ async fn import_json_work(pool: &SqlitePool, work: JsonWork) -> AppResult<(bool,
         };
         edition_count += 1;
         for copy in edition.copies {
-            if copy.condition_grade.is_some() || copy.price_minor.is_some() {
+            let location_id = if let Some(name) = copy
+                .location_name
+                .as_deref()
+                .filter(|v| !v.trim().is_empty())
+            {
+                let found: Option<(String,)> =
+                    sqlx::query_as("SELECT id FROM locations WHERE name=?")
+                        .bind(name.trim())
+                        .fetch_optional(pool)
+                        .await?;
+                Some(match found {
+                    Some((id,)) => id,
+                    None => {
+                        crate::repositories::locations::insert_location(
+                            pool,
+                            &crate::models::CreateLocationInput {
+                                name: name.trim().into(),
+                                kind: "shelf".into(),
+                                parent_id: None,
+                                sort_order: None,
+                            },
+                        )
+                        .await?
+                        .id
+                    }
+                })
+            } else {
+                None
+            };
+            {
                 // Clone up front: the acquisition reuses these fields.
                 let acquired_at = copy.acquired_at.clone();
                 let acquisition_type = copy.acquisition_type.clone();
@@ -544,7 +688,7 @@ async fn import_json_work(pool: &SqlitePool, work: JsonWork) -> AppResult<(bool,
                     &crate::models::CreateCopyInput {
                         edition_id: edition_dto.id.clone(),
                         inventory_code: None,
-                        location_id: None,
+                        location_id,
                         condition_grade: copy.condition_grade.unwrap_or_else(|| "good".into()),
                         acquisition_type: acquisition_type.clone(),
                         acquired_at: acquired_at.clone(),
@@ -570,6 +714,33 @@ async fn import_json_work(pool: &SqlitePool, work: JsonWork) -> AppResult<(bool,
         }
     }
     Ok((true, edition_count, copy_count))
+}
+
+async fn stage(pool: &SqlitePool) -> AppResult<SqlitePool> {
+    let staged = crate::db::connect_memory().await?;
+    let state = crate::repositories::snapshot::export(pool).await?;
+    crate::repositories::snapshot::apply(&staged, &state, true).await?;
+    Ok(staged)
+}
+async fn import_json_work(pool: &SqlitePool, work: JsonWork) -> AppResult<(bool, usize, usize)> {
+    let staged = stage(pool).await?;
+    let result = import_json_work_staged(&staged, work).await?;
+    let snapshot = crate::repositories::snapshot::export(&staged).await?;
+    crate::repositories::snapshot::apply(pool, &snapshot, false).await?;
+    staged.close().await;
+    Ok(result)
+}
+async fn import_one_row(
+    pool: &SqlitePool,
+    row: &ImportRowPreview,
+    input: &ImportCommitInput,
+) -> AppResult<(bool, bool, bool)> {
+    let staged = stage(pool).await?;
+    let result = import_one_row_staged(&staged, row, input).await?;
+    let snapshot = crate::repositories::snapshot::export(&staged).await?;
+    crate::repositories::snapshot::apply(pool, &snapshot, false).await?;
+    staged.close().await;
+    Ok(result)
 }
 
 #[cfg(test)]
@@ -617,13 +788,14 @@ mod tests {
             &pool,
             file.to_str().unwrap(),
             &ImportCommitInput {
+                row_policies: Default::default(),
                 row_numbers: vec![1, 2, 3],
                 duplicate_policy: "skip".into(),
             },
         )
         .await
         .unwrap();
-        assert_eq!(result.imported_works, 3);
+        assert_eq!(result.imported_works, 3, "{:?}", result.errors);
         // Rows 1 and 3 create editions; row 2's failed-checksum ISBN imports
         // as a manual (no-ISBN) edition.
         assert_eq!(result.imported_editions, 3);
@@ -649,6 +821,7 @@ mod tests {
             &pool,
             file.to_str().unwrap(),
             &ImportCommitInput {
+                row_policies: Default::default(),
                 row_numbers: vec![1, 2, 3],
                 duplicate_policy: "skip".into(),
             },
@@ -718,6 +891,7 @@ mod tests {
             &pool,
             file.to_str().unwrap(),
             &ImportCommitInput {
+                row_policies: Default::default(),
                 row_numbers: vec![1, 2, 3],
                 duplicate_policy: "skip".into(),
             },
@@ -732,6 +906,7 @@ mod tests {
             &pool,
             file.to_str().unwrap(),
             &ImportCommitInput {
+                row_policies: Default::default(),
                 row_numbers: vec![1, 2, 3],
                 duplicate_policy: "add_copy".into(),
             },
@@ -756,3 +931,7 @@ mod tests {
         );
     }
 }
+
+// Each logical row is prepared in an isolated migrated database. Only a
+// successful aggregate is merged into the live library in one transaction.
+// Domain validation or FK failures cannot leave an orphan work/copy behind.

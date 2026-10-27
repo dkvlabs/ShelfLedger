@@ -1,5 +1,6 @@
 //! Copy persistence: the owned physical item plus its acquisition record.
 
+use crate::sqlite_db as sqlx;
 use sqlx::{Sqlite, SqlitePool};
 
 use crate::error::AppResult;
@@ -236,35 +237,67 @@ pub async fn update_copy(
     id: &str,
     input: &crate::models::UpdateCopyInput,
 ) -> AppResult<bool> {
-    let result = sqlx::query(
-        "UPDATE copies SET location_id = ?2, condition_grade = ?3, note = ?4, \
-         sentimental_score = ?5, updated_at = ?6 WHERE id = ?1 AND archived_at IS NULL",
-    )
-    .bind(id)
-    .bind(&input.location_id)
-    .bind(&input.condition_grade)
-    .bind(
-        input
-            .note
-            .as_deref()
-            .map(str::trim)
-            .filter(|s| !s.is_empty()),
-    )
-    .bind(input.sentimental_score)
-    .bind(ids::now_iso())
-    .execute(pool)
-    .await?;
+    let mut tx = pool.begin().await?;
+    let mut query = sqlx::QueryBuilder::new("UPDATE copies SET updated_at = ");
+    query.push_bind(ids::now_iso());
+    if let Some(v) = &input.location_id {
+        query.push(", location_id = ").push_bind(v);
+    }
+    if let Some(v) = &input.condition_grade {
+        query.push(", condition_grade = ").push_bind(v);
+    }
+    if let Some(v) = &input.note {
+        query.push(", note = ").push_bind(v);
+    }
+    if let Some(v) = input.sentimental_score {
+        query.push(", sentimental_score = ").push_bind(v);
+    }
+    query
+        .push(" WHERE archived_at IS NULL AND id = ")
+        .push_bind(id);
+    let result = query.build().execute(&mut *tx).await?;
+    sync_copy_fts(&mut tx, id).await?;
+    tx.commit().await?;
     Ok(result.rows_affected() > 0)
 }
 
 /// Soft-delete: keep history, hide from active inventory (docs/database.md).
 pub async fn archive_copy(pool: &SqlitePool, id: &str) -> AppResult<bool> {
+    let mut tx = pool.begin().await?;
     let result = sqlx::query(
         "UPDATE copies SET archived_at = ?2, updated_at = ?2 WHERE id = ?1 AND archived_at IS NULL",
     )
     .bind(id)
     .bind(ids::now_iso())
-    .execute(pool)
+    .execute(&mut *tx)
     .await?;
+    sync_copy_fts(&mut tx, id).await?;
+    tx.commit().await?;
     Ok(result.rows_affected() > 0)
+}
+
+pub async fn sync_copy_fts(tx: &mut sqlx::Transaction<'_, Sqlite>, id: &str) -> AppResult<()> {
+    let work: Option<(String,)> = sqlx::query_as(
+        "SELECT e.work_id FROM editions e JOIN copies c ON c.edition_id=e.id WHERE c.id=?",
+    )
+    .bind(id)
+    .fetch_optional(&mut **tx)
+    .await?;
+    if let Some((id,)) = work {
+        super::works::sync_fts(tx, &id).await?;
+    }
+    Ok(())
+}
+pub async fn unarchive_copy(pool: &SqlitePool, id: &str) -> AppResult<bool> {
+    let mut tx = pool.begin().await?;
+    let changed = sqlx::query(
+        "UPDATE copies SET archived_at=NULL, updated_at=? WHERE id=? AND archived_at IS NOT NULL",
+    )
+    .bind(ids::now_iso())
+    .bind(id)
+    .execute(&mut *tx)
+    .await?;
+    sync_copy_fts(&mut tx, id).await?;
+    tx.commit().await?;
+    Ok(changed.rows_affected() > 0)
 }

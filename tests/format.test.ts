@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { formatDate, formatMoney, parseMoneyToMinor, toInputDate } from "@/lib/format";
+import {
+  formatDate,
+  formatMoney,
+  minorToDecimal,
+  parseMoneyToMinor,
+  toInputDate,
+} from "@/lib/format";
 
 describe("formatMoney", () => {
   it("formats 2-decimal currencies in minor units", () => {
@@ -13,8 +19,8 @@ describe("formatMoney", () => {
     expect(formatMoney(1250, null)).toBe("—");
   });
 
-  it("falls back to code suffix for unknown currency codes", () => {
-    expect(formatMoney(5, "XYZ")).toContain("XYZ");
+  it("does not invent a scale for unknown currency codes", () => {
+    expect(formatMoney(5, "XYZ")).toBe("—");
   });
 });
 
@@ -60,4 +66,43 @@ describe("toInputDate", () => {
     expect(toInputDate("2026-10-23")).toBe("2026-10-23");
     expect(toInputDate("nope")).toBe("nope");
   });
+});
+
+describe("currency scales and exact integer arithmetic", () => {
+  it.each([
+    ["CAD", "12.34", 1234],
+    ["CHF", "0.05", 5],
+    ["JPY", "120", 120],
+    ["KWD", "1.234", 1234],
+  ])("parses %s using its minor units", (code, amount, expected) => {
+    expect(parseMoneyToMinor(amount, code)).toBe(expected);
+  });
+  it("rejects precision loss and unsafe amounts", () => {
+    expect(parseMoneyToMinor("1.01", "JPY")).toBeNull();
+    expect(parseMoneyToMinor("90071992547409.92", "CAD")).toBeNull();
+    expect(parseMoneyToMinor("5", "XYZ")).toBeNull();
+    expect(parseMoneyToMinor("90071992547409.91", "CAD")).toBe(
+      Number.MAX_SAFE_INTEGER,
+    );
+  });
+  it("displays zero and three digit currencies correctly", () => {
+    expect(formatMoney(1234, "JPY")).not.toContain(".34");
+    expect(formatMoney(1234, "KWD")).toContain("1.234");
+  });
+});
+
+it("keeps the last minor unit when displaying and re-editing the largest safe amount", () => {
+  expect(minorToDecimal(Number.MAX_SAFE_INTEGER, "CAD")).toBe(
+    "90071992547409.91",
+  );
+  expect(
+    parseMoneyToMinor(minorToDecimal(Number.MAX_SAFE_INTEGER, "KWD"), "KWD"),
+  ).toBe(Number.MAX_SAFE_INTEGER);
+  expect(formatMoney(Number.MAX_SAFE_INTEGER, "CAD")).toContain(
+    "90,071,992,547,409.91",
+  );
+});
+it("formats negative fractional amounts without losing their sign", () => {
+  expect(minorToDecimal(-5, "CAD")).toBe("-0.05");
+  expect(formatMoney(-5, "CAD")).toContain("-CA$0.05");
 });

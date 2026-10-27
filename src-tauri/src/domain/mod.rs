@@ -5,3 +5,5 @@ pub mod finance;
 pub mod import;
 pub mod loans;
 pub mod reading;
+
+pub mod profiles;

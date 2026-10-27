@@ -1,5 +1,6 @@
+import { useT } from "@/lib/i18n";
 import { useEffect, useRef, useState } from "react";
-import { ImageUp, Loader2 } from "lucide-react";
+import { Camera, ImageUp, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -16,6 +17,8 @@ import {
   extractIsbnFromBarcode,
 } from "@/lib/barcode";
 import type { NormalizedIsbn } from "@/lib/isbn";
+import { isDesktop } from "@/lib/api";
+import { cameraErrorMessage } from "@/lib/camera";
 
 export interface ScanResult extends NormalizedIsbn {
   raw: string;
@@ -25,18 +28,14 @@ const NO_CAMERA =
   "Camera access is not available in this window. Use “Scan from photo” instead, " +
   "or scan with a USB/Bluetooth barcode scanner — it types the ISBN into the field.";
 
-const CAMERA_BLOCKED =
-  "Camera permission was denied or the camera is in use. Use “Scan from photo” instead, " +
-  "or type the ISBN manually.";
-
 const CAMERA_TIMEOUT =
-  "No camera signal yet (a permission prompt may still be open). Use “Scan from photo” " +
-  "below, or type the ISBN manually.";
+  "Still waiting for camera access. If a permission prompt is open, choose Allow to scan. " +
+  "You can also scan from a photo or type the ISBN manually.";
 
 /**
  * ISBN barcode scanner for Add Book. Live camera scanning where the platform
- * allows it, plus photo scanning everywhere (the Tauri webview on macOS has no
- * camera API — the photo path works there). Decoding runs on web APIs only,
+ * allows it, plus photo scanning where camera access is unavailable or denied.
+ * Decoding runs on web APIs only,
  * so this component works identically in the web version.
  */
 export default function ScanBarcodeDialog({
@@ -48,40 +47,47 @@ export default function ScanBarcodeDialog({
   onOpenChange: (open: boolean) => void;
   onScan: (result: ScanResult) => void;
 }) {
+  const tx = useT();
   const videoRef = useRef<HTMLVideoElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-  const timerRef = useRef<number | null>(null);
-  const busyRef = useRef(false);
   const frameRef = useRef<HTMLCanvasElement | null>(null);
   const onScanRef = useRef(onScan);
   onScanRef.current = onScan;
+  const onOpenChangeRef = useRef(onOpenChange);
+  onOpenChangeRef.current = onOpenChange;
 
-  const [cameraState, setCameraState] = useState<"idle" | "starting" | "live" | "unavailable">(
-    "idle",
-  );
+  const [cameraState, setCameraState] = useState<
+    "idle" | "starting" | "live" | "unavailable"
+  >("idle");
   const [message, setMessage] = useState<string | null>(null);
   const [imageBusy, setImageBusy] = useState(false);
+  const [cameraAttempt, setCameraAttempt] = useState(0);
 
   useEffect(() => {
     if (!open) return;
     let cancelled = false;
+    let stream: MediaStream | null = null;
+    let scanTimer: number | undefined;
+    let startTimer: number | undefined;
+    let busy = false;
+    let video: HTMLVideoElement | null = null;
+    setMessage(null);
 
     const stop = () => {
-      if (timerRef.current !== null) {
-        window.clearInterval(timerRef.current);
-        timerRef.current = null;
-      }
-      streamRef.current?.getTracks().forEach((t) => t.stop());
-      streamRef.current = null;
+      window.clearTimeout(startTimer);
+      window.clearInterval(scanTimer);
+      stream?.getTracks().forEach((track) => track.stop());
+      if (video && video.srcObject === stream) video.srcObject = null;
+      stream = null;
     };
 
     const acceptRaw = (raw: string) => {
       const isbn = extractIsbnFromBarcode(raw);
       if (isbn) {
+        cancelled = true;
         stop();
         onScanRef.current({ ...isbn, raw });
-        onOpenChange(false);
+        onOpenChangeRef.current(false);
       } else {
         setMessage(
           `Read “${raw}” — that barcode is not a book ISBN. Try again, or type the ISBN manually.`,
@@ -90,9 +96,8 @@ export default function ScanBarcodeDialog({
     };
 
     const scanFrame = async () => {
-      const video = videoRef.current;
-      if (!video || video.readyState < 2 || busyRef.current) return;
-      busyRef.current = true;
+      if (cancelled || !video || video.readyState < 2 || busy) return;
+      busy = true;
       try {
         const width = video.videoWidth;
         const height = video.videoHeight;
@@ -105,49 +110,58 @@ export default function ScanBarcodeDialog({
         if (!ctx) return;
         ctx.drawImage(video, 0, 0, frame.width, frame.height);
         const raw = await decodeBarcodeFromCanvas(frame);
-        if (raw) acceptRaw(raw);
+        if (raw && !cancelled) acceptRaw(raw);
       } finally {
-        busyRef.current = false;
+        busy = false;
       }
     };
 
-    if (!navigator.mediaDevices?.getUserMedia) {
+    const cameraAvailable = !!navigator.mediaDevices?.getUserMedia;
+    if (!cameraAvailable || window.isSecureContext === false) {
       setCameraState("unavailable");
-      setMessage(NO_CAMERA);
+      setMessage(
+        window.isSecureContext === false
+          ? "Camera access requires a secure connection. Open ShelfLedger over HTTPS or on localhost, " +
+              "or scan from a photo."
+          : NO_CAMERA,
+      );
     } else {
       setCameraState("starting");
-      // Some webviews accept the getUserMedia call but never answer; don't
-      // spin forever — fall back to photo scanning after 10s. If the stream
-      // arrives late, the .then below still upgrades to live.
-      const startTimer = window.setTimeout(() => {
-        if (!cancelled && streamRef.current === null) {
-          setCameraState("unavailable");
+      // Permission prompts can remain open indefinitely. Keep the request pending
+      // and offer the photo fallback without issuing overlapping requests.
+      startTimer = window.setTimeout(() => {
+        if (!cancelled && stream === null) {
           setMessage(CAMERA_TIMEOUT);
         }
       }, 10_000);
       navigator.mediaDevices
-        .getUserMedia({ video: { facingMode: "environment", width: { ideal: 1280 } } })
-        .then((stream) => {
+        .getUserMedia({
+          audio: false,
+          video: { facingMode: "environment", width: { ideal: 1280 } },
+        })
+        .then(async (cameraStream) => {
           window.clearTimeout(startTimer);
           if (cancelled) {
-            stream.getTracks().forEach((t) => t.stop());
+            cameraStream.getTracks().forEach((track) => track.stop());
             return;
           }
-          streamRef.current = stream;
-          const video = videoRef.current;
+          stream = cameraStream;
+          video = videoRef.current;
           if (video) {
             video.srcObject = stream;
-            void video.play().catch(() => undefined);
+            await video.play();
           }
+          if (cancelled) return;
           setCameraState("live");
           setMessage(null);
-          timerRef.current = window.setInterval(() => void scanFrame(), 350);
+          scanTimer = window.setInterval(() => void scanFrame(), 350);
         })
-        .catch(() => {
+        .catch((error: unknown) => {
           window.clearTimeout(startTimer);
           if (!cancelled) {
+            stop();
             setCameraState("unavailable");
-            setMessage(CAMERA_BLOCKED);
+            setMessage(cameraErrorMessage(error, isDesktop()));
           }
         });
     }
@@ -156,7 +170,7 @@ export default function ScanBarcodeDialog({
       cancelled = true;
       stop();
     };
-  }, [open, onOpenChange]);
+  }, [open, cameraAttempt]);
 
   const pickImage = async (file: File) => {
     setImageBusy(true);
@@ -195,10 +209,14 @@ export default function ScanBarcodeDialog({
     >
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Scan barcode</DialogTitle>
+          <DialogTitle>{tx("Scan barcode")}</DialogTitle>
           <DialogDescription>
-            Point a camera at the ISBN barcode on the back of the book — or scan from a
-            photo. USB/Bluetooth scanners work too: they just type the ISBN into the field.
+            {tx(
+              "Point a camera at the ISBN barcode on the back of the book — or scan from a photo. USB/Bluetooth scanners work too: they just type the ISBN into the field.",
+            )}{" "}
+            {tx(
+              "Allow camera access when prompted. Only video is requested, and images are processed on your device.",
+            )}
           </DialogDescription>
         </DialogHeader>
 
@@ -206,7 +224,7 @@ export default function ScanBarcodeDialog({
           ref={videoRef}
           muted
           playsInline
-          aria-label="Camera preview"
+          aria-label={tx("Camera preview")}
           className={`aspect-video w-full rounded-md bg-black object-cover ${
             cameraState === "live" ? "" : "hidden"
           }`}
@@ -214,7 +232,10 @@ export default function ScanBarcodeDialog({
         {cameraState !== "live" && (
           <div className="flex aspect-video w-full items-center justify-center rounded-md border border-dashed text-sm text-muted-foreground">
             {cameraState === "starting" ? (
-              <Loader2 className="h-5 w-5 animate-spin" aria-label="Starting camera" />
+              <span className="flex items-center gap-2">
+                <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
+                {tx("Waiting for camera access…")}
+              </span>
             ) : (
               "Camera not available — scan from a photo below"
             )}
@@ -223,17 +244,28 @@ export default function ScanBarcodeDialog({
 
         {message && (
           <p role="status" className="text-sm text-muted-foreground">
-            {message}
+            {tx(message)}
           </p>
         )}
 
         <div className="flex flex-wrap items-center gap-2">
+          {cameraState === "unavailable" &&
+            typeof navigator.mediaDevices?.getUserMedia === "function" &&
+            window.isSecureContext !== false && (
+              <Button
+                type="button"
+                onClick={() => setCameraAttempt((attempt) => attempt + 1)}
+              >
+                <Camera />
+                {tx("Retry camera")}
+              </Button>
+            )}
           <input
             ref={imageInputRef}
             type="file"
             accept="image/*"
             className="hidden"
-            aria-label="Choose a photo of a barcode"
+            aria-label={tx("Choose a photo of a barcode")}
             onChange={(e) => {
               const file = e.target.files?.[0];
               e.target.value = "";
@@ -246,13 +278,13 @@ export default function ScanBarcodeDialog({
             onClick={() => imageInputRef.current?.click()}
           >
             {imageBusy ? <Loader2 className="animate-spin" /> : <ImageUp />}
-            Scan from photo
+            {tx("Scan from photo")}
           </Button>
         </div>
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Close
+            {tx("Close")}
           </Button>
         </DialogFooter>
       </DialogContent>

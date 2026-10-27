@@ -1,6 +1,6 @@
 //! Thin IPC wrappers: no business logic here, all in `domain`.
 
-use sqlx;
+use crate::sqlite_db as sqlx;
 use tauri::State;
 
 use crate::domain;
@@ -119,4 +119,39 @@ pub async fn get_library_stats(
     state: State<'_, AppState>,
 ) -> AppResult<crate::models::LibraryStats> {
     get_library_stats_impl(&state.pool).await
+}
+
+#[tauri::command]
+pub async fn update_edition(
+    state: State<'_, AppState>,
+    id: String,
+    input: CreateEditionInput,
+) -> AppResult<EditionDto> {
+    domain::catalog::update_edition(&state.pool, &id, &input).await
+}
+
+#[tauri::command]
+pub async fn update_copy_details(
+    state: State<'_, AppState>,
+    id: String,
+    input: CreateCopyInput,
+) -> AppResult<CopyDto> {
+    domain::catalog::update_copy_details(&state.pool, &id, &input).await
+}
+
+#[tauri::command]
+pub async fn unarchive_copy(state: State<'_, AppState>, id: String) -> AppResult<()> {
+    domain::catalog::unarchive_copy(&state.pool, &id).await
+}
+#[tauri::command]
+pub async fn list_work_tags(state: State<'_, AppState>, id: String) -> AppResult<Vec<String>> {
+    domain::catalog::list_work_tags(&state.pool, &id).await
+}
+#[tauri::command]
+pub async fn set_work_tags(
+    state: State<'_, AppState>,
+    id: String,
+    tags: Vec<String>,
+) -> AppResult<()> {
+    domain::catalog::set_work_tags(&state.pool, &id, &tags).await
 }

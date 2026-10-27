@@ -5,10 +5,17 @@ import { api, CommandError, isDesktop } from "@/lib/api";
 function mockFetch(status: number, body: unknown) {
   const fn = vi.fn(
     async (_url: string, _init?: RequestInit): Promise<Response> =>
-      new Response(body === undefined ? null : JSON.stringify(body), {
-        status,
-        headers: { "Content-Type": "application/json" },
-      }),
+      new Response(
+        _url.endsWith("/session")
+          ? JSON.stringify({ token: "test-token" })
+          : body === undefined
+            ? null
+            : JSON.stringify(body),
+        {
+          status: _url.endsWith("/session") ? 200 : status,
+          headers: { "Content-Type": "application/json" },
+        },
+      ),
   );
   vi.stubGlobal("fetch", fn);
   return fn;
@@ -25,17 +32,22 @@ describe("web transport (browser mode)", () => {
     const fn = mockFetch(200, { workCount: 2, copyCount: 3 });
     const stats = await api.getLibraryStats();
     expect(stats).toEqual({ workCount: 2, copyCount: 3 });
-    expect(fn).toHaveBeenCalledTimes(1);
-    const [url, init] = fn.mock.calls[0] as unknown as [string, RequestInit];
+    expect(fn.mock.calls.some(([url]) => url === "/api/session")).toBe(true);
+    const [url, init] = fn.mock.calls.find(
+      ([url]) => url !== "/api/session",
+    ) as unknown as [string, RequestInit];
     expect(url).toBe("/api/get_library_stats");
     expect(init.method).toBe("POST");
+    expect(init.headers).toMatchObject({ "X-Shelfledger-Token": "test-token" });
     expect(JSON.parse(String(init.body))).toEqual({});
   });
 
   it("sends camelCase argument keys", async () => {
     const fn = mockFetch(200, []);
     await api.listLoans("2026-10-27");
-    const [, init] = fn.mock.calls[0] as unknown as [string, RequestInit];
+    const [, init] = fn.mock.calls.find(
+      ([url]) => url !== "/api/session",
+    ) as unknown as [string, RequestInit];
     expect(JSON.parse(String(init.body))).toEqual({ localToday: "2026-10-27" });
   });
 

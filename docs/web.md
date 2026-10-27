@@ -6,8 +6,8 @@ HTTP by the `shelfledger-web` binary. No cloud, no accounts — the browser talk
 to a server on `127.0.0.1` and the library stays on your machine.
 
 This is a local-first alternative front door to the app, useful when you prefer
-a browser tab or your platform's webview lacks a feature (e.g. camera scanning
-in the macOS webview — see the capability matrix below).
+a browser tab or your platform's webview lacks a feature (see the camera
+capability matrix below).
 
 ## Running it
 
@@ -37,7 +37,7 @@ backup first — restore semantics across two frontends are on you).
 
 - One command contract, two transports. `src/lib/api.ts` calls Tauri `invoke()`
   in the desktop app and `POST /api/<command>` in the browser; the argument
-  object and the `{kind, message}` error shape are identical. All 48 commands
+  object and the `{kind, message}` error shape are identical. Named commands
   are dispatched by `src-tauri/src/web.rs` onto the same `domain/` functions
   the Tauri commands use — no business logic is duplicated.
 - File flows: the browser file picker uploads the chosen file to
@@ -60,7 +60,22 @@ path covers scanning.
 | Web version in Chrome / Edge | ✅ (BarcodeDetector) | ✅ | ✅ |
 | Web version in Firefox / Safari | ✅ (ZXing JS fallback) | ✅ | ✅ |
 | Desktop, Windows (WebView2) | ✅ when the platform exposes the camera API | ✅ | ✅ |
-| Desktop, macOS / Linux (WebKit webview) | ❌ webview has no camera API | ✅ | ✅ |
+| Desktop, macOS / Linux (WebKit webview) | Platform-dependent; falls back when the camera API is unavailable | ✅ | ✅ |
+
+Opening Scan barcode requests **video only** and uses the platform's camera
+permission flow. Allow access when prompted. If access is blocked, allow the
+camera in browser site permissions (web version) or system camera privacy
+settings, then use **Retry camera**. On macOS, use **System Settings → Privacy
+& Security → Camera** and restart the app if necessary. Missing and busy
+cameras have separate recovery messages. Closing the scanner releases the camera.
+
+The macOS bundle includes `NSCameraUsageDescription` in `src-tauri/Info.plist`
+and the camera entitlement in `src-tauri/Entitlements.plist`. Rebuild the app
+to include these declarations; an already installed build does not gain them
+automatically. Local macOS builds are ad-hoc signed to embed the entitlement;
+public distribution still needs Developer ID signing/notarization. These declarations allow the OS consent flow where the webview
+offers camera capture; they cannot provide a missing webview API. Browsers
+require HTTPS or localhost for camera access.
 
 "Scan from photo" decodes any photo/screenshot containing the barcode; a
 USB/Bluetooth barcode scanner acts as a keyboard and types the ISBN into the
@@ -69,7 +84,17 @@ barcodes (978/979 EAN-13 or ISBN-10) — nothing is invented.
 
 ## Known limitations
 
-- After a **replace** restore, restart the server process to load the restored
-  database (the desktop app asks for a restart for the same reason).
+- Replacement restore uses a transaction on the live database. It takes a
+  consistent safety backup first and does not require a restart. Use one running
+  frontend when switching profiles or restoring.
 - The web version has not been exposed to the internet by design; do not
   reverse-proxy it without adding your own authentication.
+
+## Request protection (27.10.2026)
+
+GET `/api/session` establishes a process-session token. All API POSTs, including
+uploads, require `X-Shelfledger-Token`. Commands additionally require
+`Content-Type: application/json`. Loopback Host and same-origin Origin are checked;
+only debug builds accept the documented Vite origin. Cross-origin-shaped simple
+POSTs, untrusted hosts/origins and missing tokens are rejected by HTTP regression
+tests. These checks do not make this a remotely hosted multi-user service.

@@ -1,5 +1,6 @@
 //! Physical location hierarchy (room > bookcase > shelf > box).
 
+use crate::sqlite_db as sqlx;
 use sqlx::SqlitePool;
 
 use crate::error::{AppError, AppResult};
@@ -64,9 +65,11 @@ pub async fn insert_location(
 }
 
 pub async fn delete_location(pool: &SqlitePool, id: &str) -> AppResult<bool> {
+    let mut tx = pool.begin().await?;
+    let affected: Vec<(String,)> = sqlx::query_as("SELECT DISTINCT e.work_id FROM copies c JOIN editions e ON e.id=c.edition_id WHERE c.location_id=?").bind(id).fetch_all(&mut *tx).await?;
     let result = sqlx::query("DELETE FROM locations WHERE id = ?1")
         .bind(id)
-        .execute(pool)
+        .execute(&mut *tx)
         .await
         .map_err(|e| {
             // RESTRICT on parent_id -> cannot delete a location with children.
@@ -78,6 +81,10 @@ pub async fn delete_location(pool: &SqlitePool, id: &str) -> AppResult<bool> {
                 e.into()
             }
         })?;
+    for (id,) in affected {
+        super::works::sync_fts(&mut tx, &id).await?;
+    }
+    tx.commit().await?;
     Ok(result.rows_affected() > 0)
 }
 

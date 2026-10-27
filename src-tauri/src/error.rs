@@ -1,3 +1,4 @@
+use crate::sqlite_db as sqlx;
 use serde::Serialize;
 
 /// Application error surfaced to the frontend as `{ kind, message }`.

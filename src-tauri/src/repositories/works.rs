@@ -1,6 +1,7 @@
 //! Work + author persistence and the FTS5 search index.
 //! All SQL lives here; domain logic in `crate::domain`.
 
+use crate::sqlite_db as sqlx;
 use sqlx::{Sqlite, SqlitePool, Transaction};
 use std::collections::HashMap;
 
@@ -228,7 +229,7 @@ pub async fn list_work_summaries(pool: &SqlitePool) -> AppResult<Vec<WorkSummary
         "SELECT w.id, w.title, w.subtitle, \
            (SELECT e.cover_path FROM editions e WHERE e.work_id = w.id AND e.cover_path IS NOT NULL LIMIT 1), \
            (SELECT COUNT(*) FROM editions e WHERE e.work_id = w.id), \
-           (SELECT COUNT(*) FROM copies c JOIN editions e2 ON c.edition_id = e2.id WHERE e2.work_id = w.id) \
+           (SELECT COUNT(*) FROM copies c JOIN editions e2 ON c.edition_id = e2.id WHERE e2.work_id = w.id AND c.archived_at IS NULL) \
          FROM works w ORDER BY w.created_at DESC",
     )
     .fetch_all(pool)
@@ -285,7 +286,7 @@ pub async fn sync_fts(conn: &mut sqlx::SqliteConnection, work_id: &str) -> AppRe
         .join(" ");
     let notes: Vec<(String,)> = sqlx::query_as(
         "SELECT DISTINCT coalesce(c.note, '') FROM copies c \
-         JOIN editions e ON c.edition_id = e.id WHERE e.work_id = ?1 AND c.note IS NOT NULL",
+         JOIN editions e ON c.edition_id = e.id WHERE e.work_id = ?1 AND c.archived_at IS NULL AND c.note IS NOT NULL",
     )
     .bind(work_id)
     .fetch_all(&mut *conn)
@@ -294,7 +295,7 @@ pub async fn sync_fts(conn: &mut sqlx::SqliteConnection, work_id: &str) -> AppRe
         "SELECT DISTINCT coalesce(l.name, '') FROM copies c \
          JOIN editions e ON c.edition_id = e.id \
          LEFT JOIN locations l ON l.id = c.location_id \
-         WHERE e.work_id = ?1 AND l.name IS NOT NULL",
+         WHERE e.work_id = ?1 AND c.archived_at IS NULL AND l.name IS NOT NULL",
     )
     .bind(work_id)
     .fetch_all(&mut *conn)
