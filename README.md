@@ -153,6 +153,16 @@ pnpm tauri build
 The [step-by-step tutorial](docs/tutorial.md) covers prerequisites, desktop and
 browser setup, bundle output paths, first use, backups, and troubleshooting.
 
+### Releases
+
+GitHub Actions prepares a release PR with synchronized versions and categorized
+Features/Fixes/Changes notes from Conventional Commits. Merge it to build macOS
+(Apple Silicon and Intel), Windows x64 and Linux x64 installers, then publish a
+GitHub release with download links and SHA-256 checksums after every build passes.
+See the [release guide](docs/release.md) for enabling the workflow, signing
+secrets and retrying failed builds. macOS defaults to ad-hoc signing unless Apple
+credentials are configured; Windows installers are currently unsigned.
+
 ### Stack
 
 Tauri 2 and Rust · React and strict TypeScript · Vite · Tailwind CSS and shadcn/ui ·
@@ -169,7 +179,7 @@ and FTS5 full-text search.
 - [Languages and currencies](docs/localization.md) — coverage, upgrades, and extension
 - [Import formats](docs/import-format.md) — CSV mapping and JSON snapshots
 - [Web version](docs/web.md) — loopback server and browser setup
-- [Release checklist](docs/release.md) — packaging, signing, and acceptance checks
+- [Release automation](docs/release.md) — versions, notes, downloads, signing, and retries
 - [Audit remediation](docs/audit-remediation.md) — findings, fixes, and evidence
 - [Architecture decisions](docs/decisions/) — rationale behind the model and stack
 - [Privacy](PRIVACY.md) — local processing and optional network requests

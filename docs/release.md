@@ -1,55 +1,182 @@
-# Release checklist (Phase 5)
+# Automated releases
 
-Signing/notarization requires platform accounts and secrets that must never live
-in this repository; this checklist captures the manual steps per release.
+The [Release workflow](../.github/workflows/release.yml) manages versions,
+descriptions and desktop installers. A push to `main` updates a release pull
+request. Merging that PR creates a version tag and a draft GitHub release, runs
+the checks, builds every installer, uploads checksums and publishes the release.
 
-## 1. Prepare
+## Enable it on GitHub
 
-- [ ] Bump versions: `package.json`, `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml` (workspace member only), and add a `CHANGELOG.md` section.
-- [ ] Run the full gate locally: `pnpm lint && pnpm test:web && pnpm test:rust && cargo clippy --all-targets -- -D warnings` inside `src-tauri`.
-- [ ] Confirm `cargo audit` and the secret scan pass in CI.
-- [ ] Verify the phase acceptance criteria in `docs/implementation.md` are actually met.
+1. Push these files to the default branch (`main`), with GitHub Actions enabled.
+2. In **Settings → Actions → General → Workflow permissions**, enable **Allow
+   GitHub Actions to create and approve pull requests**. The workflow explicitly
+   requests contents and pull requests write access for release-please; build
+   jobs have read access only. Organization policy must allow these actions.
+3. Optionally add `RELEASE_PLEASE_TOKEN` as a repository Actions secret: a
+   fine-grained personal access token with repository contents and
+   pull requests **read/write**. Otherwise the workflow uses `GITHUB_TOKEN`.
+   GitHub may require a maintainer to approve CI runs for a PR created by
+   `GITHUB_TOKEN`; approve them on the release PR. The optional token lets PR CI
+   run without that approval. Branch protection checks still need to pass.
+4. Configure the six Apple secrets below for Developer ID signed and notarized
+   macOS downloads. Without them, builds use the existing ad-hoc identity.
+   Windows installers are currently unsigned.
 
-## 2. Build artifacts
+Versioning and packaging need no third-party release service. Apple distribution
+requires an Apple Developer account; Actions usage follows your GitHub plan.
 
-- [ ] `pnpm tauri build` on macOS, Windows, and Linux (the `tauri-build` job is configured for all three; inspect its actual results before release).
-- [ ] macOS: sign with Developer ID and **notarize** (`tauri.conf.json` updater/signing config); keep the signing key in CI secrets or a local keychain — never in the repo.
-- [ ] Windows: sign the installer with an Authenticode certificate if available.
-- [ ] Linux: publish AppImage/deb; consider the flathub route later.
-- [ ] Camera scanning in each packaged app: verify first-use consent, denied
-      access guidance, retry after allowing access, and camera release on close.
-      On macOS, confirm the bundle includes `NSCameraUsageDescription` and the
-      signed app includes `com.apple.security.device.camera`. Where the webview
-      does not expose camera capture, verify the photo fallback.
-- [ ] Optional: enable the signed Tauri updater (minisign key pair; public key committed, private key in secrets).
+## Daily use
 
-## 3. Publish
+Use Conventional Commits on `main`. With squash merges, use the convention in
+the **PR title**, which becomes the squash commit.
 
-- [ ] GitHub Release with changelog notes and artifacts + checksums (SHA-256, published alongside).
-- [ ] Generate an SBOM (`cargo cyclonedx` / `pnpm sbom`) and attach it.
-- [ ] Update the demo dataset (`demo/demo-library.json`) if the schema changed.
-- [ ] Post-release smoke test: install on a clean machine, create a library, import, lend, sell, back up, restore — no terminal required (Phase 5 acceptance).
+| Commit / PR title | Description category | Version effect |
+| --- | --- | --- |
+| `feat(scan): add ISBN photo import` | Features | Minor |
+| `fix(import): accept blank Goodreads dates` | Fixes | Patch |
+| `perf(search): reduce catalog queries` | Performance | Patch |
+| `refactor(catalog): simplify edition updates` | Changes | Patch |
+| `docs: explain backups` | Documentation | Patch |
+| `deps: update a dependency` | Dependencies | Patch |
+| `build: update platform packaging` | Build | Patch |
+| `ci: improve release retries` | Automation | Patch |
+| `chore: refresh development tools` | Maintenance | Patch |
 
-## 4. Disclosure readiness
+`feat!:` or a `BREAKING CHANGE:` footer marks a breaking change. Before 1.0,
+breaking changes bump the minor version; after 1.0 they bump the major version.
+Features also bump the minor version before 1.0. The highest applicable change
+determines the version. All configured categories are visible and can open a
+release PR; merge it when ready to publish, or leave it open to collect changes.
 
-- [ ] SECURITY.md points at a live private-reporting channel.
-- [ ] Tag `good first issue` / `help wanted` starter issues for new contributors.
+1. Merge application changes. The workflow opens or updates one release PR
+   with categorized descriptions, commit links and versions.
+2. Review its changelog and version. It updates `package.json`,
+   `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml`, the `shelfledger` package
+   in `src-tauri/Cargo.lock`, and `.release-please-manifest.json` together.
+   Dependency package versions in Cargo.lock are preserved.
 
+   The lockfile JSONPath uses `name.value` deliberately: release-please's TOML
+   updater wraps scalar values with position metadata. Its real 17.3.0 updater
+   has been checked against this lockfile to ensure only the app version changes;
+   repeat that check when upgrading the pinned release-please action.
+3. Merge the release PR. The workflow creates `vX.Y.Z` and a draft release,
+   checks tag/version consistency, runs frontend and release tests, and runs
+   Rust tests, formatting and Clippy on each build platform.
+4. Once every installer succeeds, the workflow checks the complete asset set,
+   computes SHA-256 checksums and publishes the release. Its description contains
+   Features/Fixes/Changes/etc. as applicable, plus direct download links.
 
-## Local audit verification (27.10.2026)
+The manifest starts empty because there has not been a packaged release. The
+first version is **0.1.0**. Its published description also includes the curated
+`Development history` section in `CHANGELOG.md`, covering work done before
+Conventional Commits. Later descriptions use only the matching version section.
+Review those initial notes in the first release PR.
 
-See `audit-remediation.md` for the 24-finding register and test evidence. Local
-checks pass: 88 Rust tests, 59 frontend tests, strict frontend production build,
-Clippy, and a macOS `.app` bundle. These do not check off the cross-platform,
-clean-machine or physical-camera release gates above.
+For an intentional override, add a `Release-As: 0.2.0` footer to a commit landing
+on `main` before merging the release PR. Use stable `X.Y.Z` versions; the workflow
+rejects prerelease tags. See [release-please customization](https://github.com/googleapis/release-please/blob/main/docs/customizing.md).
 
-macOS builds default to the ad-hoc identity `-`, which embeds the camera
-entitlement without private credentials. For distribution, override
-`bundle.macOS.signingIdentity` with your Developer ID identity in a local/CI
-Tauri configuration and perform notarization. Verify the produced signature and
-`NSCameraUsageDescription` before testing consent on a real camera. Ad-hoc
-signing is not Developer ID signing or notarization.
+## Assets
 
-The JavaScript advisory scan reports zero vulnerabilities; the Rust scan has
-zero vulnerability matches but retains the glib unsoundness and proc-macro-error
-maintenance warnings described in the remediation register. Do not hide them.
+| Platform | Runner | Download name (`X.Y.Z` = version) |
+| --- | --- | --- |
+| macOS Apple Silicon | `macos-15` | `ShelfLedger_X.Y.Z_macos-arm64.dmg` |
+| macOS Intel | `macos-15-intel` | `ShelfLedger_X.Y.Z_macos-x64.dmg` |
+| Windows x64 | `windows-2022` | `ShelfLedger_X.Y.Z_windows-x64.exe` (NSIS) |
+| Linux x64 | `ubuntu-22.04` | `ShelfLedger_X.Y.Z_linux-x64.AppImage` and `.deb` |
+| Checksums | After all builds succeed | `SHA256SUMS` |
+
+Builds check out the resolved tag commit and use the committed pnpm lockfile.
+Missing, empty, duplicate or unexpected installers prevent publication. The
+publish job checks that the tag has not moved during the build. Workflow
+artifacts last seven days; published release assets remain independently.
+
+Download `SHA256SUMS` alongside installers. Linux:
+`sha256sum --ignore-missing -c SHA256SUMS`. On macOS compare
+`shasum -a 256 ShelfLedger_X.Y.Z_macos-arm64.dmg` to its line in the file.
+On Windows use `Get-FileHash .\ShelfLedger_X.Y.Z_windows-x64.exe -Algorithm SHA256`.
+Checksums detect corruption; they do not replace platform signatures.
+
+## Retry a failed release
+
+Failures leave the release in **draft**. Fix runner configuration or secrets,
+then open **Actions → Release → Run workflow**, select **main**, and enter the
+tag (for example `v0.1.0`) in **retry_tag**. It rebuilds that exact tag and replaces
+only draft assets, publishing once every check passes. Published releases cannot
+be retried or overwritten through this path.
+
+Leave `retry_tag` empty to refresh the release PR. For a code fix in an already
+tagged release, create a patch release: retries do not include newer `main`
+commits. Do not move release tags. If release-please failed before creating a
+tag/draft, rerun with an empty retry field after correcting its permissions.
+
+One concurrency group prevents overlapping release jobs; new pushes do not
+cancel an in-flight build. Packaging and publishing run in the **same workflow**,
+since events created with `GITHUB_TOKEN` generally do not trigger another workflow.
+
+## Apple signing and notarization
+
+Set all six repository Actions secrets together:
+
+| Secret | Value |
+| --- | --- |
+| `APPLE_CERTIFICATE` | Base64-encoded Developer ID Application `.p12` certificate and private key |
+| `APPLE_CERTIFICATE_PASSWORD` | Password used to export the `.p12` |
+| `APPLE_SIGNING_IDENTITY` | Full `Developer ID Application: … (TEAMID)` identity |
+| `APPLE_ID` | Apple account used for notarization |
+| `APPLE_PASSWORD` | An Apple app-specific password |
+| `APPLE_TEAM_ID` | Apple Developer team ID |
+
+Tauri imports the certificate, overrides the default `-` signing identity and
+notarizes the bundle. The workflow verifies the app signature and validates its
+stapled notarization ticket for distribution builds. Partial credentials fail
+early; empty secrets are removed so an unconfigured repository can still use
+ad-hoc signing and its camera entitlement. Never commit credentials.
+
+Ad-hoc macOS builds are not Developer ID signed or notarized and may be blocked
+by Gatekeeper. Windows builds have no Authenticode signing integration and may
+trigger SmartScreen. Published notes state these limitations. Signed updater
+feeds, SBOM generation, Windows signing and additional architectures remain
+separate additions; no updater feed is generated by this workflow.
+
+References: [Tauri macOS signing](https://v2.tauri.app/distribute/sign/macos/),
+[release-please action](https://github.com/googleapis/release-please-action),
+[GitHub workflow triggers](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow).
+
+## Local checks and remaining acceptance
+
+```sh
+pnpm release:check
+pnpm test:release
+pnpm lint
+pnpm test:web
+pnpm test:rust
+cargo fmt --manifest-path src-tauri/Cargo.toml -- --check
+cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
+```
+
+To exercise the same packaging helper locally on Apple Silicon:
+
+```sh
+node scripts/release.mjs build macos-arm64
+node scripts/release.mjs stage macos-arm64
+```
+
+Other helper platforms are `macos-x64`, `windows-x64` and `linux-x64`; run them
+on matching native hosts. Output stays under `src-tauri/target` and
+`release-assets`, never in a library profile.
+
+Manual release gates still apply:
+
+- Confirm the existing Security workflow's advisory and secret scans pass;
+  assess upstream warnings recorded in `audit-remediation.md`.
+- Install on clean machines: create/import a library, read, lend, sell, back up
+  and restore without a terminal.
+- Test camera consent, denied-access guidance, retry and camera release on
+  close; check macOS purpose text/entitlement and the photo fallback.
+- Check acceptance criteria in `implementation.md`, update demo data if the
+  schema changes, and verify the private reporting channel in `SECURITY.md`.
+
+Local checks cannot establish Windows/Linux packaging, actual GitHub runner
+results, Developer ID notarization or physical-camera consent. Inspect the first
+live workflow and complete the corresponding installation checks.

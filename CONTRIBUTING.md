@@ -5,7 +5,7 @@ purpose: one desktop app, one SQLite database, no cloud.
 
 ## Getting started
 
-1. Install Node.js ≥ 20, pnpm ≥ 9, and Rust ≥ 1.77, plus the
+1. Install Node.js ≥ 22.12, pnpm 12.15, and Rust ≥ 1.90, plus the
    [Tauri 2 prerequisites](https://tauri.app/start/prerequisites/) for your platform.
 2. `pnpm install`
 3. `pnpm tauri dev` — you should see the empty-state welcome screen.
@@ -29,8 +29,21 @@ purpose: one desktop app, one SQLite database, no cloud.
 - `pnpm lint` (typecheck + build) passes
 - `pnpm test:web` passes
 - `pnpm test:rust` passes
+- `pnpm release:check` and `pnpm test:release` pass
 - New behavior has tests (see the test matrix in `docs/implementation.md`)
 - Rust code is formatted (`cargo fmt`) and clippy-clean (`cargo clippy -- -D warnings`)
+
+## Commit messages and releases
+
+Use Conventional Commits for commits landing on `main`: `feat: …` for features,
+`fix: …` for fixes, and `perf: …`, `refactor: …`, `docs: …`, `deps: …`, `build: …`,
+`ci: …` or `chore: …` for other changes. For squash merges, use this format in
+the PR title. Mark breaking changes with `!` or a `BREAKING CHANGE:` footer.
+
+GitHub Actions maintains a release PR with the version bump and changelog.
+Review and merge that PR to publish all installers and checksums; do not bump
+individual version files independently. See [the release guide](docs/release.md)
+for initial setup, signing and recovery.
 
 ## Good first issues
 

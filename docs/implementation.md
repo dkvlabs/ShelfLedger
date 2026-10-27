@@ -78,6 +78,9 @@ requires real release builds — tracked in docs/release.md.
       CHANGELOG, issue templates, starter issues list, demo dataset
       (`demo/demo-library.json`), release checklist (docs/release.md)
 - [x] Security workflow: `cargo audit` + gitleaks secret scan
+- [x] Release automation: reviewed version/changelog PRs, four native build
+      targets, installer assets and SHA-256 checksums, draft recovery; first
+      live GitHub run and signed distribution remain to be verified
 - [ ] Release artifacts for three OSs with signing/notarization — requires
       platform accounts and keys; see docs/release.md (deliberately not faked)
 

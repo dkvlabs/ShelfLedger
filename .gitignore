@@ -3,6 +3,8 @@ node_modules/
 
 # Build outputs
 dist/
+release-assets/
+release-notes.md
 src-tauri/target/
 src-tauri/gen/schemas/
 

@@ -6,6 +6,21 @@ All notable changes to ShelfLedger are documented here. Format follows
 
 ## [Unreleased]
 
+## Development history (before automated releases)
+
+### Added — release automation (2026-10-27)
+- GitHub Actions release PRs synchronize all app versions and generate categorized
+  descriptions from Conventional Commits. Merging builds macOS Apple Silicon and
+  Intel, Windows x64 and Linux x64 installers and publishes SHA-256 checksums.
+- Releases remain drafts until all checks and installers succeed, with retry by
+  tag, optional Apple Developer ID signing/notarization, and documented setup.
+
+### Added — localization and local market comparisons (2026-10-27)
+- Offline translations for ten languages and the complete active ISO 4217
+  currency list, with currency-specific decimal scales and right-to-left Arabic.
+- User-initiated OLX Romania searches and offline comparable listings with
+  source, date and confidence; evidenced per-currency valuation estimates.
+
 ### Fixed — Goodreads CSV import (2026-10-27)
 - Unrelated legacy timestamps such as `x` no longer reject every imported row.
   Internal staging preserves existing data and validates only the incoming delta;
@@ -87,8 +102,3 @@ All notable changes to ShelfLedger are documented here. Format follows
   SHA-256 manifest, zipped) with validated, confirmed restore (replace or
   separate profile).
 - Light/dark/system theme and English/Romanian localization; DD.MM.YYYY UI dates.
-
-## [0.1.0] — initial development release (planned)
-
-First packaged builds for macOS, Windows, and Linux once signing/notarization is
-in place (see docs/release.md).

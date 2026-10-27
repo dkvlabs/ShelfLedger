@@ -1,0 +1,230 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      retry_tag:
+        description: 'Retry an existing draft release (for example v0.1.0); leave empty to update the release PR'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+# A new push must not cancel installers or publishing for an earlier release.
+concurrency:
+  group: releases
+  cancel-in-progress: false
+
+jobs:
+  release-please:
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || inputs.retry_tag == '')
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      pull-requests: write
+    outputs:
+      created: ${{ steps.release.outputs.release_created }}
+      release_id: ${{ steps.release.outputs.id }}
+    steps:
+      - uses: googleapis/release-please-action@v4.4.1
+        id: release
+        with:
+          # Optional fine-grained token for PR CI without manual approval.
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN || github.token }}
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+
+  prepare:
+    needs: release-please
+    if: >-
+      always() && !cancelled() && github.ref == 'refs/heads/main' &&
+      (needs.release-please.outputs.created == 'true' ||
+       (github.event_name == 'workflow_dispatch' && inputs.retry_tag != ''))
+    runs-on: ubuntu-24.04
+    outputs:
+      tag: ${{ steps.release.outputs.tag }}
+      sha: ${{ steps.release.outputs.sha }}
+      release_id: ${{ steps.release.outputs.release_id }}
+    steps:
+      - name: Resolve the draft release and immutable source commit
+        id: release
+        uses: actions/github-script@v7
+        env:
+          RETRY_TAG: ${{ inputs.retry_tag }}
+          RELEASE_ID: ${{ needs.release-please.outputs.release_id }}
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const tag = process.env.RETRY_TAG;
+            if (tag && !/^v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(tag)) {
+              throw new Error('Retry tag must be a stable version such as v0.1.0');
+            }
+            let release;
+            if (tag) {
+              const releases = await github.paginate(github.rest.repos.listReleases, { owner, repo, per_page: 100 });
+              release = releases.find(item => item.tag_name === tag);
+            } else {
+              release = (await github.rest.repos.getRelease({ owner, repo, release_id: Number(process.env.RELEASE_ID) })).data;
+            }
+            if (!release?.draft) throw new Error('Only an existing draft release can be built or retried');
+            if (!/^v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(release.tag_name)) {
+              throw new Error('Release tag must be stable SemVer');
+            }
+            const commit = await github.rest.repos.getCommit({ owner, repo, ref: `tags/${release.tag_name}` });
+            core.setOutput('tag', release.tag_name);
+            core.setOutput('sha', commit.data.sha);
+            core.setOutput('release_id', String(release.id));
+
+  checks:
+    needs: prepare
+    if: ${{ !cancelled() && needs.prepare.result == 'success' }}
+    runs-on: ubuntu-24.04
+    env:
+      RELEASE_TAG: ${{ needs.prepare.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.sha }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm release:check
+      - run: pnpm test:release
+      - run: pnpm lint
+      - run: pnpm test:web
+      - name: Validate the release description before building
+        run: node scripts/release.mjs notes
+
+  installers:
+    needs: [prepare, checks]
+    if: ${{ !cancelled() && needs.prepare.result == 'success' && needs.checks.result == 'success' }}
+    name: Installer (${{ matrix.platform }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: macos-arm64
+            os: macos-15
+          - platform: macos-x64
+            os: macos-15-intel
+          - platform: windows-x64
+            os: windows-2022
+          - platform: linux-x64
+            os: ubuntu-22.04
+    runs-on: ${{ matrix.os }}
+    env:
+      RELEASE_TAG: ${{ needs.prepare.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.sha }}
+          persist-credentials: false
+      - name: Install Linux bundle dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev patchelf libfuse2
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+          key: release-${{ matrix.platform }}
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm release:check
+      - run: cargo fmt --manifest-path src-tauri/Cargo.toml -- --check
+      - run: cargo clippy --manifest-path src-tauri/Cargo.toml --locked --all-targets -- -D warnings
+      - run: cargo test --manifest-path src-tauri/Cargo.toml --locked
+      - name: Build installers
+        run: node scripts/release.mjs build "$RELEASE_PLATFORM"
+        shell: bash
+        env:
+          RELEASE_PLATFORM: ${{ matrix.platform }}
+          APPLE_CERTIFICATE: ${{ runner.os == 'macOS' && secrets.APPLE_CERTIFICATE || '' }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ runner.os == 'macOS' && secrets.APPLE_CERTIFICATE_PASSWORD || '' }}
+          APPLE_SIGNING_IDENTITY: ${{ runner.os == 'macOS' && secrets.APPLE_SIGNING_IDENTITY || '' }}
+          APPLE_ID: ${{ runner.os == 'macOS' && secrets.APPLE_ID || '' }}
+          APPLE_PASSWORD: ${{ runner.os == 'macOS' && secrets.APPLE_PASSWORD || '' }}
+          APPLE_TEAM_ID: ${{ runner.os == 'macOS' && secrets.APPLE_TEAM_ID || '' }}
+      - name: Stage versioned installers
+        run: node scripts/release.mjs stage "$RELEASE_PLATFORM"
+        shell: bash
+        env:
+          RELEASE_PLATFORM: ${{ matrix.platform }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: installer-${{ matrix.platform }}
+          path: release-assets/*
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    needs: [prepare, installers]
+    if: ${{ !cancelled() && needs.prepare.result == 'success' && needs.installers.result == 'success' }}
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    env:
+      RELEASE_TAG: ${{ needs.prepare.outputs.tag }}
+      RELEASE_ID: ${{ needs.prepare.outputs.release_id }}
+      RELEASE_SHA: ${{ needs.prepare.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: installer-*
+          path: release-assets
+          merge-multiple: true
+      - name: Require every installer and generate SHA-256 checksums
+        run: node scripts/release.mjs checksums
+      - name: Generate categorized notes and download links
+        run: node scripts/release.mjs notes
+      - name: Upload all assets, then publish the draft
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('node:fs');
+            const { owner, repo } = context.repo;
+            const release_id = Number(process.env.RELEASE_ID);
+            const { data: release } = await github.rest.repos.getRelease({ owner, repo, release_id });
+            if (!release.draft || release.tag_name !== process.env.RELEASE_TAG) {
+              throw new Error('Refusing to modify a public release or a different tag');
+            }
+            const commit = await github.rest.repos.getCommit({ owner, repo, ref: `tags/${release.tag_name}` });
+            if (commit.data.sha !== process.env.RELEASE_SHA) throw new Error('Release tag moved during the build');
+            const existing = await github.paginate(github.rest.repos.listReleaseAssets, { owner, repo, release_id, per_page: 100 });
+            const names = fs.readdirSync('release-assets').sort();
+            if (existing.some(asset => !names.includes(asset.name))) throw new Error('Draft contains unexpected assets');
+            for (const name of names) {
+              const old = existing.find(asset => asset.name === name);
+              if (old) await github.rest.repos.deleteReleaseAsset({ owner, repo, asset_id: old.id });
+              await github.rest.repos.uploadReleaseAsset({
+                owner, repo, release_id, name,
+                data: fs.readFileSync(`release-assets/${name}`),
+                headers: { 'content-type': 'application/octet-stream' },
+              });
+            }
+            await github.rest.repos.updateRelease({
+              owner, repo, release_id, draft: false, prerelease: false, make_latest: 'true',
+              body: fs.readFileSync('release-notes.md', 'utf8'),
+            });
+            core.notice(`Published ${release.tag_name} with ${names.length} assets`);
