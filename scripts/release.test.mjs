@@ -18,6 +18,21 @@ function fixture(t) {
   return root;
 }
 
+test('draft release preparation has write access while build jobs remain read-only', () => {
+  const workflow = readFileSync(new URL('../.github/workflows/release.yml', import.meta.url), 'utf8');
+  assert.match(workflow, /^permissions:\n  contents: read$/m);
+  const jobs = workflow.split(/(?=^  [\w-]+:\n)/m);
+  for (const [name, access] of Object.entries({
+    'release-please': 'write', prepare: 'write', publish: 'write',
+    checks: 'read', installers: 'read',
+  })) {
+    const job = jobs.find((section) => section.startsWith(`  ${name}:\n`));
+    assert.ok(job, `Missing ${name} job`);
+    const override = job.match(/^    permissions:\n      contents: (read|write)$/m)?.[1];
+    assert.equal(override ?? 'read', access, `${name} contents permission`);
+  }
+});
+
 test('all four versions and the release manifest must agree with the tag', (t) => {
   const root = fixture(t);
   assert.equal(validateVersions(root, 'v0.1.0'), '0.1.0');

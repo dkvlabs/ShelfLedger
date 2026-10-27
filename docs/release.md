@@ -99,6 +99,14 @@ Checksums detect corruption; they do not replace platform signatures.
 
 ## Retry a failed release
 
+If the draft's Assets list is empty, inspect **Actions → Release** first. A failed
+`prepare` job means installer builds never started. Reading a draft release needs
+push access: `prepare` therefore requests `contents: write`, while checks and
+installer builds retain read-only contents access. A `403 Resource not accessible
+by integration` at that step can indicate missing draft access. After pushing a
+workflow fix, start a new manual run on `main` with the draft tag in `retry_tag`
+so the corrected workflow is used.
+
 Failures leave the release in **draft**. Fix runner configuration or secrets,
 then open **Actions → Release → Run workflow**, select **main**, and enter the
 tag (for example `v0.1.0`) in **retry_tag**. It rebuilds that exact tag and replaces

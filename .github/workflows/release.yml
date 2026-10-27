@@ -39,6 +39,9 @@ jobs:
 
   prepare:
     needs: release-please
+    # GitHub exposes draft releases only to callers with push access.
+    permissions:
+      contents: write
     if: >-
       always() && !cancelled() && github.ref == 'refs/heads/main' &&
       (needs.release-please.outputs.created == 'true' ||
