@@ -79,6 +79,46 @@ pub async fn export(pool: &SqlitePool) -> AppResult<Snapshot> {
 /// Replace in a transaction on the live database. WAL and pooled connections
 /// remain valid; readers observe either the old library or the committed one.
 pub async fn apply(pool: &SqlitePool, snapshot: &Snapshot, replace: bool) -> AppResult<()> {
+    apply_inner(pool, snapshot, replace, true).await
+}
+
+/// Import staging copies already persisted local data, including legacy values
+/// that predate today's validators. This exception cannot be used for incoming
+/// files: the destination is always a new in-memory database created here.
+pub(crate) async fn stage_local(pool: &SqlitePool) -> AppResult<(SqlitePool, Snapshot)> {
+    let baseline = export(pool).await?;
+    let staged = crate::db::connect_memory().await?;
+    if let Err(error) = apply_inner(&staged, &baseline, true, false).await {
+        staged.close().await;
+        return Err(error);
+    }
+    Ok((staged, baseline))
+}
+
+/// Only new or changed staged records cross the validation boundary. Unrelated
+/// legacy records are neither rewritten nor revalidated during a CSV/array import.
+pub(crate) async fn merge_staged(
+    pool: &SqlitePool,
+    staged: &SqlitePool,
+    baseline: &Snapshot,
+) -> AppResult<()> {
+    let mut delta = export(staged).await?;
+    for (table, records) in &mut delta.tables {
+        let existing = baseline.tables[table]
+            .iter()
+            .map(serde_json::to_string)
+            .collect::<Result<std::collections::HashSet<_>, _>>()?;
+        records.retain(|record| !existing.contains(&serde_json::to_string(record).unwrap()));
+    }
+    apply(pool, &delta, false).await
+}
+
+async fn apply_inner(
+    pool: &SqlitePool,
+    snapshot: &Snapshot,
+    replace: bool,
+    validate_incoming: bool,
+) -> AppResult<()> {
     if ![1, 2].contains(&snapshot.format_version)
         || snapshot
             .tables
@@ -128,14 +168,17 @@ pub async fn apply(pool: &SqlitePool, snapshot: &Snapshot, replace: bool) -> App
             if record.is_empty() || record.keys().any(|c| !allowed.contains(c)) {
                 return Err(AppError::Validation(format!("invalid columns in {table}")));
             }
-            validate_record(table, record)?;
+            if validate_incoming {
+                validate_record(table, record)?;
+            }
             for (key, value) in record {
-                if key == "currency" {
+                if validate_incoming && key == "currency" {
                     if let Some(code) = value.as_str() {
                         crate::money::validate_currency(code).map_err(AppError::Validation)?;
                     }
                 }
-                if key.ends_with("_path")
+                if validate_incoming
+                    && key.ends_with("_path")
                     && value.as_str().is_some_and(|p| {
                         std::path::Path::new(p).is_absolute()
                             || p.split(['/', '\\']).any(|v| v == "..")

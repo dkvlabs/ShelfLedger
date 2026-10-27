@@ -93,11 +93,13 @@ are targeted through Tauri 2 but have not been executed in the latest local
 verification. The optional browser version uses the same Rust core over loopback
 HTTP; it is not a hosted cloud service.
 
-Verified on **27.10.2026**: **91 Rust tests** and **267 frontend tests** pass, along
+Verified on **27.10.2026**: **93 Rust tests** and **267 frontend tests** pass, along
 with strict TypeScript/production build, Rust formatting, and Clippy with warnings
 denied. Browser checks cover imports, profile switching, reading, lending,
 editing, all eleven language choices, preference persistence, currency selection,
-and desktop/mobile layouts.
+and desktop/mobile layouts. A separate local check imports a supplied 209-row
+Goodreads export without row errors and verifies idempotent repeat import; see
+[import verification](docs/import-format.md#verification-with-the-supplied-export--27102026).
 
 The audit remediation addresses **23 of 24 findings**. Two upstream Rust advisory
 warnings remain visible. Physical webcam/OS consent, clean-machine installation,

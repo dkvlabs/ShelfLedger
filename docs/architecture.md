@@ -50,12 +50,17 @@ patches distinguish omitted fields from explicit null clears. Active loans and
 active sale listings have partial unique indexes. Listing/disposal transitions
 are transactional; disposal closes active listings for every terminal state.
 
-JSON snapshot format 1 preserves every logical table, including archived copies,
+JSON snapshot format 2 preserves every logical table, including archived copies,
 financial/reading/loan history, settings, cache and import logs. Restore first
 verifies archive hashes, SQLite integrity and migrations. Replace creates a
 consistent safety ZIP, then replaces records in a transaction on the live pool:
 **the open database, WAL and SHM files are never overwritten or removed**. No
 restart is required. Separate restore creates a selectable library profile.
+
+CSV and legacy-array imports stage trusted local records without revalidating
+old values, then validate and atomically merge only newly created records.
+An unrelated legacy timestamp cannot block new rows. Incoming snapshots retain
+full validation. Re-importing with skip rechecks live duplicates before staging.
 
 Generated exports, backups, uploads and profile files stay under app data.
 Canonical ancestor checks reject traversal and symlink escapes before directory

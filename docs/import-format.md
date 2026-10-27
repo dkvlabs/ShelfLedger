@@ -13,10 +13,17 @@ unavailable until the preview matches the mapping.
 
 Title is required. A valid ISBN13 takes precedence; valid ISBN-10 is a fallback.
 Checksum failures produce manual editions with a warning. Author strings preserve
-commas in names; semicolons separate multiple authors. `Exclusive Shelf` maps
+commas in primary names; semicolons separate multiple primary authors. Goodreads
+`Additional Authors` is read as its comma/semicolon-separated contributor list.
+Publisher, binding, positive page count, and edition publication year are retained.
+`Exclusive Shelf` maps
 `to-read`, `currently-reading`, `read` to independent reading sessions. Custom
-Bookshelves become tags. Rating and review are retained. Date Read accepts
-YYYY/MM/DD, YYYY-MM-DD or DD.MM.YYYY. Unknown reading dates stay null; import never
+Bookshelves become tags. Rating and review are retained. Integral ratings such as
+`5.0` and `4.00` are accepted; Goodreads `0` means unrated and stays null. Invalid
+optional ratings, pages, publication years and reading dates produce preview
+warnings rather than rejecting the book. Date Read accepts
+YYYY/MM/DD, YYYY-MM-DD, DD.MM.YYYY, or a valid RFC3339 timestamp. Unknown
+reading dates stay null; import never
 invents a finish date. Arbitrary UTF-8 date input cannot panic.
 
 Preview exposes duplicate matches and selected rows. Choose skip, add a physical
@@ -25,7 +32,46 @@ Conflicting ISBNs on a separate work produce a manual edition, never an orphan.
 Each selected row is staged and merged atomically: failure rolls back its work,
 editions and copies. Results distinguish imported, skipped and failed rows;
 `import_jobs.stats_json` retains the row log and counts. Re-import with skip is
-idempotent. Rows not selected are untouched.
+idempotent. Live duplicates selected for skipping bypass expensive staging. Rows
+not selected are untouched. Trusted existing rows are cloned internally without
+revalidating legacy values; only new staged records are merged and validated.
+This prevents an old `works.created_at = 'x'` from failing every CSV row while
+keeping incoming JSON snapshot validation strict. Existing dates are not guessed
+or rewritten.
+
+CSV is a catalog/reading import, not a lossless Goodreads backup. Date Added does
+not establish purchase or reading-start dates, and shelves do not establish
+physical ownership. No physical copies are created on the initial CSV import;
+add owned copies explicitly afterwards. Goodreads IDs, average/community ratings,
+Original Publication Year, shelf positions, spoiler/private-note fields and Read
+Count are not mapped into invented local history. A read count greater than one
+does not create fabricated reread sessions. Keep the source export for those fields.
+
+### Verification with the supplied export — 27.10.2026
+
+The private 209-row Goodreads export was exercised through the same Rust file
+preview and commit functions as the wizard, using a disposable on-disk library
+containing an existing `x` timestamp. All 209 works and editions imported without
+row errors; 81 supplied ratings and 83 finish dates were retained. A second import
+skipped every row and created no duplicate works, editions or copies. The private
+CSV is not stored in this repository. The macOS app bundle was rebuilt and its
+ad-hoc signature verified after the fix.
+
+The synthetic regression also checks an empty library, quoted commas, multiline
+Unicode reviews, BOM headers, ISBN wrappers and fallback, manual editions,
+additional authors, publication metadata, unknown dates, persistence after reopen,
+and strict snapshot rejection/atomic invalid-row rollback. To repeat the optional
+local full-file check:
+
+```sh
+SHELFLEDGER_TEST_GOODREADS_CSV=/absolute/path/to/export.csv \
+  cargo test --manifest-path src-tauri/Cargo.toml \
+  private_goodreads_export_imports_every_row_and_repeat_is_idempotent -- --ignored --nocapture
+```
+
+This opt-in check expects an export whose selected rows are distinct and have no
+matches with the test fixture. It imports into a temporary library and removes
+that test library when complete; it never commits the CSV or writes the real library.
 
 ## Lossless JSON snapshot, format 2
 

@@ -6,6 +6,17 @@ All notable changes to ShelfLedger are documented here. Format follows
 
 ## [Unreleased]
 
+### Fixed — Goodreads CSV import (2026-10-27)
+- Unrelated legacy timestamps such as `x` no longer reject every imported row.
+  Internal staging preserves existing data and validates only the incoming delta;
+  external snapshot validation stays strict and row commits remain atomic.
+- Decimal ratings such as `5.0` are retained; Goodreads zero stays unrated.
+  Publisher, binding, page count, publication year and additional authors are imported.
+- Blank spreadsheet ISBN wrappers produce manual editions, unknown dates stay
+  blank with a warning, and repeated imports skip duplicates without cloning the library.
+- Verified a private 209-row export with zero errors, all 81 ratings and 83 finish
+  dates retained, and an idempotent second import. See `docs/import-format.md`.
+
 ### Added — audit remediation and cinematic redesign (2026-10-27)
 - Ink, copper and ivory interface with bundled literary typography, original
   atmospheric artwork, collection-first navigation and responsive layouts.

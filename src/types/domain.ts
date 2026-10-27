@@ -506,6 +506,13 @@ export interface ImportRowPreview {
   rowNumber: number;
   title: string;
   author: string;
+  authorNames?: string[];
+  publisher?: string | null;
+  binding?: string | null;
+  pageCount?: number | null;
+  publishedAt?: string | null;
+  review?: string | null;
+  tags?: string[];
   isbn13: string | null;
   shelf: string | null;
   rating: number | null;

@@ -42,11 +42,27 @@ fn parse_goodreads_date(raw: &str) -> Option<String> {
         return Some(d.to_string());
     }
     for format in ["%Y-%m-%d", "%d.%m.%Y"] {
-        if let Ok(d) = chrono::NaiveDate::parse_from_str(s.get(..10).unwrap_or(s), format) {
+        if let Ok(d) = chrono::NaiveDate::parse_from_str(s, format) {
             return Some(d.to_string());
         }
     }
-    None
+    chrono::DateTime::parse_from_rfc3339(s)
+        .ok()
+        .map(|d| d.date_naive().to_string())
+}
+
+fn parse_goodreads_rating(raw: &str) -> Result<Option<i64>, ()> {
+    // Some exports use "5.0". Accept integral decimals without rounding a
+    // fractional rating; Goodreads zero means unrated, not a zero-star review.
+    let (whole, fraction) = raw.split_once('.').unwrap_or((raw, ""));
+    if !fraction.chars().all(|c| c == '0') {
+        return Err(());
+    }
+    let rating = whole.parse::<i64>().map_err(|_| ())?;
+    if !(0..=5).contains(&rating) {
+        return Err(());
+    }
+    Ok((rating != 0).then_some(rating))
 }
 
 /// Parse a Goodreads CSV export into preview rows (no writes).
@@ -68,6 +84,15 @@ pub fn preview_goodreads_csv(csv_text: &str) -> AppResult<ImportPreview> {
 
         let title = field("Title").unwrap_or("").to_string();
         let author = field("Author").unwrap_or("").to_string();
+        let mut author_names = author
+            .split(';')
+            .chain(field("Additional Authors").unwrap_or("").split([',', ';']))
+            .map(str::trim)
+            .filter(|v| !v.is_empty())
+            .map(str::to_string)
+            .collect::<Vec<_>>();
+        let mut seen = std::collections::HashSet::new();
+        author_names.retain(|name| seen.insert(name.clone()));
         let raw_isbn = field("ISBN13")
             .filter(|v| isbn::parse(&clean_isbn(v)).is_some())
             .or_else(|| field("ISBN"))
@@ -80,34 +105,52 @@ pub fn preview_goodreads_csv(csv_text: &str) -> AppResult<ImportPreview> {
         let shelf = field("Exclusive Shelf")
             .or_else(|| field("Bookshelves"))
             .map(str::to_string);
-        let rating = field("My Rating")
-            .and_then(|r| r.parse::<i64>().ok())
-            .filter(|r| (0..=5).contains(r));
+        let rating = field("My Rating").map(parse_goodreads_rating).transpose();
 
         let mut warnings = Vec::new();
         if title.is_empty() {
             warnings.push("missing title (row will be skipped)".to_string());
         }
-        if raw_isbn.is_empty() {
+        if cleaned.is_empty() {
             warnings.push("no ISBN — imported as a manual edition".to_string());
         } else if parsed_isbn.is_none() {
             warnings.push("ISBN failed checksum — imported without ISBN".to_string());
         }
-        if let Some(rating_raw) = field("My Rating") {
-            let parsed = rating_raw.parse::<i64>().ok();
-            if parsed.is_none() && !rating_raw.is_empty() {
-                warnings.push(format!("unparseable rating {rating_raw:?} ignored"));
-            }
+        if rating.is_err() {
+            warnings.push(format!(
+                "invalid rating {:?} ignored",
+                field("My Rating").unwrap_or("")
+            ));
         }
         let date_read = field("Date Read").and_then(parse_goodreads_date);
+        if date_read.is_none() && field("Date Read").is_some() {
+            warnings.push("unknown or invalid Date Read ignored; finish date left blank".into());
+        }
+        let page_count = field("Number of Pages")
+            .and_then(|v| v.parse::<i64>().ok())
+            .filter(|v| (1..=1_000_000).contains(v));
+        if page_count.is_none() && field("Number of Pages").is_some() {
+            warnings.push("invalid page count ignored".into());
+        }
+        let published_at = field("Year Published")
+            .filter(|v| crate::models::validate_publication(Some(v), None).is_ok())
+            .map(str::to_string);
+        if published_at.is_none() && field("Year Published").is_some() {
+            warnings.push("invalid publication year ignored".into());
+        }
 
         rows.push(ImportRowPreview {
             row_number: i + 1,
             title,
             author,
+            author_names,
+            publisher: field("Publisher").map(str::to_string),
+            binding: field("Binding").map(str::to_string),
+            page_count,
+            published_at,
             isbn13: parsed_isbn.as_ref().and_then(|n| n.isbn13.clone()),
             shelf,
-            rating,
+            rating: rating.ok().flatten().flatten(),
             date_read,
             review: field("My Review").map(str::to_string),
             tags: field("Bookshelves")
@@ -138,20 +181,27 @@ pub async fn annotate_duplicates(
         if row.title.trim().is_empty() {
             continue;
         }
-        let found = crate::domain::catalog::find_duplicates(
-            pool,
-            &crate::models::DuplicateQuery {
-                isbn: row.isbn13.clone(),
-                title: Some(row.title.clone()),
-                author_name: (!row.author.is_empty()).then(|| row.author.clone()),
-            },
-        )
-        .await?;
+        let found = row_duplicates(pool, row).await?;
         row.duplicate_of = found
             .first()
             .map(|w| format!("{} ({})", w.title, w.author_names.join(", ")));
     }
     Ok(preview)
+}
+
+async fn row_duplicates(
+    pool: &SqlitePool,
+    row: &ImportRowPreview,
+) -> AppResult<Vec<crate::models::WorkSummary>> {
+    crate::domain::catalog::find_duplicates(
+        pool,
+        &crate::models::DuplicateQuery {
+            isbn: row.isbn13.clone(),
+            title: Some(row.title.clone()),
+            author_name: row.author_names.first().cloned(),
+        },
+    )
+    .await
 }
 
 /// Commit selected preview rows. `csv_path` is re-read by Rust; the webview
@@ -272,15 +322,7 @@ async fn import_one_row_staged(
     input: &ImportCommitInput,
 ) -> AppResult<(bool, bool, bool)> {
     // Re-resolve the duplicate at commit time.
-    let dup = crate::domain::catalog::find_duplicates(
-        pool,
-        &crate::models::DuplicateQuery {
-            isbn: row.isbn13.clone(),
-            title: Some(row.title.clone()),
-            author_name: (!row.author.is_empty()).then(|| row.author.clone()),
-        },
-    )
-    .await?;
+    let dup = row_duplicates(pool, row).await?;
 
     let mut work_created = false;
     let mut edition_created = false;
@@ -403,12 +445,7 @@ async fn create_work_and_edition(
             subtitle: None,
             original_language: None,
             description: None,
-            author_names: row
-                .author
-                .split(';')
-                .map(|s| s.trim().to_string())
-                .filter(|s| !s.is_empty())
-                .collect(),
+            author_names: row.author_names.clone(),
         },
     )
     .await?;
@@ -421,11 +458,11 @@ async fn create_work_and_edition(
                 work_id: detail.work.id.clone(),
                 isbn10: None,
                 isbn13: Some(isbn13.clone()),
-                publisher: None,
-                published_at: None,
+                publisher: row.publisher.clone(),
+                published_at: row.published_at.clone(),
                 language: None,
-                page_count: None,
-                binding: None,
+                page_count: row.page_count,
+                binding: row.binding.clone(),
             },
         )
         .await
@@ -436,11 +473,11 @@ async fn create_work_and_edition(
                     work_id: detail.work.id.clone(),
                     isbn10: None,
                     isbn13: None,
-                    publisher: None,
-                    published_at: None,
+                    publisher: row.publisher.clone(),
+                    published_at: row.published_at.clone(),
                     language: None,
-                    page_count: None,
-                    binding: None,
+                    page_count: row.page_count,
+                    binding: row.binding.clone(),
                 };
                 manual.isbn13 = None;
                 Some(
@@ -458,11 +495,11 @@ async fn create_work_and_edition(
                 work_id: detail.work.id.clone(),
                 isbn10: None,
                 isbn13: None,
-                publisher: None,
-                published_at: None,
+                publisher: row.publisher.clone(),
+                published_at: row.published_at.clone(),
                 language: None,
-                page_count: None,
-                binding: None,
+                page_count: row.page_count,
+                binding: row.binding.clone(),
             },
         )
         .await?;
@@ -716,31 +753,42 @@ async fn import_json_work_staged(
     Ok((true, edition_count, copy_count))
 }
 
-async fn stage(pool: &SqlitePool) -> AppResult<SqlitePool> {
-    let staged = crate::db::connect_memory().await?;
-    let state = crate::repositories::snapshot::export(pool).await?;
-    crate::repositories::snapshot::apply(&staged, &state, true).await?;
-    Ok(staged)
-}
 async fn import_json_work(pool: &SqlitePool, work: JsonWork) -> AppResult<(bool, usize, usize)> {
-    let staged = stage(pool).await?;
-    let result = import_json_work_staged(&staged, work).await?;
-    let snapshot = crate::repositories::snapshot::export(&staged).await?;
-    crate::repositories::snapshot::apply(pool, &snapshot, false).await?;
+    let (staged, baseline) = crate::repositories::snapshot::stage_local(pool).await?;
+    let result = async {
+        let result = import_json_work_staged(&staged, work).await?;
+        crate::repositories::snapshot::merge_staged(pool, &staged, &baseline).await?;
+        Ok(result)
+    }
+    .await;
     staged.close().await;
-    Ok(result)
+    result
 }
 async fn import_one_row(
     pool: &SqlitePool,
     row: &ImportRowPreview,
     input: &ImportCommitInput,
 ) -> AppResult<(bool, bool, bool)> {
-    let staged = stage(pool).await?;
-    let result = import_one_row_staged(&staged, row, input).await?;
-    let snapshot = crate::repositories::snapshot::export(&staged).await?;
-    crate::repositories::snapshot::apply(pool, &snapshot, false).await?;
+    // A skipped duplicate has no writes to stage. Recheck the live library so
+    // repeats (including duplicate rows within one file) stay quick and safe.
+    if input
+        .row_policies
+        .get(&row.row_number)
+        .unwrap_or(&input.duplicate_policy)
+        == "skip"
+        && !row_duplicates(pool, row).await?.is_empty()
+    {
+        return Ok((false, false, false));
+    }
+    let (staged, baseline) = crate::repositories::snapshot::stage_local(pool).await?;
+    let result = async {
+        let result = import_one_row_staged(&staged, row, input).await?;
+        crate::repositories::snapshot::merge_staged(pool, &staged, &baseline).await?;
+        Ok(result)
+    }
+    .await;
     staged.close().await;
-    Ok(result)
+    result
 }
 
 #[cfg(test)]

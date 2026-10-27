@@ -4,6 +4,8 @@ mod db;
 mod domain;
 mod error;
 mod ids;
+#[cfg(test)]
+mod import_regressions;
 mod isbn;
 mod metadata;
 mod models;
