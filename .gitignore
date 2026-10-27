@@ -1,0 +1,35 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+src-tauri/target/
+src-tauri/gen/schemas/
+
+# Rust
+**/*.rs.bk
+
+# Environment / secrets — never commit credentials
+.env
+.env.*
+!.env.example
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Agent/tool session state (not project code)
+.mimosa/
+.v2c/
+.video_agent/
+
+# Editor
+.idea/
+.vscode/
+*.swp
+
+# Logs
+*.log
+
+# Tauri dev artifacts
+src-tauri/gen/apple/

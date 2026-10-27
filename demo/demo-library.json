@@ -1,0 +1,89 @@
+[
+  {
+    "title": "The Hobbit",
+    "subtitle": "or, There and Back Again",
+    "authorNames": ["J.R.R. Tolkien"],
+    "originalLanguage": "en",
+    "editions": [
+      {
+        "isbn13": "9780547928227",
+        "publisher": "Houghton Mifflin Harcourt",
+        "publishedAt": "2012",
+        "language": "en",
+        "pageCount": 300,
+        "binding": "paperback",
+        "copies": [
+          {
+            "conditionGrade": "very_good",
+            "acquiredAt": "2023-04-12",
+            "priceMinor": 4500,
+            "currency": "RON",
+            "store": "Local bookshop",
+            "acquisitionType": "bought",
+            "note": "Gift idea turned duplicate",
+            "sentimentalScore": 1
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "title": "American Gods",
+    "subtitle": "A Novel",
+    "authorNames": ["Neil Gaiman"],
+    "originalLanguage": "en",
+    "editions": [
+      {
+        "isbn13": "9780060558123",
+        "publisher": "Harper Perennial",
+        "publishedAt": "2003",
+        "language": "en",
+        "pageCount": 591,
+        "binding": "paperback",
+        "copies": [
+          {
+            "conditionGrade": "good",
+            "acquiredAt": "2021-08-01",
+            "priceMinor": 6000,
+            "currency": "RON",
+            "acquisitionType": "bought",
+            "sentimentalScore": 0
+          },
+          {
+            "conditionGrade": "like_new",
+            "acquiredAt": "2024-11-20",
+            "priceMinor": 7500,
+            "currency": "RON",
+            "store": "Carturesti",
+            "acquisitionType": "bought",
+            "sentimentalScore": 4
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "title": "Enigma Otiliei",
+    "authorNames": ["George Călinescu"],
+    "originalLanguage": "ro",
+    "editions": [
+      {
+        "isbn13": "9789744606547",
+        "publisher": "Editura Litera",
+        "language": "ro",
+        "pageCount": 472,
+        "binding": "hardcover",
+        "copies": [
+          {
+            "conditionGrade": "good",
+            "acquiredAt": "2026-01-10",
+            "priceMinor": 3900,
+            "currency": "RON",
+            "acquisitionType": "gift",
+            "sentimentalScore": 2
+          }
+        ]
+      }
+    ]
+  }
+]
