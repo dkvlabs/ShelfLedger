@@ -4,6 +4,18 @@ All notable changes to ShelfLedger are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning is
 [SemVer](https://semver.org/).
 
+## 0.1.0 (2026-10-27)
+
+
+### Features
+
+* **ci:** automate versioned desktop releases ([d1b0588](https://github.com/dkvlabs/ShelfLedger/commit/d1b0588e78b3ed5bb36a54cce604d123ec9a0b8d))
+
+
+### Fixes
+
+* **ci:** resolve Windows SQLite cleanup and secret scanning failures ([e96398c](https://github.com/dkvlabs/ShelfLedger/commit/e96398c64d5acd2a0b49a9c635c3cd2580af0814))
+
 ## [Unreleased]
 
 ### Fixed
