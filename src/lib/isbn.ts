@@ -42,7 +42,9 @@ export function parseIsbn(raw: string): NormalizedIsbn | null {
 }
 
 export function isbn10ToIsbn13(isbn10: string): string | null {
-  if (!/^\d{10}$/.test(isbn10)) return null;
+  // The 10th digit can be X (value 10); only the first 9 are used for the
+  // conversion, the ISBN-13 check digit is recomputed below.
+  if (!/^[0-9]{9}[0-9X]$/.test(isbn10)) return null;
   const first12 = [9, 7, 8, ...isbn10.split("").slice(0, 9).map(Number)];
   const sum = first12.reduce((acc, d, i) => acc + d * (i % 2 === 0 ? 1 : 3), 0);
   const check = (10 - (sum % 10)) % 10;

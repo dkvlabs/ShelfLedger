@@ -347,23 +347,31 @@ pub async fn sync_fts(conn: &mut sqlx::SqliteConnection, work_id: &str) -> AppRe
 }
 
 /// Build a safe FTS5 MATCH expression from free text: each token becomes a
-/// quoted prefix term, joined with AND. A single hyphenated token (e.g. an
-/// ISBN with separators) is normalized to one alphanumeric term so
-/// "978-0-306-40615-7" matches the indexed "9780306406157". Empty when no
+/// quoted prefix term, joined with AND. A single hyphenated token is fused
+/// into one term only when it is ISBN-like ("978-0-306-40615-7" must match
+/// the indexed "9780306406157"); hyphenated words ("error-correction") are
+/// two terms, because that is how the tokenizer indexed them. Empty when no
 /// usable tokens.
 pub fn fts_match_query(query: &str) -> Option<String> {
     let trimmed = query.trim();
-    // Hyphenated single token (no whitespace) -> one normalized term.
+    // Hyphenated single token (no whitespace): ISBN-like values fuse into one
+    // normalized term; anything else falls through to word splitting below.
     if !trimmed.contains(char::is_whitespace) && trimmed.contains('-') {
         let cleaned: String = trimmed
             .chars()
             .filter(|c| c.is_alphanumeric())
             .collect::<String>()
             .to_lowercase();
-        return (!cleaned.is_empty()).then(|| format!("\"{cleaned}\"*"));
+        let digits = cleaned.chars().filter(|c| c.is_ascii_digit()).count();
+        let isbn_like =
+            (cleaned.len() == 13 && digits == 13) || (cleaned.len() == 10 && digits >= 9);
+        if isbn_like {
+            return (!cleaned.is_empty()).then(|| format!("\"{cleaned}\"*"));
+        }
     }
     let terms: Vec<String> = trimmed
         .split_whitespace()
+        .flat_map(|t| t.split('-'))
         .map(|t| {
             let cleaned: String = t
                 .chars()
@@ -595,6 +603,45 @@ mod tests {
             fts_match_query("gods gaiman").as_deref(),
             Some("\"gods\"* AND \"gaiman\"*")
         );
+        // Hyphenated words are two terms, not one fused token.
+        assert_eq!(
+            fts_match_query("error-correction").as_deref(),
+            Some("\"error\"* AND \"correction\"*")
+        );
+        assert_eq!(
+            fts_match_query("sci-fi novel").as_deref(),
+            Some("\"sci\"* AND \"fi\"* AND \"novel\"*")
+        );
+        // An ISBN-10 with an X check digit is still ISBN-like.
+        assert_eq!(
+            fts_match_query("0-8044-2957-X").as_deref(),
+            Some("\"080442957x\"*")
+        );
         assert_eq!(fts_match_query("   "), None);
+    }
+
+    #[tokio::test]
+    async fn hyphenated_word_query_matches_indexed_tokens() {
+        // Regression from the live drill: searching a hyphenated word in a
+        // title ("error-correction") found nothing because the query was
+        // fused into one token the index never contains.
+        let pool = connect_memory().await.unwrap();
+        let mut tx = pool.begin().await.unwrap();
+        insert_work(&mut tx, "Error-correction coding", None, None, None)
+            .await
+            .unwrap();
+        tx.commit().await.unwrap();
+        let work_id = find_work_id(&pool, "Error-correction coding").await;
+        let mut conn = pool.acquire().await.unwrap();
+        sync_fts(&mut conn, &work_id).await.unwrap();
+
+        assert_eq!(
+            search_fts_ids(&pool, "error-correction").await.unwrap(),
+            vec![work_id.clone()]
+        );
+        assert_eq!(
+            search_fts_ids(&pool, "coding").await.unwrap(),
+            vec![work_id]
+        );
     }
 }

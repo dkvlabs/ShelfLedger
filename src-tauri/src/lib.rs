@@ -8,6 +8,7 @@ mod metadata;
 mod models;
 mod money;
 mod repositories;
+pub mod web;
 
 use tauri::Manager;
 

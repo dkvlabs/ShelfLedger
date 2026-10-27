@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!-- ShelfLedger: three book spines on a shelf plank, warm library palette.
+       Source artwork for `tauri icon app-icon.json` (all platform icons). -->
+  <rect width="1024" height="1024" rx="230" fill="#22304A"/>
+
+  <!-- shelf plank -->
+  <rect x="144" y="736" width="736" height="64" rx="20" fill="#E9D6AE"/>
+
+  <!-- cream spine with two ledger lines -->
+  <path d="M244 740 V334 a18 18 0 0 1 18 -18 h96 a18 18 0 0 1 18 18 V740 Z" fill="#F4EADA"/>
+  <rect x="278" y="420" width="66" height="14" rx="7" fill="#CBB891"/>
+  <rect x="278" y="456" width="66" height="14" rx="7" fill="#CBB891"/>
+
+  <!-- amber spine with label band -->
+  <path d="M400 740 V266 a18 18 0 0 1 18 -18 h120 a18 18 0 0 1 18 18 V740 Z" fill="#E8A33D"/>
+  <rect x="400" y="322" width="156" height="56" fill="#B97F2A"/>
+
+  <!-- terracotta spine, leaning like a book just pulled from the shelf -->
+  <path
+    d="M584 740 V392 a18 18 0 0 1 18 -18 h102 a18 18 0 0 1 18 18 V740 Z"
+    fill="#C05B4D"
+    transform="rotate(8 584 740)"
+  />
+</svg>

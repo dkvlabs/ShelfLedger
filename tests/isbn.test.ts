@@ -47,6 +47,10 @@ describe("parseIsbn", () => {
       isbn13: "9780198526636",
       isbn10: "0198526636",
     });
+    expect(parseIsbn("0-8044-2957-X")).toEqual({
+      isbn13: "9780804429573",
+      isbn10: "080442957X",
+    });
   });
 
   it("rejects invalid input", () => {
@@ -61,6 +65,7 @@ describe("conversions", () => {
     expect(isbn10ToIsbn13("0306406152")).toBe("9780306406157");
     expect(isbn13ToIsbn10("9780306406157")).toBe("0306406152");
     expect(isbn13ToIsbn10("9791234567896")).toBeNull(); // only 978 maps back
-    expect(isbn10ToIsbn13("030640615X")).toBeNull(); // non-numeric body
+    expect(isbn10ToIsbn13("080442957X")).toBe("9780804429573"); // X check digit
+    expect(isbn10ToIsbn13("03064061X5")).toBeNull(); // X outside check position
   });
 });
