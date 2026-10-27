@@ -17,7 +17,7 @@ SQL from the frontend.
 - `src-tauri/src/commands`: Tauri entry points and shared data-file operations.
 - `src-tauri/src/domain`: catalog, reading, loans, finance, imports, backup, profiles.
 - `src-tauri/src/repositories`: SQLite persistence, derived FTS index and versioned snapshots.
-- `src-tauri/src/db.rs`: WAL, foreign keys, five embedded migrations and connection pool.
+- `src-tauri/src/db.rs`: WAL, foreign keys, six embedded migrations and connection pool.
 - `src-tauri/src/sqlite_db.rs`: SQLite-only SQLx facade. Direct driver/core versions
   are pinned together at 0.8.6; upgrades must verify the facade and migration checksums.
   Unused MySQL/Postgres drivers and their crypto dependencies are excluded.
@@ -43,6 +43,13 @@ server checks loopback Host, Origin, JSON Content-Type and a process-session tok
 for API POSTs. It sends anti-framing, no-sniff and no-store headers. Development
 allows the documented Vite origin; it does not enable permissive CORS.
 
+OLX comparisons are entered by the user, scoped to an edition, and stored locally.
+Only explicit clicks open validated HTTPS OLX Romania listings/book searches in
+the system browser. A named Rust command uses the opener plugin; generic webview
+opener permissions are not granted. No iframe, scraping, marketplace API, remote
+images or background requests are used. Saved valuations retain immutable listing
+URLs, advertised prices, observation dates, notes and user-selected confidence.
+
 ## Persistence and recovery
 
 Catalog mutations update affected FTS rows with the record transaction. Copy
@@ -50,7 +57,7 @@ patches distinguish omitted fields from explicit null clears. Active loans and
 active sale listings have partial unique indexes. Listing/disposal transitions
 are transactional; disposal closes active listings for every terminal state.
 
-JSON snapshot format 2 preserves every logical table, including archived copies,
+JSON snapshot format 3 preserves every logical table, including archived copies,
 financial/reading/loan history, settings, cache and import logs. Restore first
 verifies archive hashes, SQLite integrity and migrations. Replace creates a
 consistent safety ZIP, then replaces records in a transaction on the live pool:
@@ -70,6 +77,6 @@ attachments are deferred; JSON is a record interchange, not an asset package.
 ## Deliberate limits
 
 One local operator per running library is the supported deployment. Sync,
-accounts, remote hosting, e-books, receipt management, comparable-price collection
+accounts, remote hosting, e-books, receipt management, automated marketplace collection
 and very-large-library virtualization remain outside the current phase. See
 [implementation.md](implementation.md) for verified coverage and remaining gates.

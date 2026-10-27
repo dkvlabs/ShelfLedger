@@ -1,3 +1,4 @@
+import { MarketComparisonDialog } from "@/features/finance/MarketComparisonDialog";
 import { CurrencySelect } from "@/components/ui/currency-select";
 import { useT, useFormatMoney } from "@/lib/i18n";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -444,6 +445,7 @@ export default function WorkDetail({
   const [editTarget, setEditTarget] = useState<EditTarget | null>(null);
   const [showArchived, setShowArchived] = useState(false);
   const [addCopyOpen, setAddCopyOpen] = useState(false);
+  const [comparisonEditionId, setComparisonEditionId] = useState<string | null>(null);
   const [lendCopyId, setLendCopyId] = useState<string | null>(null);
   const [valueCopyId, setValueCopyId] = useState<string | null>(null);
   const { data: settings } = useQuery({
@@ -561,6 +563,14 @@ export default function WorkDetail({
                     }
                   >
                     {tx("Edit edition")}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="my-2"
+                    onClick={() => setComparisonEditionId(e.id)}
+                  >
+                    {tx("Compare local prices")}
                   </Button>
                   <div className="text-xs text-muted-foreground">
                     {e.isbn13 ? `ISBN-13 ${e.isbn13}` : tx("No ISBN")}
@@ -767,6 +777,15 @@ export default function WorkDetail({
         </Card>
       </div>
 
+      {editions.filter(e => e.id === comparisonEditionId).map(e => (
+        <MarketComparisonDialog
+          key={e.id}
+          edition={e}
+          title={work.title}
+          authors={authors.map(a => a.name).join(" ")}
+          onClose={() => setComparisonEditionId(null)}
+        />
+      ))}
       {editTarget && (
         <EditBookDialog
           data={data}

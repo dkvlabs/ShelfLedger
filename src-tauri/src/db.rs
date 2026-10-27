@@ -34,6 +34,11 @@ pub(crate) static MIGRATOR: std::sync::LazyLock<sqlx::migrate::Migrator> =
                 "ISO currency scales",
                 include_str!("../migrations/0005_iso_currency_scales.sql"),
             ),
+            (
+                6,
+                "market comparables",
+                include_str!("../migrations/0006_market_comparables.sql"),
+            ),
         ]
         .into_iter()
         .map(|(version, name, sql)| {

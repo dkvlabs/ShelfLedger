@@ -87,12 +87,20 @@ import, lend, sell, and back up without a terminal. Signed installers, cross-OS 
 
 ## Phase 6 — After feedback ⬜ (non-MVP)
 
-Receipts, price comparables, ebooks, optional sync (barcode scanning was
-pulled forward on request — see below).
+Receipts, automated marketplace collection, ebooks and optional sync remain
+deferred. Barcode scanning and manual OLX comparisons were pulled forward on
+request — see below.
 
 ## User-requested follow-ups ✅ (2026-10-27)
 
 Scope beyond the original plan, implemented on explicit request:
+
+- [x] OLX Romania comparison workflow per edition: external ISBN/title searches,
+      user-verified listing URLs and prices, observation dates, condition notes,
+      currency-separated medians/ranges, exclusions, exact net-proceeds simulation,
+      and explicit copy valuations with immutable source evidence. Migration 0006,
+      snapshot format 3 with format 1/2 compatibility, eleven UI languages.
+      No automatic scraping or iframe integration. See [market-comparisons.md](market-comparisons.md).
 
 - [x] ISBN barcode scanning in Add Book — camera where the platform offers it,
       photo scanning where camera access is unavailable, USB/Bluetooth

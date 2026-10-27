@@ -586,3 +586,22 @@ export interface FileImportPreview {
   headers: string[];
   rows: ImportRowPreview[];
 }
+
+// Edition-scoped, user-verified marketplace observations.
+export interface MarketComparable {
+  id: string; editionId: string; listingUrl: string; askingMinor: number;
+  currency: string; conditionNote: string | null; observedAt: string;
+  included: boolean; createdAt: string; updatedAt: string;
+}
+export interface MarketSummary {
+  currency: string; count: number; minMinor: number; maxMinor: number;
+  medianMinor: number; medianRounded: boolean;
+}
+export interface MarketReport { comparables: MarketComparable[]; summaries: MarketSummary[] }
+export interface SaveMarketComparableInput {
+  editionId: string; listingUrl: string; askingMinor: number; currency: string;
+  conditionNote: string | null; observedAt: string; editionChecked: boolean;
+}
+export interface SaveMarketEstimateInput {
+  editionId: string; copyId: string; currency: string; confidence: "low" | "medium" | "high";
+}

@@ -73,8 +73,9 @@ For example, an old UI-entered 12 PKR becomes 1,200 minor units and still displa
 disposal price/fee/shipping and wishlist limits. Nulls remain null. The migration
 runs once and refuses unsafe multiplication atomically rather than rounding.
 
-New JSON exports use **formatVersion 2**. Format 1 snapshots remain importable
-and receive the same scale correction transactionally. Format 2 snapshots are
+New JSON exports use **formatVersion 3**, adding checked marketplace comparisons.
+Format 1 snapshots remain importable
+and receive the same scale correction transactionally. Format 2/3 snapshots are
 already in ISO units and are not rescaled. Old ZIP backups run database migrations
 before being restored. Do not label newly authored ISO-scale JSON as format 1.
 
@@ -121,7 +122,7 @@ round-trip every supported code at the safe-integer limit.
 
 ## Verification record — 27.10.2026
 
-- 267 frontend tests and 91 Rust tests pass; strict TypeScript/production build,
+- 290 frontend tests and 99 Rust tests pass; strict TypeScript/production build,
   `cargo fmt --check`, and Clippy with warnings denied pass.
 - Browser checks selected all eleven languages and counted all 165 current
   currency options. Chinese and Arabic language preferences, plus a CLF currency
@@ -132,7 +133,7 @@ round-trip every supported code at the safe-integer limit.
   `docs/images/localization-*.jpg` and displayed in the README.
 - Automated checks verify bundle key/placeholder completeness, every current ISO
   decimal scale, every supported currency at the safe-integer limit, transactional
-  old-data upgrades, and version-one/version-two snapshot compatibility.
+  old-data upgrades, and version-one/version-two/version-three snapshot compatibility.
 
 The production build reports a chunk-size advisory for the main bundle (about
 606 kB before gzip). Native desktop rendering and independent native-speaker

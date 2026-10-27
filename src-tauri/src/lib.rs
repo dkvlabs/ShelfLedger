@@ -25,6 +25,7 @@ pub struct AppState {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_opener::init())
         // Preserve the platform's consent prompt rather than granting webview capture.
         .on_permission_request(|_, _| tauri::webview::PermissionResponse::Default)
         .setup(|app| {
@@ -82,6 +83,11 @@ pub fn run() {
             commands::loans::list_overdue_loans,
             commands::loans::lend_copy,
             commands::loans::return_loan,
+            commands::market::list_market_comparisons,
+            commands::market::save_market_comparison,
+            commands::market::set_market_comparison_included,
+            commands::market::save_market_estimate,
+            commands::market::open_marketplace_url,
             commands::finance::add_valuation,
             commands::finance::list_valuations,
             commands::finance::create_listing,
@@ -110,3 +116,6 @@ mod audit_regressions;
 
 #[cfg(test)]
 mod currency_regressions;
+
+#[cfg(test)]
+mod market_regressions;

@@ -80,6 +80,25 @@ fn ok<T: serde::Serialize>(value: T) -> AppResult<Value> {
 pub async fn dispatch(ctx: &WebCtx, cmd: &str, args: &Value) -> AppResult<Value> {
     let pool = &ctx.pool;
     match cmd {
+        "list_market_comparisons" => {
+            ok(domain::market::report(pool, &arg::<String>(args, "editionId")?).await?)
+        }
+        "save_market_comparison" => ok(domain::market::save(
+            pool,
+            &arg::<domain::market::SaveMarketComparableInput>(args, "input")?,
+        )
+        .await?),
+        "set_market_comparison_included" => ok(domain::market::set_included(
+            pool,
+            &arg::<String>(args, "id")?,
+            arg::<bool>(args, "included")?,
+        )
+        .await?),
+        "save_market_estimate" => ok(domain::market::save_estimate(
+            pool,
+            &arg::<domain::market::SaveMarketEstimateInput>(args, "input")?,
+        )
+        .await?),
         "unarchive_copy" => {
             ok(domain::catalog::unarchive_copy(pool, &arg::<String>(args, "id")?).await?)
         }

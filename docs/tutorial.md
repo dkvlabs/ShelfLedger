@@ -225,6 +225,19 @@ listing/disposal actions, and **Finance** reports amounts by currency. Record th
 actual outcome when a copy is sold, donated, traded, or lost. Purchase cost,
 estimate, asking price, and realized sale are separate values.
 
+To compare local offers, open **Editions → Compare local prices**. Search OLX by
+ISBN or title, inspect matching listings in your browser, and paste each public
+listing URL, advertised price, currency, observation date and condition notes.
+Check the verification box and choose **Save comparison**. Exclude mismatches
+without deleting their history. Each currency has its own median and range.
+**Use median** fills the asking-price simulator; enter fees and shipping to see
+net proceeds. Blank costs mean zero. **Save median estimate** records the included
+listings’ median against your chosen copy, with its source evidence and your
+confidence; it does not save the simulator or create an OLX advertisement.
+Expand **Saved estimate evidence** to inspect the retained sources. Listings may
+be stale or negotiated; advertised prices are not completed sales. See the
+[comparison guide](market-comparisons.md) for details.
+
 **Archive** hides a copy without erasing its history. Enable **Show archived
 history** in the book's detail page and use **Restore archived copy** to show it
 again. Archiving is separate from recording a sale or donation.

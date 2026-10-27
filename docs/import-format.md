@@ -73,22 +73,23 @@ This opt-in check expects an export whose selected rows are distinct and have no
 matches with the test fixture. It imports into a temporary library and removes
 that test library when complete; it never commits the CSV or writes the real library.
 
-## Lossless JSON snapshot, format 2
+## Lossless JSON snapshot, format 3
 
 ```json
-{"formatVersion": 2, "tables": {"works": [], "authors": [], "editions": []}}
+{"formatVersion": 3, "tables": {"works": [], "authors": [], "editions": []}}
 ```
 
-The abbreviated example shows the envelope only. Actual exports contain all 22
+The abbreviated example shows the envelope only. Actual exports contain all 23
 logical tables listed in [database.md](database.md), with snake_case SQL column
 names and bound JSON scalar values. They retain IDs, author names containing
 commas, descriptions, editions, archived copies, complete acquisitions, tags,
 reading progress/reviews, contacts/loans, valuations/listings/disposals, settings,
-metadata cache and import audit records. FTS and migrations are derived/local.
+metadata cache, import audit records and checked marketplace comparisons. FTS and migrations are derived/local.
 
 Format 1 snapshots remain supported and are upgraded using the old release’s
-currency-scale conventions. Format 2 amounts already use corrected ISO minor
-units and are never rescaled. See [currency upgrades](localization.md#upgrading-older-libraries).
+currency-scale conventions. Format 2 and 3 amounts already use corrected ISO minor
+units and are never rescaled. Complete format 1/2 exports may omit the new
+`market_comparables` table; format 3 requires it. See [currency upgrades](localization.md#upgrading-older-libraries).
 
 A snapshot imports as a complete unit so references and histories stay together.
 Identical existing records are allowed; conflicting IDs/ISBNs/names or invalid

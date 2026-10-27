@@ -17,8 +17,12 @@ Only what you explicitly trigger:
   the ISBN you typed to openlibrary.org with a User-Agent identifying the app.
   Responses are cached locally so repeat lookups work offline. You can disable
   this provider in settings; manual entry always works offline.
-- **Nothing else.** Contacts, loans, valuations, and financial data are never
-  transmitted. There is no automatic message sending, ever.
+- **OLX links:** clicking a comparison search or listing opens OLX in your
+  browser, sharing the chosen ISBN/title/author or URL with OLX. Saved comparisons
+  remain local; no pages are fetched or monitored in the background.
+
+Contacts, loans, saved valuations and financial records are never automatically
+transmitted. There is no automatic message sending.
 
 ## Your data
 
@@ -36,9 +40,12 @@ manual ISBN entry without camera access.
 
 ## Third-party content
 
-Metadata and cover images fetched from Open Library remain subject to their own
-terms; the app stores them locally for your personal use and does not redistribute
-them.
+Metadata fetched from Open Library remains subject to its own
+terms; the app caches it locally for your personal use and does not redistribute
+it.
+
+OLX’s own privacy policy applies in your browser. ShelfLedger does not scrape
+pages, embed OLX, or send your library or saved comparisons to OLX.
 
 ## Changes
 

@@ -6,6 +6,9 @@
 
 import { invoke } from "@tauri-apps/api/core";
 import type {
+  MarketReport,
+  SaveMarketComparableInput,
+  SaveMarketEstimateInput,
   AddBookInput,
   AddBookResult,
   AddProgressInput,
@@ -138,6 +141,14 @@ export async function call<T>(
 }
 
 export const api = {
+  listMarketComparisons: (editionId: string) =>
+    call<MarketReport>("list_market_comparisons", { editionId }),
+  saveMarketComparison: (input: SaveMarketComparableInput) =>
+    call<void>("save_market_comparison", { input }),
+  setMarketComparisonIncluded: (id: string, included: boolean) =>
+    call<void>("set_market_comparison_included", { id, included }),
+  saveMarketEstimate: (input: SaveMarketEstimateInput) =>
+    call<ValuationDto>("save_market_estimate", { input }),
   previewImport: (path: string, mapping: Record<string, string> = {}) =>
     call<FileImportPreview>("preview_import", { path, mapping }),
   commitImport: (

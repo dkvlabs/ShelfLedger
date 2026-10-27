@@ -13,6 +13,7 @@ pub const TABLES: &[&str] = &[
     "works",
     "work_authors",
     "editions",
+    "market_comparables",
     "locations",
     "copies",
     "acquisitions",
@@ -71,7 +72,7 @@ pub async fn export(pool: &SqlitePool) -> AppResult<Snapshot> {
     }
     tx.commit().await?;
     Ok(Snapshot {
-        format_version: 2,
+        format_version: 3,
         tables,
     })
 }
@@ -119,7 +120,7 @@ async fn apply_inner(
     replace: bool,
     validate_incoming: bool,
 ) -> AppResult<()> {
-    if ![1, 2].contains(&snapshot.format_version)
+    if ![1, 2, 3].contains(&snapshot.format_version)
         || snapshot
             .tables
             .keys()
@@ -129,7 +130,12 @@ async fn apply_inner(
             "unsupported library snapshot format".into(),
         ));
     }
-    if replace && TABLES.iter().any(|t| !snapshot.tables.contains_key(*t)) {
+    if replace
+        && TABLES.iter().any(|t| {
+            !snapshot.tables.contains_key(*t)
+                && !(snapshot.format_version < 3 && *t == "market_comparables")
+        })
+    {
         return Err(AppError::Validation("incomplete library snapshot".into()));
     }
     let mut tx = pool.begin().await?;
@@ -311,6 +317,18 @@ fn validate_record(table: &str, record: &BTreeMap<String, Value>) -> AppResult<(
     for key in ["title", "name", "display_name"] {
         if text(key).is_some_and(|v| v.trim().is_empty()) {
             return Err(invalid(format!("{key} cannot be blank")));
+        }
+    }
+    if table == "market_comparables" {
+        let url = text("listing_url").ok_or_else(|| invalid("listing URL required".into()))?;
+        let canonical = crate::domain::market::olx_url(url, true)?;
+        if canonical != url
+            || !matches!(number("included"), Some(0 | 1))
+            || text("condition_note").is_some_and(|v| v.chars().count() > 2000)
+            || text("observed_at").is_none_or(|v| v.len() != 10)
+            || text("currency").is_none_or(|v| v != v.to_ascii_uppercase())
+        {
+            return Err(invalid("invalid comparison".into()));
         }
     }
     if table == "editions" {

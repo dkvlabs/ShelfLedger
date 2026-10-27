@@ -5,3 +5,5 @@ pub mod locations;
 pub mod settings;
 pub mod snapshot;
 pub mod works;
+
+pub mod market;

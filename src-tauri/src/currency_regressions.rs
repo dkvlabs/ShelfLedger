@@ -45,7 +45,7 @@ async fn migration_and_old_json_preserve_all_money_fields_exactly_once() {
     let current = crate::repositories::snapshot::export(&imported)
         .await
         .unwrap();
-    assert_eq!(current.format_version, 2);
+    assert_eq!(current.format_version, 3);
     crate::repositories::snapshot::apply(&imported, &current, true)
         .await
         .unwrap();

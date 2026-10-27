@@ -29,10 +29,18 @@ themes; eleven interface languages (the initial global top ten plus Romanian); g
 | **Find every copy** | Multiple editions and physical copies, condition, notes, acquisition costs, and a room → bookcase → shelf → box hierarchy. Archive and restore inventory while keeping its history. |
 | **Keep a reading journal** | Want-to-read, reading, finished, paused, and DNF sessions; progress, dates, ratings, reviews, and rereads. Reading stays separate from ownership. |
 | **Lend with confidence** | Contacts, due dates, returns, and a per-copy loan history. |
+| **Compare local offers** | Search OLX Romania by edition ISBN/title, save checked asking prices with sources and dates, compare medians/ranges by currency, simulate net proceeds, and explicitly save an evidenced valuation. [Guide](docs/market-comparisons.md). |
 | **Understand your spending** | Purchase costs, sourced manual estimates, asking prices, and realized sales recorded separately. Integer minor units and ISO currency codes; currencies are never summed together. |
 | **Use your language and currency** | English, Simplified Chinese, Hindi, Spanish, Arabic, French, Bengali, Portuguese, Indonesian, Urdu, and Romanian. All 165 current ISO currencies/fund units with defined minor units, localized names and exact 0–4 decimal handling. Arabic/Urdu use right-to-left layouts. |
 | **Bring your collection along** | Goodreads/custom CSV mapping, preview, duplicate policies, row selection, confirmation, and import logs. |
 | **Keep control of your data** | CSV/JSON exports, consistent SQLite backups, transactional restore, and separately restored libraries you can switch between. |
+
+### Compare local asking prices
+
+![OLX comparison screen with saved source listings, a median and net-proceeds simulation](docs/images/olx-comparisons.jpg)
+
+*Actual app screenshot using a disposable QA library. The sample listings and
+amounts are test fixtures, not fetched market data. [How to compare a book](docs/market-comparisons.md).*
 
 ### Your language, your collection
 
@@ -93,11 +101,11 @@ are targeted through Tauri 2 but have not been executed in the latest local
 verification. The optional browser version uses the same Rust core over loopback
 HTTP; it is not a hosted cloud service.
 
-Verified on **27.10.2026**: **93 Rust tests** and **267 frontend tests** pass, along
+Verified on **27.10.2026**: **99 Rust tests** and **290 frontend tests** pass, along
 with strict TypeScript/production build, Rust formatting, and Clippy with warnings
 denied. Browser checks cover imports, profile switching, reading, lending,
 editing, all eleven language choices, preference persistence, currency selection,
-and desktop/mobile layouts. A separate local check imports a supplied 209-row
+OLX comparisons, saved evidence and desktop/mobile layouts. A separate local check imports a supplied 209-row
 Goodreads export without row errors and verifies idempotent repeat import; see
 [import verification](docs/import-format.md#verification-with-the-supplied-export--27102026).
 
@@ -108,7 +116,7 @@ remain release checks. See the [audit record](docs/audit-remediation.md) and
 [release checklist](docs/release.md).
 
 Phase 6 remains deferred: receipts/OCR, attachment-byte portability, ebooks/devices,
-user-assisted comparables, and optional encrypted sync. Current snapshots preserve
+automatic marketplace collection, and optional encrypted sync. Current snapshots preserve
 attachment records and relative paths, not attachment files.
 
 ## Development

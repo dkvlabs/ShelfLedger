@@ -6,3 +6,5 @@ pub mod locations;
 pub mod metadata;
 pub mod reading;
 pub mod settings;
+
+pub mod market;

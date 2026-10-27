@@ -7,3 +7,5 @@ pub mod loans;
 pub mod reading;
 
 pub mod profiles;
+
+pub mod market;
