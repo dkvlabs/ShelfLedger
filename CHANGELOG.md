@@ -4,6 +4,13 @@ All notable changes to ShelfLedger are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning is
 [SemVer](https://semver.org/).
 
+## [0.1.1](https://github.com/dkvlabs/ShelfLedger/compare/v0.1.0...v0.1.1) (2026-10-27)
+
+
+### Fixes
+
+* **release:** allow preparation to read draft releases ([14eac90](https://github.com/dkvlabs/ShelfLedger/commit/14eac90f8a8840a24045a7a8d68b9442f64af919))
+
 ## 0.1.0 (2026-10-27)
 
 
