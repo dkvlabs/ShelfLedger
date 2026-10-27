@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, Loader2, Search } from "lucide-react";
+import { AlertTriangle, Loader2, ScanBarcode, Search } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -21,6 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { api, CommandError } from "@/lib/api";
+import ScanBarcodeDialog, { type ScanResult } from "./ScanBarcodeDialog";
 import { parseMoneyToMinor, todayIso } from "@/lib/format";
 import { parseIsbn } from "@/lib/isbn";
 import {
@@ -106,6 +107,7 @@ export default function AddBookDialog({
   const [formError, setFormError] = useState<string | null>(null);
   const [saveResult, setSaveResult] = useState<AddBookResult | null>(null);
   const [wantCopy, setWantCopy] = useState(true);
+  const [scanOpen, setScanOpen] = useState(false);
 
   const { data: locations } = useQuery({
     queryKey: ["locations"],
@@ -144,6 +146,17 @@ export default function AddBookDialog({
       setLookupNote(msg);
     },
   });
+
+  // Filled by the barcode scanner; auto-lookup follows so the user sees
+  // metadata immediately (plan: "I scan an ISBN and see the metadata …
+  // before adding a copy"). Offline, the lookup note offers manual entry.
+  const applyScan = (result: ScanResult) => {
+    const thirteen = result.isbn13 ?? "";
+    const ten = result.isbn10 ?? "";
+    setIsbnInput(thirteen || ten);
+    setDraft((d) => ({ ...d, isbn13: thirteen, isbn10: ten }));
+    lookup.mutate(thirteen || ten);
+  };
 
   const save = useMutation({
     mutationFn: async (overrideDuplicates: boolean) => {
@@ -240,7 +253,8 @@ export default function AddBookDialog({
     (parseIsbn(isbnInput) !== null && !lookup.isPending);
 
   return (
-    <Dialog
+    <>
+      <Dialog
       open={open}
       onOpenChange={(o) => {
         if (!o) reset();
@@ -273,6 +287,14 @@ export default function AddBookDialog({
               onClick={() => lookup.mutate(isbnInput)}
             >
               {lookup.isPending ? <Loader2 className="animate-spin" /> : <Search />} Look up
+            </Button>
+            <Button
+              variant="secondary"
+              aria-label="Scan barcode"
+              title="Scan barcode"
+              onClick={() => setScanOpen(true)}
+            >
+              <ScanBarcode />
             </Button>
           </div>
           {!isbnValid && (
@@ -486,5 +508,7 @@ export default function AddBookDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+    <ScanBarcodeDialog open={scanOpen} onOpenChange={setScanOpen} onScan={applyScan} />
+    </>
   );
 }

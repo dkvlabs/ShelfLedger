@@ -17,6 +17,11 @@ export default defineConfig({
   server: {
     port: 1420,
     strictPort: true,
+    proxy: {
+      // Web version: forward /api to the local Rust server. Unused in the
+      // Tauri dev flow, which talks over IPC instead.
+      "/api": "http://127.0.0.1:8787",
+    },
   },
   envPrefix: ["VITE_", "TAURI_ENV_"],
   build: {

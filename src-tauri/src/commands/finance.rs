@@ -66,14 +66,14 @@ pub async fn get_sell_queue(state: State<'_, AppState>) -> AppResult<Vec<SellQue
     domain::finance::sell_queue(&state.pool).await
 }
 
-#[tauri::command]
-pub async fn set_sell_override(
-    state: State<'_, AppState>,
-    copy_id: String,
-    override_value: Option<String>,
+/// Shared by the Tauri command and the web dispatcher (`web::dispatch`).
+pub async fn set_sell_override_impl(
+    pool: &sqlx::SqlitePool,
+    copy_id: &str,
+    override_value: Option<&str>,
 ) -> AppResult<()> {
-    if let Some(v) = &override_value {
-        if !matches!(v.as_str(), "keep" | "sell" | "donate") {
+    if let Some(v) = override_value {
+        if !matches!(v, "keep" | "sell" | "donate") {
             return Err(AppError::Validation(format!("unknown override {v:?}")));
         }
     }
@@ -81,12 +81,21 @@ pub async fn set_sell_override(
         "UPDATE copies SET sell_review_override = ?2, updated_at = ?3 \
          WHERE id = ?1 AND archived_at IS NULL",
     )
-    .bind(&copy_id)
-    .bind(&override_value)
+    .bind(copy_id)
+    .bind(override_value)
     .bind(crate::ids::now_iso())
-    .execute(&state.pool)
+    .execute(pool)
     .await?;
     Ok(())
+}
+
+#[tauri::command]
+pub async fn set_sell_override(
+    state: State<'_, AppState>,
+    copy_id: String,
+    override_value: Option<String>,
+) -> AppResult<()> {
+    set_sell_override_impl(&state.pool, &copy_id, override_value.as_deref()).await
 }
 
 #[tauri::command]

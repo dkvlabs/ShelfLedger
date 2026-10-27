@@ -88,7 +88,29 @@ remaining manual step.
 
 ## Phase 6 — After feedback ⬜ (non-MVP)
 
-Barcode scanning, receipts, price comparables, ebooks, optional sync.
+Receipts, price comparables, ebooks, optional sync (barcode scanning was
+pulled forward on request — see below).
+
+## User-requested follow-ups ✅ (2026-10-27)
+
+Scope beyond the original plan, implemented on explicit request:
+
+- [x] ISBN barcode scanning in Add Book — camera where the platform offers it,
+      photo scanning everywhere (incl. the macOS webview, which has no camera
+      API), USB/Bluetooth scanner input, manual fallback. Web-API-only
+      decoding (`BarcodeDetector` → pure-JS ZXing), checksum-validated ISBN
+      extraction (plan Phase 6 item, pulled forward).
+- [x] Web version: the same Rust core served to a browser over loopback HTTP
+      (`shelfledger-web` bin, `POST /api/<command>` transport sharing the
+      `domain/` layer with the Tauri commands). See docs/web.md.
+- [x] Original app icon (`app-icon.svg` → full platform icon set) replacing the
+      Tauri template icons.
+
+**Acceptance status:** scanning decodes EAN-13/ISBN-10 and rejects non-book
+barcodes (unit-tested); the web version round-trips add-book → search over
+HTTP in tests and in a live browser drill; icon rendered and visually checked
+at 512 px and 32 px. One pre-existing bug found and fixed along the way:
+`isbn10ToIsbn13` used to reject ISBN-10s with an `X` check digit.
 
 ## Test matrix status (spec §13)
 

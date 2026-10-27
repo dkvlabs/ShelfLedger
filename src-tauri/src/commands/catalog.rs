@@ -17,12 +17,11 @@ pub async fn add_book(state: State<'_, AppState>, input: AddBookInput) -> AppRes
     domain::catalog::create_book(&state.pool, &input).await
 }
 
-#[tauri::command]
-pub async fn search_works(
-    state: State<'_, AppState>,
+/// Shared by the Tauri command and the web dispatcher (`web::dispatch`).
+pub async fn search_works_impl(
+    pool: &sqlx::SqlitePool,
     query: Option<String>,
 ) -> AppResult<Vec<WorkSummary>> {
-    let pool = &state.pool;
     match query.as_deref().map(str::trim).filter(|s| !s.is_empty()) {
         Some(q) => {
             let ids = crate::repositories::works::search_fts_ids(pool, q).await?;
@@ -30,6 +29,14 @@ pub async fn search_works(
         }
         None => crate::repositories::works::list_work_summaries(pool).await,
     }
+}
+
+#[tauri::command]
+pub async fn search_works(
+    state: State<'_, AppState>,
+    query: Option<String>,
+) -> AppResult<Vec<WorkSummary>> {
+    search_works_impl(&state.pool, query).await
 }
 
 #[tauri::command]
@@ -89,12 +96,10 @@ pub async fn find_duplicates(
     domain::catalog::find_duplicates(&state.pool, &query).await
 }
 
-/// Convenience command for the dashboard: counts of works and active copies.
-#[tauri::command]
-pub async fn get_library_stats(
-    state: State<'_, AppState>,
+/// Shared by the Tauri command and the web dispatcher (`web::dispatch`).
+pub async fn get_library_stats_impl(
+    pool: &sqlx::SqlitePool,
 ) -> AppResult<crate::models::LibraryStats> {
-    let pool = &state.pool;
     let (work_count,): (i64,) = sqlx::query_as("SELECT COUNT(*) FROM works")
         .fetch_one(pool)
         .await?;
@@ -106,4 +111,12 @@ pub async fn get_library_stats(
         work_count,
         copy_count,
     })
+}
+
+/// Convenience command for the dashboard: counts of works and active copies.
+#[tauri::command]
+pub async fn get_library_stats(
+    state: State<'_, AppState>,
+) -> AppResult<crate::models::LibraryStats> {
+    get_library_stats_impl(&state.pool).await
 }

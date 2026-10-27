@@ -1,5 +1,8 @@
-// Typed wrappers around Tauri IPC commands. The webview never sends SQL —
-// only validated DTOs to named commands (AGENTS.md).
+// Typed wrappers around the backend commands. The webview never sends SQL —
+// only validated DTOs to named commands (AGENTS.md). One contract, two
+// transports: Tauri IPC inside the desktop app, loopback HTTP
+// (`POST /api/<command>`) in the web version — the argument object and the
+// `{kind, message}` error shape are identical.
 
 import { invoke } from "@tauri-apps/api/core";
 import type {
@@ -55,118 +58,147 @@ export class CommandError extends Error {
   }
 }
 
-function unwrap<T>(promise: Promise<T>): Promise<T> {
-  return promise.catch((err) => {
+/** True inside the Tauri webview; false in a plain browser (web version). */
+export function isDesktop(): boolean {
+  return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
+}
+
+/** Base for the web transport; empty means same-origin (the web server). */
+const API_BASE = ((import.meta as { env?: Record<string, string> }).env?.VITE_API_BASE ?? "");
+
+async function webCall<T>(cmd: string, args: Record<string, unknown>): Promise<T> {
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}/api/${cmd}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(args ?? {}),
+    });
+  } catch (err) {
+    throw new CommandError(
+      "network",
+      `could not reach the local ShelfLedger server: ${(err as Error).message}`,
+    );
+  }
+  if (res.status === 204) return null as T;
+  const text = await res.text();
+  const body: unknown = text ? JSON.parse(text) : null;
+  if (!res.ok) {
+    if (body && typeof body === "object" && "kind" in body && "message" in body) {
+      const e = body as { kind: string; message: string };
+      throw new CommandError(String(e.kind), String(e.message));
+    }
+    throw new CommandError("network", `HTTP ${res.status}`);
+  }
+  return body as T;
+}
+
+/** One command call over whichever transport this build runs on. */
+export async function call<T>(cmd: string, args: Record<string, unknown> = {}): Promise<T> {
+  try {
+    if (isDesktop()) return (await invoke(cmd, args)) as T;
+    return await webCall<T>(cmd, args);
+  } catch (err) {
     if (err && typeof err === "object" && "kind" in err && "message" in err) {
-      throw new CommandError(String(err.kind), String(err.message));
+      const e = err as { kind: string; message: string };
+      throw new CommandError(String(e.kind), String(e.message));
     }
     throw err;
-  });
+  }
 }
 
 export const api = {
   // catalog
   searchWorks: (query?: string | null): Promise<WorkSummary[]> =>
-    unwrap(invoke("search_works", { query: query ?? null })),
-  getWork: (id: string): Promise<WorkDetail> => unwrap(invoke("get_work", { id })),
-  addBook: (input: AddBookInput): Promise<AddBookResult> =>
-    unwrap(invoke("add_book", { input })),
-  createWork: (input: CreateWorkInput): Promise<WorkDetail> =>
-    unwrap(invoke("create_work", { input })),
+    call("search_works", { query: query ?? null }),
+  getWork: (id: string): Promise<WorkDetail> => call("get_work", { id }),
+  addBook: (input: AddBookInput): Promise<AddBookResult> => call("add_book", { input }),
+  createWork: (input: CreateWorkInput): Promise<WorkDetail> => call("create_work", { input }),
   updateWork: (id: string, input: UpdateWorkInput): Promise<WorkDetail> =>
-    unwrap(invoke("update_work", { id, input })),
+    call("update_work", { id, input }),
   createEdition: (input: CreateEditionInput): Promise<EditionDto> =>
-    unwrap(invoke("create_edition", { input })),
-  createCopy: (input: CreateCopyInput): Promise<CopyDto> =>
-    unwrap(invoke("create_copy", { input })),
+    call("create_edition", { input }),
+  createCopy: (input: CreateCopyInput): Promise<CopyDto> => call("create_copy", { input }),
   updateCopy: (id: string, input: UpdateCopyInput): Promise<CopyDto> =>
-    unwrap(invoke("update_copy", { id, input })),
-  archiveCopy: (id: string): Promise<void> => unwrap(invoke("archive_copy", { id })),
+    call("update_copy", { id, input }),
+  archiveCopy: (id: string): Promise<void> => call("archive_copy", { id }),
   findDuplicates: (query: DuplicateQuery): Promise<WorkSummary[]> =>
-    unwrap(invoke("find_duplicates", { query })),
-  getLibraryStats: (): Promise<LibraryStats> => unwrap(invoke("get_library_stats")),
+    call("find_duplicates", { query }),
+  getLibraryStats: (): Promise<LibraryStats> => call("get_library_stats"),
 
   // locations
-  listLocations: (): Promise<LocationDto[]> => unwrap(invoke("list_locations")),
+  listLocations: (): Promise<LocationDto[]> => call("list_locations"),
   createLocation: (input: CreateLocationInput): Promise<LocationDto> =>
-    unwrap(invoke("create_location", { input })),
-  deleteLocation: (id: string): Promise<boolean> =>
-    unwrap(invoke("delete_location", { id })),
+    call("create_location", { input }),
+  deleteLocation: (id: string): Promise<boolean> => call("delete_location", { id }),
 
   // settings
-  getSettings: (): Promise<Record<string, unknown>> => unwrap(invoke("get_settings")),
-  setSetting: (key: string, value: unknown): Promise<void> =>
-    unwrap(invoke("set_setting", { key, value })),
+  getSettings: (): Promise<Record<string, unknown>> => call("get_settings"),
+  setSetting: (key: string, value: unknown): Promise<void> => call("set_setting", { key, value }),
 
   // metadata
   lookupIsbn: (isbn: string): Promise<LookupIsbnResult | null> =>
-    unwrap(invoke("lookup_isbn", { isbn })),
+    call("lookup_isbn", { isbn }),
 
   // reading (Phase 2)
   listReadingSessions: (status?: string | null): Promise<ReadingSessionDto[]> =>
-    unwrap(invoke("list_reading_sessions", { status: status ?? null })),
+    call("list_reading_sessions", { status: status ?? null }),
   listReadingSessionsForWork: (workId: string): Promise<ReadingSessionDto[]> =>
-    unwrap(invoke("list_reading_sessions_for_work", { workId })),
+    call("list_reading_sessions_for_work", { workId }),
   createReadingSession: (input: CreateReadingSessionInput): Promise<ReadingSessionDto> =>
-    unwrap(invoke("create_reading_session", { input })),
+    call("create_reading_session", { input }),
   updateReadingSession: (
     id: string,
     input: UpdateReadingSessionInput,
-  ): Promise<ReadingSessionDto> =>
-    unwrap(invoke("update_reading_session", { id, input })),
+  ): Promise<ReadingSessionDto> => call("update_reading_session", { id, input }),
   addReadingProgress: (sessionId: string, input: AddProgressInput): Promise<ReadingSessionDto> =>
-    unwrap(invoke("add_reading_progress", { sessionId, input })),
+    call("add_reading_progress", { sessionId, input }),
 
   // loans (Phase 2)
-  listContacts: (): Promise<ContactDto[]> => unwrap(invoke("list_contacts")),
+  listContacts: (): Promise<ContactDto[]> => call("list_contacts"),
   createContact: (input: CreateContactInput): Promise<ContactDto> =>
-    unwrap(invoke("create_contact", { input })),
+    call("create_contact", { input }),
   updateContact: (id: string, input: UpdateContactInput): Promise<ContactDto> =>
-    unwrap(invoke("update_contact", { id, input })),
-  listLoans: (localToday: string): Promise<LoanDto[]> =>
-    unwrap(invoke("list_loans", { localToday })),
+    call("update_contact", { id, input }),
+  listLoans: (localToday: string): Promise<LoanDto[]> => call("list_loans", { localToday }),
   listActiveLoans: (localToday: string): Promise<LoanDto[]> =>
-    unwrap(invoke("list_active_loans", { localToday })),
+    call("list_active_loans", { localToday }),
   listOverdueLoans: (localToday: string): Promise<LoanDto[]> =>
-    unwrap(invoke("list_overdue_loans", { localToday })),
-  lendCopy: (input: LendCopyInput): Promise<LoanDto> =>
-    unwrap(invoke("lend_copy", { input })),
+    call("list_overdue_loans", { localToday }),
+  lendCopy: (input: LendCopyInput): Promise<LoanDto> => call("lend_copy", { input }),
   returnLoan: (loanId: string, input: ReturnCopyInput): Promise<LoanDto> =>
-    unwrap(invoke("return_loan", { loanId, input })),
+    call("return_loan", { loanId, input }),
 
   // finance (Phase 3)
   addValuation: (input: AddValuationInput): Promise<ValuationDto> =>
-    unwrap(invoke("add_valuation", { input })),
+    call("add_valuation", { input }),
   listValuations: (copyId: string): Promise<ValuationDto[]> =>
-    unwrap(invoke("list_valuations", { copyId })),
+    call("list_valuations", { copyId }),
   createListing: (input: CreateListingInput): Promise<SaleListingDto> =>
-    unwrap(invoke("create_listing", { input })),
+    call("create_listing", { input }),
   withdrawListing: (listingId: string): Promise<void> =>
-    unwrap(invoke("withdraw_listing", { listingId })),
-  listListings: (copyId: string): Promise<SaleListingDto[]> =>
-    unwrap(invoke("list_listings", { copyId })),
+    call("withdraw_listing", { listingId }),
+  listListings: (copyId: string): Promise<SaleListingDto[]> => call("list_listings", { copyId }),
   recordDisposal: (input: RecordDisposalInput): Promise<DisposalDto> =>
-    unwrap(invoke("record_disposal", { input })),
-  listDisposals: (copyId: string): Promise<DisposalDto[]> =>
-    unwrap(invoke("list_disposals", { copyId })),
-  getSellQueue: (): Promise<SellQueueItem[]> => unwrap(invoke("get_sell_queue")),
+    call("record_disposal", { input }),
+  listDisposals: (copyId: string): Promise<DisposalDto[]> => call("list_disposals", { copyId }),
+  getSellQueue: (): Promise<SellQueueItem[]> => call("get_sell_queue"),
   setSellOverride: (copyId: string, overrideValue: string | null): Promise<void> =>
-    unwrap(invoke("set_sell_override", { copyId, overrideValue })),
-  getFinanceReport: (): Promise<FinanceReport> => unwrap(invoke("get_finance_report")),
-  getDashboard: (localToday: string): Promise<DashboardDto> =>
-    unwrap(invoke("get_dashboard", { localToday })),
+    call("set_sell_override", { copyId, overrideValue }),
+  getFinanceReport: (): Promise<FinanceReport> => call("get_finance_report"),
+  getDashboard: (localToday: string): Promise<DashboardDto> => call("get_dashboard", { localToday }),
 
   // data portability (Phase 4)
-  exportLibraryCsv: (): Promise<ExportResult> => unwrap(invoke("export_library_csv")),
-  exportLibraryJson: (): Promise<ExportResult> => unwrap(invoke("export_library_json")),
+  exportLibraryCsv: (): Promise<ExportResult> => call("export_library_csv"),
+  exportLibraryJson: (): Promise<ExportResult> => call("export_library_json"),
   importLibraryJson: (path: string): Promise<ImportResult> =>
-    unwrap(invoke("import_library_json", { path })),
+    call("import_library_json", { path }),
   previewGoodreadsImport: (path: string): Promise<ImportPreview> =>
-    unwrap(invoke("preview_goodreads_import", { path })),
+    call("preview_goodreads_import", { path }),
   commitGoodreadsImport: (path: string, input: ImportCommitInput): Promise<ImportResult> =>
-    unwrap(invoke("commit_goodreads_import", { path, input })),
+    call("commit_goodreads_import", { path, input }),
   createBackup: (outputPath?: string | null): Promise<BackupResult> =>
-    unwrap(invoke("create_backup", { outputPath: outputPath ?? null })),
+    call("create_backup", { outputPath: outputPath ?? null }),
   restoreBackup: (archivePath: string, mode: string): Promise<RestoreResult> =>
-    unwrap(invoke("restore_backup", { archivePath, mode })),
+    call("restore_backup", { archivePath, mode }),
 };

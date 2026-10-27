@@ -1,6 +1,11 @@
 //! Export / backup / import commands. All file I/O happens in Rust; the
-//! webview only ever passes paths chosen through the dialog plugin.
+//! webview only ever passes paths chosen through the dialog plugin (in the
+//! web version, paths come from `/api/upload`). The `*_impl` functions are
+//! shared by the Tauri commands and the web dispatcher (`web::dispatch`).
 
+use std::path::Path;
+
+use sqlx::SqlitePool;
 use tauri::{Manager, State};
 
 use crate::domain;
@@ -36,10 +41,13 @@ fn data_dir(app: &tauri::AppHandle) -> AppResult<std::path::PathBuf> {
         .map_err(|_| AppError::Other("app data directory is not resolvable".into()))
 }
 
-#[tauri::command]
-pub async fn export_library_csv(
-    app: tauri::AppHandle,
-    state: State<'_, AppState>,
+// ---------------------------------------------------------------------------
+// Shared implementations
+// ---------------------------------------------------------------------------
+
+pub async fn export_library_csv_impl(
+    pool: &SqlitePool,
+    data_dir: &Path,
 ) -> AppResult<ExportResult> {
     let rows: Vec<domain::backup::CopyExportRow> = sqlx::query_as(
         "SELECT w.title, \
@@ -56,11 +64,11 @@ pub async fn export_library_csv(
          LEFT JOIN acquisitions ac ON ac.copy_id = c.id \
          ORDER BY w.title",
     )
-    .fetch_all(&state.pool)
+    .fetch_all(pool)
     .await?;
     let csv = domain::backup::build_copies_csv(rows);
 
-    let dir = data_dir(&app)?.join("exports");
+    let dir = data_dir.join("exports");
     std::fs::create_dir_all(&dir)?;
     let stamp = chrono::Local::now().format("%Y%m%d-%H%M%S");
     let path = dir.join(format!("shelfledger-copies-{stamp}.csv"));
@@ -73,19 +81,18 @@ pub async fn export_library_csv(
 
 /// Structured JSON export of the full library (works → editions → copies,
 /// plus reading sessions), suitable for re-import via `import_library_json`.
-#[tauri::command]
-pub async fn export_library_json(
-    app: tauri::AppHandle,
-    state: State<'_, AppState>,
+pub async fn export_library_json_impl(
+    pool: &SqlitePool,
+    data_dir: &Path,
 ) -> AppResult<ExportResult> {
     let works: Vec<(String, String, Option<String>, Option<String>)> =
         sqlx::query_as("SELECT id, title, subtitle, original_language FROM works ORDER BY title")
-            .fetch_all(&state.pool)
+            .fetch_all(pool)
             .await?;
 
     let mut out: Vec<serde_json::Value> = Vec::with_capacity(works.len());
     for (work_id, title, subtitle, original_language) in works {
-        let author_names = crate::repositories::works::list_author_names(&state.pool, &work_id)
+        let author_names = crate::repositories::works::list_author_names(pool, &work_id)
             .await?
             .join(", ");
         let editions: Vec<ExportEditionRow> = sqlx::query_as(
@@ -93,7 +100,7 @@ pub async fn export_library_json(
                  FROM editions WHERE work_id = ?1 ORDER BY created_at",
         )
         .bind(&work_id)
-        .fetch_all(&state.pool)
+        .fetch_all(pool)
         .await?;
         let mut editions_json = Vec::with_capacity(editions.len());
         for (edition_id, isbn10, isbn13, publisher, published_at, language, page_count, binding) in
@@ -106,7 +113,7 @@ pub async fn export_library_json(
                      WHERE c.edition_id = ?1 AND c.archived_at IS NULL",
             )
             .bind(&edition_id)
-            .fetch_all(&state.pool)
+            .fetch_all(pool)
             .await?;
             editions_json.push(serde_json::json!({
                 "isbn10": isbn10,
@@ -138,7 +145,7 @@ pub async fn export_library_json(
         }));
     }
 
-    let dir = data_dir(&app)?.join("exports");
+    let dir = data_dir.join("exports");
     std::fs::create_dir_all(&dir)?;
     let stamp = chrono::Local::now().format("%Y%m%d-%H%M%S");
     let path = dir.join(format!("shelfledger-library-{stamp}.json"));
@@ -150,19 +157,92 @@ pub async fn export_library_json(
     })
 }
 
+pub async fn import_library_json_impl(pool: &SqlitePool, path: &str) -> AppResult<ImportResult> {
+    let text = std::fs::read_to_string(path)
+        .map_err(|e| AppError::Validation(format!("could not read import file: {e}")))?;
+    let result = domain::import::import_json(pool, &text).await?;
+    if result.imported_works > 0 {
+        // Let list views refresh.
+        let _ = sqlx::query("SELECT 1").execute(pool).await;
+    }
+    Ok(result)
+}
+
+pub async fn preview_goodreads_import_impl(
+    pool: &SqlitePool,
+    path: &str,
+) -> AppResult<ImportPreview> {
+    let text = std::fs::read_to_string(path)
+        .map_err(|e| AppError::Validation(format!("could not read import file: {e}")))?;
+    let preview = domain::import::preview_goodreads_csv(&text)?;
+    domain::import::annotate_duplicates(pool, preview).await
+}
+
+pub async fn commit_goodreads_import_impl(
+    pool: &SqlitePool,
+    path: &str,
+    input: &ImportCommitInput,
+) -> AppResult<ImportResult> {
+    domain::import::commit_goodreads_csv(pool, path, input).await
+}
+
+/// Complete backup: `VACUUM INTO` snapshot + hashed manifest, zipped under
+/// the app data directory (or a caller-chosen path).
+pub async fn create_backup_impl(
+    pool: &SqlitePool,
+    data_dir: &Path,
+    output_path: Option<String>,
+) -> AppResult<BackupResult> {
+    let db_path = data_dir.join("shelfledger.db");
+    let target = match output_path {
+        Some(p) => std::path::PathBuf::from(p),
+        None => {
+            let dir = data_dir.join("backups");
+            let stamp = chrono::Local::now().format("%Y%m%d-%H%M%S");
+            dir.join(format!("shelfledger-backup-{stamp}.zip"))
+        }
+    };
+    let path = domain::backup::create_backup(pool, &db_path, &target).await?;
+    Ok(BackupResult {
+        path: path.to_string_lossy().to_string(),
+    })
+}
+
+pub async fn restore_backup_impl(
+    data_dir: &Path,
+    archive_path: &str,
+    mode: &str,
+) -> AppResult<RestoreResult> {
+    let db_path = data_dir.join("shelfledger.db");
+    domain::backup::restore_archive(&db_path, Path::new(archive_path), mode).await
+}
+
+// ---------------------------------------------------------------------------
+// Thin IPC wrappers
+// ---------------------------------------------------------------------------
+
+#[tauri::command]
+pub async fn export_library_csv(
+    app: tauri::AppHandle,
+    state: State<'_, AppState>,
+) -> AppResult<ExportResult> {
+    export_library_csv_impl(&state.pool, &data_dir(&app)?).await
+}
+
+#[tauri::command]
+pub async fn export_library_json(
+    app: tauri::AppHandle,
+    state: State<'_, AppState>,
+) -> AppResult<ExportResult> {
+    export_library_json_impl(&state.pool, &data_dir(&app)?).await
+}
+
 #[tauri::command]
 pub async fn import_library_json(
     state: State<'_, AppState>,
     path: String,
 ) -> AppResult<ImportResult> {
-    let text = std::fs::read_to_string(&path)
-        .map_err(|e| AppError::Validation(format!("could not read import file: {e}")))?;
-    let result = domain::import::import_json(&state.pool, &text).await?;
-    if result.imported_works > 0 {
-        // Let list views refresh.
-        let _ = sqlx::query("SELECT 1").execute(&state.pool).await;
-    }
-    Ok(result)
+    import_library_json_impl(&state.pool, &path).await
 }
 
 #[tauri::command]
@@ -170,10 +250,7 @@ pub async fn preview_goodreads_import(
     state: State<'_, AppState>,
     path: String,
 ) -> AppResult<ImportPreview> {
-    let text = std::fs::read_to_string(&path)
-        .map_err(|e| AppError::Validation(format!("could not read import file: {e}")))?;
-    let preview = domain::import::preview_goodreads_csv(&text)?;
-    domain::import::annotate_duplicates(&state.pool, preview).await
+    preview_goodreads_import_impl(&state.pool, &path).await
 }
 
 #[tauri::command]
@@ -182,30 +259,16 @@ pub async fn commit_goodreads_import(
     path: String,
     input: ImportCommitInput,
 ) -> AppResult<ImportResult> {
-    domain::import::commit_goodreads_csv(&state.pool, &path, &input).await
+    commit_goodreads_import_impl(&state.pool, &path, &input).await
 }
 
-/// Complete backup: `VACUUM INTO` snapshot + hashed manifest, zipped under
-/// the app data directory (or a caller-chosen path).
 #[tauri::command]
 pub async fn create_backup(
     app: tauri::AppHandle,
     state: State<'_, AppState>,
     output_path: Option<String>,
 ) -> AppResult<BackupResult> {
-    let db_path = data_dir(&app)?.join("shelfledger.db");
-    let target = match output_path {
-        Some(p) => std::path::PathBuf::from(p),
-        None => {
-            let dir = data_dir(&app)?.join("backups");
-            let stamp = chrono::Local::now().format("%Y%m%d-%H%M%S");
-            dir.join(format!("shelfledger-backup-{stamp}.zip"))
-        }
-    };
-    let path = domain::backup::create_backup(&state.pool, &db_path, &target).await?;
-    Ok(BackupResult {
-        path: path.to_string_lossy().to_string(),
-    })
+    create_backup_impl(&state.pool, &data_dir(&app)?, output_path).await
 }
 
 #[tauri::command]
@@ -218,6 +281,5 @@ pub async fn restore_backup(
     // Hold the pool across restore: the swap happens on disk and the app
     // restarts to reopen the restored database.
     let _ = &state;
-    let db_path = data_dir(&app)?.join("shelfledger.db");
-    domain::backup::restore_archive(&db_path, std::path::Path::new(&archive_path), &mode).await
+    restore_backup_impl(&data_dir(&app)?, &archive_path, &mode).await
 }

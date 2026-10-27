@@ -1,7 +1,6 @@
 import { useRef, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { FileUp } from "lucide-react";
-import { open } from "@tauri-apps/plugin-dialog";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,6 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { api } from "@/lib/api";
+import { pickFile as chooseFile } from "@/lib/files";
 import type { ImportPreview } from "@/types/domain";
 
 export default function ImportView() {
@@ -29,13 +29,9 @@ export default function ImportView() {
 
   const pickFile = useMutation({
     mutationFn: async () => {
-      const file = await open({
-        multiple: false,
-        filters: [
-          { name: "Goodreads export / JSON", extensions: ["csv", "json"] },
-        ],
-      });
-      return typeof file === "string" ? file : null;
+      // Native dialog on desktop, browser picker + local upload in the web
+      // version — both resolve to a path the import commands can read.
+      return chooseFile(["csv", "json"]);
     },
     onSuccess: async (file) => {
       setError(null);

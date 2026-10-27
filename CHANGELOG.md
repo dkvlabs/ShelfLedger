@@ -6,6 +6,19 @@ All notable changes to ShelfLedger are documented here. Format follows
 
 ## [Unreleased]
 
+### Added — user-requested follow-ups (2026-10-27)
+- ISBN barcode scanning in Add Book: live camera where available, photo
+  scanning everywhere, USB/Bluetooth scanner input, checksum-validated
+  extraction (book-range barcodes only).
+- Web version: run the app in a browser against the same local Rust core
+  (`pnpm web:server`, loopback HTTP; see docs/web.md), with browser file
+  pickers, uploads, and download links for exports/backups.
+- Original app icon across all platforms plus a web favicon.
+
+### Fixed
+- `isbn10ToIsbn13` rejected ISBN-10s whose check digit is `X` (~1 in 11
+  books); such ISBN-10s now derive their ISBN-13 correctly.
+
 ### Added — Phase 0–1 (scaffold + core catalog & inventory)
 - Tauri 2 + React 19 + TypeScript + Tailwind + shadcn-style UI scaffold with
   least-privilege capabilities and CI on macOS/Windows/Linux.

@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, Trash2 } from "lucide-react";
-import { open } from "@tauri-apps/plugin-dialog";
+import { Download, Plus, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,7 +13,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { api } from "@/lib/api";
+import { api, isDesktop } from "@/lib/api";
+import { downloadExport, pickFile as chooseFile } from "@/lib/files";
 import { applyTheme, type Theme } from "@/lib/theme";
 import { translate, useLanguage, LANGUAGES, type Language } from "@/lib/i18n";
 import { LOCATION_LABELS, LOCATION_TYPES, type LocationDto } from "@/types/domain";
@@ -38,6 +38,9 @@ export default function SettingsView() {
   const [dataNote, setDataNote] = useState<string | null>(null);
   const [dataError, setDataError] = useState<string | null>(null);
   const [restorePath, setRestorePath] = useState<string | null>(null);
+  // Last export/backup produced in this session; in the web version it is
+  // offered as a browser download (the file lives on the local server).
+  const [lastExport, setLastExport] = useState<string | null>(null);
 
   const setPreferences = useMutation({
     mutationFn: (prefs: Record<string, unknown>) => {
@@ -180,6 +183,7 @@ export default function SettingsView() {
               onClick={async () => {
                 try {
                   const res = await api.exportLibraryCsv();
+                  setLastExport(res.path);
                   setDataNote(`CSV written to ${res.path}`);
                   setDataError(null);
                 } catch (err) {
@@ -194,6 +198,7 @@ export default function SettingsView() {
               onClick={async () => {
                 try {
                   const res = await api.exportLibraryJson();
+                  setLastExport(res.path);
                   setDataNote(`JSON written to ${res.path}`);
                   setDataError(null);
                 } catch (err) {
@@ -208,6 +213,7 @@ export default function SettingsView() {
               onClick={async () => {
                 try {
                   const res = await api.createBackup(null);
+                  setLastExport(res.path);
                   setDataNote(`Backup written to ${res.path}`);
                   setDataError(null);
                 } catch (err) {
@@ -220,11 +226,8 @@ export default function SettingsView() {
             <Button
               variant="outline"
               onClick={async () => {
-                const file = await open({
-                  multiple: false,
-                  filters: [{ name: "Backup archive", extensions: ["zip"] }],
-                });
-                if (typeof file === "string") setRestorePath(file);
+                const file = await chooseFile(["zip"]);
+                if (file) setRestorePath(file);
               }}
             >
               {t("settings.restore")}
@@ -232,11 +235,8 @@ export default function SettingsView() {
             <Button
               variant="outline"
               onClick={async () => {
-                const file = await open({
-                  multiple: false,
-                  filters: [{ name: "Import file", extensions: ["csv", "json"] }],
-                });
-                if (typeof file === "string") {
+                const file = await chooseFile(["csv", "json"]);
+                if (file) {
                   window.dispatchEvent(
                     new CustomEvent("shelfledger:open-import", { detail: file }),
                   );
@@ -245,6 +245,11 @@ export default function SettingsView() {
             >
               {t("settings.import")}
             </Button>
+            {lastExport && !isDesktop() && (
+              <Button variant="secondary" onClick={() => downloadExport(lastExport)}>
+                <Download /> Download
+              </Button>
+            )}
           </div>
           {dataNote && (
             <p className="rounded-md border p-2 text-xs" role="status">

@@ -8,10 +8,13 @@ and make informed decisions about keeping or selling each copy.
 readable SQLite database in your user data directory.
 
 > Project status: **Phases 0–5 implemented** (catalog, reading, loans, resale &
-> money, import/export/backup, theme + EN/RO). See
-> [docs/implementation.md](docs/implementation.md) for per-phase status and
-> [docs/release.md](docs/release.md) for the packaging checklist. Phase 6 (barcode
-> scanning, e-books, sync) is deliberately not started.
+> money, import/export/backup, theme + EN/RO), plus user-requested follow-ups:
+> ISBN **barcode scanning**, a **web version** (browser UI over the same local
+> Rust core), and a real app icon. See
+> [docs/implementation.md](docs/implementation.md) for per-phase status,
+> [docs/web.md](docs/web.md) for the web version, and
+> [docs/release.md](docs/release.md) for the packaging checklist. The rest of
+> Phase 6 (e-books, sync, receipts) is deliberately not started.
 
 ## Why ShelfLedger?
 
@@ -26,12 +29,15 @@ asking price, realized sale) and zero lock-in.
 2. **Offline and private by default:** everything important works without internet.
 3. **Truthful values:** purchase cost, estimated value, asking price, and actual sale price are distinct fields. We never fabricate price data.
 4. **Zero lock-in:** CSV/JSON export, complete backup/restore, plain SQLite, stable IDs and migrations.
-5. **Fast entry:** ISBN lookup (Open Library, cached), manual entry, duplicate detection.
+5. **Fast entry:** ISBN barcode scanning (camera or photo), ISBN lookup (Open
+   Library, cached), manual entry, duplicate detection.
 6. **Low maintenance:** single desktop app; no server, Docker, or hosted database.
 
 ## Platforms
 
-macOS, Windows, Linux (Tauri 2).
+macOS, Windows, Linux (Tauri 2) — plus a **web version**: the same app in a
+browser against the same local database core, served over loopback HTTP by the
+`shelfledger-web` binary. See [docs/web.md](docs/web.md).
 
 ## Tech stack
 
@@ -52,6 +58,10 @@ pnpm tauri dev       # run the desktop app in dev mode
 pnpm test:rust       # Rust unit/integration tests (cargo test)
 pnpm test:web        # frontend tests (Vitest)
 pnpm lint            # typecheck + build
+
+# web version (browser UI over the same local core) — see docs/web.md
+pnpm web:server      # terminal 1: local server on http://127.0.0.1:8787
+pnpm dev             # terminal 2: Vite dev server (proxies /api)
 ```
 
 ## Documentation
@@ -61,6 +71,7 @@ pnpm lint            # typecheck + build
 - [docs/design.md](docs/design.md) — UI principles, screens, design tokens
 - [docs/implementation.md](docs/implementation.md) — phased plan and current status
 - [docs/import-format.md](docs/import-format.md) — CSV/JSON import schema
+- [docs/web.md](docs/web.md) — running the web version
 - [docs/release.md](docs/release.md) — release/signing checklist
 - [docs/decisions/](docs/decisions/) — architecture decision records
 - [PRIVACY.md](PRIVACY.md) — what leaves your computer (almost nothing)
