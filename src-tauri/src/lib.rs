@@ -105,3 +105,6 @@ pub fn run() {
 
 #[cfg(test)]
 mod audit_regressions;
+
+#[cfg(test)]
+mod currency_regressions;

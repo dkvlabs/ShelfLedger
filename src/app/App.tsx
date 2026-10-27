@@ -1,3 +1,4 @@
+import { DirectionProvider } from "@radix-ui/react-direction";
 import { useT } from "@/lib/i18n";
 import { lazy, Suspense, useEffect, useState } from "react";
 import {
@@ -20,7 +21,7 @@ import {
 
 import { api } from "@/lib/api";
 import { applyTheme, type Theme } from "@/lib/theme";
-import { translate, useLanguage } from "@/lib/i18n";
+import { translate, useLanguage, languageInfo } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 const DashboardView = lazy(() => import("@/features/dashboard/DashboardView"));
 const LibraryView = lazy(() => import("@/features/catalog/LibraryView"));
@@ -87,7 +88,8 @@ function Shell() {
   const t = (key: string) => translate(language, key);
 
   useEffect(() => {
-    document.documentElement.lang = language;
+    document.documentElement.lang = languageInfo(language).locale;
+    document.documentElement.dir = languageInfo(language).direction;
   }, [language]);
 
   // Apply the stored theme on mount and on change.
@@ -172,6 +174,7 @@ function Shell() {
   const activeKey = view.name === "work" ? "library" : view.name;
 
   return (
+    <DirectionProvider dir={languageInfo(language).direction}>
     <div className="flex h-full flex-col">
       <div className="mobile-bar">
         <span className="brand font-display">{tx("ShelfLedger")}</span>
@@ -206,9 +209,9 @@ function Shell() {
             />
           ))}
           <div className="mt-auto border-t px-3 pt-6 text-xs leading-relaxed text-muted-foreground">
-            <span className="mr-2 text-primary">●</span>
+            <span className="me-2 text-primary">●</span>
             {t("Offline — all data on this device")}
-            <p className="ml-5 mt-1 opacity-70">
+            <p className="ms-5 mt-1 opacity-70">
               {t("Your library stays private.")}
             </p>
           </div>
@@ -246,6 +249,7 @@ function Shell() {
         </main>
       </div>
     </div>
+    </DirectionProvider>
   );
 }
 

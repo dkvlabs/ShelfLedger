@@ -1,3 +1,4 @@
+import { CurrencySelect } from "@/components/ui/currency-select";
 import { useT } from "@/lib/i18n";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -72,7 +73,7 @@ const emptyDraft: Draft = {
   acquisitionType: "bought",
   acquiredAt: todayIso(),
   price: "",
-  currency: "RON",
+  currency: "",
   store: "",
 };
 
@@ -128,6 +129,8 @@ export default function AddBookDialog({
   const preferredCurrency =
     (settings?.["preferences"] as { currency?: string } | undefined)
       ?.currency ?? "RON";
+
+  const currency = draft.currency || preferredCurrency;
 
   const set = (patch: Partial<Draft>) => setDraft((d) => ({ ...d, ...patch }));
 
@@ -192,12 +195,12 @@ export default function AddBookDialog({
 
       // 2. Price is parsed once, at the IPC edge.
       const priceMinor = draft.price.trim()
-        ? parseMoneyToMinor(draft.price, draft.currency)
+        ? parseMoneyToMinor(draft.price, currency)
         : null;
       if (draft.price.trim() && priceMinor === null) {
         throw new CommandError(
           "validation",
-          `Could not parse price: ${draft.price}`,
+          tx("Invalid amount"),
         );
       }
 
@@ -231,9 +234,7 @@ export default function AddBookDialog({
                 priceMinor !== null
                   ? {
                       priceMinor,
-                      currency: (
-                        draft.currency || preferredCurrency
-                      ).toUpperCase(),
+                      currency: currency.toUpperCase(),
                       acquiredAt: draft.acquiredAt || null,
                       acquisitionType: draft.acquisitionType || null,
                       store: draft.store.trim() || null,
@@ -265,7 +266,7 @@ export default function AddBookDialog({
   function reset() {
     setIsbnInput("");
     setLookupNote(null);
-    setDraft({ ...emptyDraft, currency: preferredCurrency });
+    setDraft(emptyDraft);
     setDuplicates(null);
     setFormError(null);
     setSaveResult(null);
@@ -549,14 +550,7 @@ export default function AddBookDialog({
                   </div>
                   <div className="space-y-1">
                     <Label htmlFor="currency">{tx("Currency")}</Label>
-                    <Input
-                      id="currency"
-                      maxLength={3}
-                      value={draft.currency}
-                      onChange={(e) =>
-                        set({ currency: e.target.value.toUpperCase() })
-                      }
-                    />
+                    <CurrencySelect id="currency" value={currency} onValueChange={(currency) => set({ currency })} />
                   </div>
                   <div className="col-span-2 space-y-1">
                     <Label htmlFor="store">{tx("Store / seller")}</Label>

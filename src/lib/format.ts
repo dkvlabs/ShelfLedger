@@ -4,7 +4,17 @@
 // - Dates: DD.MM.YYYY in the UI, ISO 8601 in storage.
 
 import currencyDigits from "./currencies.json";
-export const currencies = Object.keys(currencyDigits);
+import catalog from "./currency-catalog.json";
+export const currencies = Object.keys(catalog.current);
+
+export function currencyName(code: string, language = "en"): string {
+  try {
+    const name = new Intl.DisplayNames([language], { type: "currency" }).of(code);
+    return name && name !== code ? name : (catalog.current as Record<string, string>)[code] ?? code;
+  } catch {
+    return (catalog.current as Record<string, string>)[code] ?? code;
+  }
+}
 export function minorDigits(code: string): number | null {
   return (currencyDigits as Record<string, number>)[code.toUpperCase()] ?? null;
 }
@@ -26,6 +36,7 @@ export function minorToDecimal(minor: number, currency: string): string {
 export function formatMoney(
   minor: number | null | undefined,
   currency: string | null | undefined,
+  locale?: string,
 ): string {
   if (minor === null || minor === undefined || !currency) return "—";
   const decimals = minorDigits(currency);
@@ -35,14 +46,14 @@ export function formatMoney(
   const whole = absolute / scale;
   const signedWhole = minor < 0 ? (whole === 0n ? -0 : -whole) : whole;
   try {
-    const formatter = new Intl.NumberFormat(undefined, {
+    const formatter = new Intl.NumberFormat(locale, {
       style: "currency",
       currency: currency.toUpperCase(),
       minimumFractionDigits: decimals,
       maximumFractionDigits: decimals,
     });
     const fraction = decimals
-      ? new Intl.NumberFormat(undefined, {
+      ? new Intl.NumberFormat(locale, {
           useGrouping: false,
           minimumIntegerDigits: decimals,
           maximumFractionDigits: 0,
@@ -67,7 +78,14 @@ export function parseMoneyToMinor(
 ): number | null {
   const decimals = minorDigits(currency);
   if (decimals === null) return null;
-  const cleaned = input.replace(/[\s'’\u00a0]/g, "");
+  const cleaned = input.normalize("NFKC")
+    .replace(/[٠-٩۰-۹०-९০-৯]/g, (digit) => {
+      const value = digit.charCodeAt(0);
+      const start = [0x660, 0x6f0, 0x966, 0x9e6].find((base) => value >= base && value <= base + 9)!;
+      return String(value - start);
+    })
+    .replace(/٫/g, ".").replace(/٬/g, "")
+    .replace(/[\s'’\u00a0\u200e\u200f\u061c]/g, "");
   if (cleaned === "" || cleaned === "-" || cleaned === "." || cleaned === ",") {
     return null;
   }

@@ -120,7 +120,7 @@ export default function LibraryView({
             {stats?.workCount ?? 0}{" "}
             {t(stats?.workCount === 1 ? "work" : "works")}
           </span>
-          <span className="border-l pl-4">
+          <span className="border-l ps-4">
             {stats?.copyCount ?? 0}{" "}
             {t(stats?.copyCount === 1 ? "copy" : "copies")}
           </span>
@@ -225,7 +225,7 @@ export default function LibraryView({
           {sorted.map((w) => (
             <button
               key={w.id}
-              className="library-book flex flex-col justify-between p-7 text-left transition duration-300"
+              className="library-book flex flex-col justify-between p-7 text-start transition duration-300"
               onClick={() => onOpenWork(w.id)}
             >
               <span>
@@ -248,7 +248,7 @@ export default function LibraryView({
         </div>
       ) : (
         <div className="responsive-table">
-          <table className="w-full text-left text-sm">
+          <table className="w-full text-start text-sm">
             <thead>
               <tr className="border-b text-muted-foreground">
                 <th>{t("Title")}</th>
@@ -262,7 +262,7 @@ export default function LibraryView({
                 <tr key={w.id} className="border-b hover:bg-accent">
                   <td>
                     <button
-                      className="text-left font-medium underline-offset-4 hover:underline"
+                      className="text-start font-medium underline-offset-4 hover:underline"
                       onClick={() => onOpenWork(w.id)}
                     >
                       {w.title}

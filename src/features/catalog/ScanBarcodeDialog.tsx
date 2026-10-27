@@ -237,7 +237,7 @@ export default function ScanBarcodeDialog({
                 {tx("Waiting for camera access…")}
               </span>
             ) : (
-              "Camera not available — scan from a photo below"
+              tx("Camera not available — scan from a photo below")
             )}
           </div>
         )}

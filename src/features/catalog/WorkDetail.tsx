@@ -1,4 +1,5 @@
-import { useT } from "@/lib/i18n";
+import { CurrencySelect } from "@/components/ui/currency-select";
+import { useT, useFormatMoney } from "@/lib/i18n";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Archive, BookPlus, BookOpen, Tag } from "lucide-react";
 import { useState } from "react";
@@ -26,7 +27,6 @@ import {
 import { api } from "@/lib/api";
 import {
   formatDate,
-  formatMoney,
   parseMoneyToMinor,
   todayIso,
 } from "@/lib/format";
@@ -71,7 +71,7 @@ function LendDialog({
         });
         cid = contact.id;
       }
-      if (!cid) throw new Error("pick a contact or enter a name");
+      if (!cid) throw new Error(tx("pick a contact or enter a name"));
       return api.lendCopy({
         copyId,
         contactId: cid,
@@ -185,7 +185,7 @@ function ValuationDialog({
     mutationFn: () => {
       const valueMinor = parseMoneyToMinor(value, currency);
       if (valueMinor == null)
-        throw new Error(`could not parse value: ${value}`);
+        throw new Error(tx("Invalid amount"));
       return api.addValuation({
         copyId,
         valueMinor,
@@ -231,12 +231,7 @@ function ValuationDialog({
           </div>
           <div className="space-y-1">
             <Label htmlFor="val-currency">{tx("Currency")}</Label>
-            <Input
-              id="val-currency"
-              maxLength={3}
-              value={currency}
-              onChange={(e) => setCurrency(e.target.value.toUpperCase())}
-            />
+            <CurrencySelect id="val-currency" value={currency} onValueChange={setCurrency} />
           </div>
           <div className="space-y-1">
             <Label htmlFor="val-source">{tx("Source")}</Label>
@@ -403,7 +398,7 @@ function ReadingSection({ workId }: { workId: string }) {
                   <Input
                     className="h-7 w-16"
                     placeholder="0-5"
-                    aria-label={`Rating for ${s.workTitle}`}
+                    aria-label={tx("Rating for {value}", { value: s.workTitle })}
                     value={rating}
                     onChange={(e) =>
                       setRating(e.target.value.replace(/[^0-5]/g, ""))
@@ -444,6 +439,7 @@ export default function WorkDetail({
   onBack: () => void;
 }) {
   const tx = useT();
+  const formatMoney = useFormatMoney();
   const queryClient = useQueryClient();
   const [editTarget, setEditTarget] = useState<EditTarget | null>(null);
   const [showArchived, setShowArchived] = useState(false);
@@ -568,7 +564,7 @@ export default function WorkDetail({
                   </Button>
                   <div className="text-xs text-muted-foreground">
                     {e.isbn13 ? `ISBN-13 ${e.isbn13}` : tx("No ISBN")}
-                    {e.pageCount ? ` · ${e.pageCount} pp.` : ""}
+                    {e.pageCount ? ` · ${e.pageCount} ${tx("Pages")}` : ""}
                     {e.publishedAt ? ` · ${e.publishedAt}` : ""}
                   </div>
                 </div>

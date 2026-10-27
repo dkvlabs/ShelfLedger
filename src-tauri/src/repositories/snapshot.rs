@@ -71,7 +71,7 @@ pub async fn export(pool: &SqlitePool) -> AppResult<Snapshot> {
     }
     tx.commit().await?;
     Ok(Snapshot {
-        format_version: 1,
+        format_version: 2,
         tables,
     })
 }
@@ -79,7 +79,7 @@ pub async fn export(pool: &SqlitePool) -> AppResult<Snapshot> {
 /// Replace in a transaction on the live database. WAL and pooled connections
 /// remain valid; readers observe either the old library or the committed one.
 pub async fn apply(pool: &SqlitePool, snapshot: &Snapshot, replace: bool) -> AppResult<()> {
-    if snapshot.format_version != 1
+    if ![1, 2].contains(&snapshot.format_version)
         || snapshot
             .tables
             .keys()
@@ -115,7 +115,16 @@ pub async fn apply(pool: &SqlitePool, snapshot: &Snapshot, replace: bool) -> App
             .fetch_all(&mut *tx)
             .await?;
         let allowed: Vec<String> = columns.iter().map(|r| r.get("name")).collect();
-        for record in snapshot.tables.get(table).into_iter().flatten() {
+        for original_record in snapshot.tables.get(table).into_iter().flatten() {
+            let mut upgraded_record;
+            let record = if snapshot.format_version == 1 {
+                upgraded_record = original_record.clone();
+                crate::money::upgrade_legacy_record(table, &mut upgraded_record)
+                    .map_err(AppError::Validation)?;
+                &upgraded_record
+            } else {
+                original_record
+            };
             if record.is_empty() || record.keys().any(|c| !allowed.contains(c)) {
                 return Err(AppError::Validation(format!("invalid columns in {table}")));
             }

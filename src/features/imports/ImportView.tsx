@@ -147,7 +147,7 @@ export default function ImportView({
                     <label key={field} className="text-xs">
                       {t(field)}
                       <select
-                        aria-label={`${t("Map column")}: ${field}`}
+                        aria-label={`${t("Map column")}: ${t(field)}`}
                         className="mt-1 block w-full rounded-md border bg-background p-2"
                         value={
                           mapping[field] ??

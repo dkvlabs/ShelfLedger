@@ -24,7 +24,7 @@ import {
   type LocationDto,
 } from "@/types/domain";
 
-import { currencies as CURRENCIES } from "@/lib/format";
+import { CurrencySelect } from "@/components/ui/currency-select";
 
 export default function SettingsView() {
   const tx = useT();
@@ -86,6 +86,7 @@ export default function SettingsView() {
   const setPreferences = useMutation({
     mutationFn: (prefs: Record<string, unknown>) => {
       const merged = {
+        ...preferences,
         currency: preferences.currency ?? "RON",
         theme: preferences.theme ?? "dark",
         language: language,
@@ -95,6 +96,7 @@ export default function SettingsView() {
     },
     onSuccess: () =>
       void queryClient.invalidateQueries({ queryKey: ["settings"] }),
+    onError: (error) => setDataError(error.message),
   });
 
   const setCurrency = useMutation({
@@ -188,32 +190,20 @@ export default function SettingsView() {
         <CardContent className="space-y-4">
           <div className="max-w-xs space-y-1">
             <Label htmlFor="currency">{tx("Preferred currency")}</Label>
-            <Select
-              value={preferences.currency ?? "RON"}
-              onValueChange={(v) => setCurrency.mutate(v)}
-            >
-              <SelectTrigger id="currency">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {CURRENCIES.map((c) => (
-                  <SelectItem key={c} value={c}>
-                    {c}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <CurrencySelect id="currency" value={preferences.currency ?? "RON"}
+              onValueChange={(value) => setCurrency.mutate(value)} disabled={setPreferences.isPending} />
             <p className="text-xs text-muted-foreground">
               {tx(
                 "Used as the default for purchase entries. Any ISO 4217 code is accepted per-record; currencies are never summed together.",
               )}
             </p>
           </div>
-          <div className="flex gap-4">
+          <div className="flex flex-wrap gap-4">
             <div className="max-w-xs space-y-1">
               <Label htmlFor="language">{t("settings.language")}</Label>
               <Select
                 value={language}
+                disabled={setPreferences.isPending}
                 onValueChange={(v) => setLanguage.mutate(v as Language)}
               >
                 <SelectTrigger id="language">
@@ -221,7 +211,7 @@ export default function SettingsView() {
                 </SelectTrigger>
                 <SelectContent>
                   {LANGUAGES.map((l) => (
-                    <SelectItem key={l.value} value={l.value}>
+                    <SelectItem key={l.value} value={l.value} lang={l.locale} dir={l.direction}>
                       {l.label}
                     </SelectItem>
                   ))}
@@ -232,6 +222,7 @@ export default function SettingsView() {
               <Label htmlFor="theme">{t("settings.theme")}</Label>
               <Select
                 value={preferences.theme ?? "dark"}
+                disabled={setPreferences.isPending}
                 onValueChange={(v) => setTheme.mutate(v as Theme)}
               >
                 <SelectTrigger id="theme">
@@ -434,7 +425,7 @@ export default function SettingsView() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  aria-label={`Delete ${locationLabel(l)}`}
+                  aria-label={tx("Delete {value}", { value: locationLabel(l) })}
                   onClick={() => deleteLocation.mutate(l.id)}
                 >
                   <Trash2 />

@@ -11,7 +11,8 @@ import { afterEach, expect, it, vi } from "vitest";
 import App from "@/app/App";
 import { api } from "@/lib/api";
 import { pickFile } from "@/lib/files";
-vi.mock("@/lib/i18n", () => ({
+vi.mock("@/lib/i18n", async (importOriginal) => ({
+  ...await importOriginal<typeof import("@/lib/i18n")>(),
   useT: () => (s: string) => s,
   useLanguage: () => "en",
   translate: (_: string, s: string) => s,

@@ -1,4 +1,4 @@
-import { useT } from "@/lib/i18n";
+import { useT, useFormatMoney } from "@/lib/i18n";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -25,11 +25,10 @@ import {
 import { api } from "@/lib/api";
 import {
   formatDate,
-  formatMoney,
   parseMoneyToMinor,
   todayIso,
 } from "@/lib/format";
-import type { SellQueueItem } from "@/types/domain";
+import { CONDITION_LABELS, type SellQueueItem } from "@/types/domain";
 
 const DECISION_BADGES: Record<
   string,
@@ -47,6 +46,7 @@ const DECISION_BADGES: Record<
 /** What-if calculator: net = asking − fee − seller-paid shipping. */
 function WhatIfCalculator({ item }: { item: SellQueueItem }) {
   const tx = useT();
+  const formatMoney = useFormatMoney();
   const [asking, setAsking] = useState("");
   const [fee, setFee] = useState("");
   const [shipping, setShipping] = useState("");
@@ -162,7 +162,7 @@ function ListForSaleDialog({
     mutationFn: () => {
       const askingMinor = parseMoneyToMinor(asking, currency);
       if (askingMinor == null || askingMinor < 0) {
-        throw new Error(`could not parse asking price: ${asking}`);
+        throw new Error(tx("Invalid amount"));
       }
       return api.createListing({
         copyId: item.copyId,
@@ -245,6 +245,7 @@ function SellActions({
   currency: string;
 }) {
   const tx = useT();
+  const formatMoney = useFormatMoney();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [listOpen, setListOpen] = useState(false);
@@ -288,7 +289,7 @@ function SellActions({
 
   const withdraw = useMutation({
     mutationFn: () => {
-      if (!item.activeListing) throw new Error("no active listing");
+      if (!item.activeListing) throw new Error(tx("no active listing"));
       return api.withdrawListing(item.activeListing.id);
     },
     onSuccess: () =>
@@ -450,6 +451,7 @@ function SellActions({
 
 export default function SellView() {
   const tx = useT();
+  const formatMoney = useFormatMoney();
   const {
     data: queue,
     isPending,
@@ -503,12 +505,12 @@ export default function SellView() {
                         <div className="text-xs text-muted-foreground">
                           {item.authorNames.join(", ")} {tx("· copy")}
                           {item.copyNumber} {tx("of")} {item.totalCopiesOfWork}{" "}
-                          · {item.conditionGrade.replace("_", " ")}
+                          · {tx(CONDITION_LABELS[item.conditionGrade])}
                           {item.historicalCost
-                            ? ` · cost ${formatMoney(item.historicalCost.minor, item.historicalCost.currency)}`
+                            ? ` · ${tx("Cost")} ${formatMoney(item.historicalCost.minor, item.historicalCost.currency)}`
                             : tx(" · cost unknown")}
                           {item.latestValuation
-                            ? ` · latest estimate ${formatMoney(item.latestValuation.valueMinor, item.latestValuation.currency)} (${item.latestValuation.sourceType}, ${formatDate(item.latestValuation.observedAt)})`
+                            ? ` · ${tx("Latest estimate")} ${formatMoney(item.latestValuation.valueMinor, item.latestValuation.currency)} (${tx(item.latestValuation.sourceType === "manual" ? "My own estimate" : "Comparable sale I verified")}, ${formatDate(item.latestValuation.observedAt)})`
                             : ""}
                         </div>
                       </div>

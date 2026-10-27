@@ -19,7 +19,7 @@ subscription, hosted database, or Docker required.
 ![ShelfLedger library with literary typography, copper accents, search, and book cards](docs/images/library-populated.jpg)
 
 *Actual app screenshot using the bundled demo library. Light, dark, and system
-themes; English and Romanian; grid/table views; responsive browser navigation.*
+themes; eleven interface languages (the initial global top ten plus Romanian); grid/table views; responsive browser navigation.*
 
 ## What you can do
 
@@ -30,8 +30,20 @@ themes; English and Romanian; grid/table views; responsive browser navigation.*
 | **Keep a reading journal** | Want-to-read, reading, finished, paused, and DNF sessions; progress, dates, ratings, reviews, and rereads. Reading stays separate from ownership. |
 | **Lend with confidence** | Contacts, due dates, returns, and a per-copy loan history. |
 | **Understand your spending** | Purchase costs, sourced manual estimates, asking prices, and realized sales recorded separately. Integer minor units and ISO currency codes; currencies are never summed together. |
+| **Use your language and currency** | English, Simplified Chinese, Hindi, Spanish, Arabic, French, Bengali, Portuguese, Indonesian, Urdu, and Romanian. All 165 current ISO currencies/fund units with defined minor units, localized names and exact 0–4 decimal handling. Arabic/Urdu use right-to-left layouts. |
 | **Bring your collection along** | Goodreads/custom CSV mapping, preview, duplicate policies, row selection, confirmation, and import logs. |
 | **Keep control of your data** | CSV/JSON exports, consistent SQLite backups, transactional restore, and separately restored libraries you can switch between. |
+
+### Your language, your collection
+
+| Simplified Chinese | Arabic with right-to-left layout |
+| --- | --- |
+| ![Chinese library interface](docs/images/localization-chinese.jpg) | ![Arabic library interface](docs/images/localization-arabic.jpg) |
+
+All eleven language bundles and script fonts work offline. See the
+[localization guide](docs/localization.md) for coverage, compatibility, and how
+to add another language or update the currency catalog. Native-speaker editorial
+review remains outstanding.
 
 ### Read, record, return
 
@@ -81,10 +93,11 @@ are targeted through Tauri 2 but have not been executed in the latest local
 verification. The optional browser version uses the same Rust core over loopback
 HTTP; it is not a hosted cloud service.
 
-Verified on **27.10.2026**: **88 Rust tests** and **59 frontend tests** pass, along
+Verified on **27.10.2026**: **91 Rust tests** and **267 frontend tests** pass, along
 with strict TypeScript/production build, Rust formatting, and Clippy with warnings
 denied. Browser checks cover imports, profile switching, reading, lending,
-editing, EN/RO, and desktop/mobile layouts.
+editing, all eleven language choices, preference persistence, currency selection,
+and desktop/mobile layouts.
 
 The audit remediation addresses **23 of 24 findings**. Two upstream Rust advisory
 warnings remain visible. Physical webcam/OS consent, clean-machine installation,
@@ -143,6 +156,7 @@ and FTS5 full-text search.
 - [Database](docs/database.md) — schema, invariants, money, and dates
 - [Design](docs/design.md) — visual system, workflows, and accessibility
 - [Implementation roadmap](docs/implementation.md) — phase status and deferred work
+- [Languages and currencies](docs/localization.md) — coverage, upgrades, and extension
 - [Import formats](docs/import-format.md) — CSV mapping and JSON snapshots
 - [Web version](docs/web.md) — loopback server and browser setup
 - [Release checklist](docs/release.md) — packaging, signing, and acceptance checks

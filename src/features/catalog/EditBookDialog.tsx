@@ -13,8 +13,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api";
-import { currencies, minorToDecimal, parseMoneyToMinor } from "@/lib/format";
-import { useT } from "@/lib/i18n";
+import { currencies, currencyName, minorToDecimal, parseMoneyToMinor } from "@/lib/format";
+import { useT, useLanguage } from "@/lib/i18n";
 import {
   CONDITION_GRADES,
   CONDITION_LABELS,
@@ -40,6 +40,7 @@ export default function EditBookDialog({
   onClose: () => void;
 }) {
   const t = useT();
+  const language = useLanguage();
   const client = useQueryClient();
   const e = target.kind === "edition" ? target.edition : undefined;
   const c = target.kind === "copy" ? target.copy : undefined;
@@ -279,7 +280,7 @@ export default function EditBookDialog({
                 {select(
                   "currency",
                   "Currency",
-                  currencies.map((v) => ({ value: v, label: v })),
+                  Array.from(new Set([values.currency, ...currencies])).filter(Boolean).map((v) => ({ value: v, label: `${v} — ${currencyName(v, language)}` })),
                 )}
                 <div className="grid grid-cols-2 gap-3">
                   {field("price", "Purchase price")}

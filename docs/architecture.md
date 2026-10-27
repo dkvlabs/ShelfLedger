@@ -17,7 +17,7 @@ SQL from the frontend.
 - `src-tauri/src/commands`: Tauri entry points and shared data-file operations.
 - `src-tauri/src/domain`: catalog, reading, loans, finance, imports, backup, profiles.
 - `src-tauri/src/repositories`: SQLite persistence, derived FTS index and versioned snapshots.
-- `src-tauri/src/db.rs`: WAL, foreign keys, four embedded migrations and connection pool.
+- `src-tauri/src/db.rs`: WAL, foreign keys, five embedded migrations and connection pool.
 - `src-tauri/src/sqlite_db.rs`: SQLite-only SQLx facade. Direct driver/core versions
   are pinned together at 0.8.6; upgrades must verify the facade and migration checksums.
   Unused MySQL/Postgres drivers and their crypto dependencies are excluded.

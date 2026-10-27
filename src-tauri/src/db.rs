@@ -29,6 +29,11 @@ pub(crate) static MIGRATOR: std::sync::LazyLock<sqlx::migrate::Migrator> =
                 "listing invariants",
                 include_str!("../migrations/0004_listing_invariants.sql"),
             ),
+            (
+                5,
+                "ISO currency scales",
+                include_str!("../migrations/0005_iso_currency_scales.sql"),
+            ),
         ]
         .into_iter()
         .map(|(version, name, sql)| {

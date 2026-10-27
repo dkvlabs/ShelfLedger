@@ -1,6 +1,6 @@
 # Database
 
-Status: migrations `0001_init` through `0004_listing_invariants`, 27.10.2026.
+Status: migrations `0001_init` through `0005_iso_currency_scales`, 27.10.2026.
 SQLite uses WAL, foreign keys and integer money. Existing migration SQL is never
 rewritten; the embedded migration list preserves its checksums.
 
@@ -37,6 +37,8 @@ are real ISO calendar dates or RFC3339 timestamps.
 
 Money is nonnegative integer minor units with a supported ISO 4217 code. Shared
 `src/lib/currencies.json` defines the accepted codes and frontend decimal scale.
+The catalog covers all 165 current fixed-scale ISO currencies/fund units and keeps
+eight compatibility codes for older records. See [localization.md](localization.md).
 Every cost, including shipping or tax without a purchase price, requires a
 currency. Missing amounts stay unknown. Reports never mix currencies. The latest
 valuation uses observed date, creation time, then SQLite row sequence to select
@@ -53,3 +55,9 @@ and rejects differing conflicts. Invalid input rolls the transaction back.
 The snapshot contains the 22 logical tables above (excluding derived FTS and
 migration bookkeeping). Full reading, loan and finance fixture round trips are
 covered in `src-tauri/src/audit_regressions.rs`. See [import-format.md](import-format.md).
+
+Migration 0005 corrects sixteen formerly zero-decimal currencies, preserving their
+previously displayed major-unit amounts across every money-bearing table. Unsafe
+multiplication rolls back. JSON exports now use format 2; importing format 1
+performs the same correction once. ZIP restores migrate the temporary database
+before importing its format 2 snapshot. [Upgrade details](localization.md#upgrading-older-libraries).

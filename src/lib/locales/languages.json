@@ -1,0 +1,57 @@
+{
+  "en": {
+    "label": "English",
+    "locale": "en",
+    "direction": "ltr"
+  },
+  "zh": {
+    "label": "中文（简体）",
+    "locale": "zh-Hans",
+    "direction": "ltr"
+  },
+  "hi": {
+    "label": "हिन्दी",
+    "locale": "hi",
+    "direction": "ltr"
+  },
+  "es": {
+    "label": "Español",
+    "locale": "es",
+    "direction": "ltr"
+  },
+  "ar": {
+    "label": "العربية",
+    "locale": "ar",
+    "direction": "rtl"
+  },
+  "fr": {
+    "label": "Français",
+    "locale": "fr",
+    "direction": "ltr"
+  },
+  "bn": {
+    "label": "বাংলা",
+    "locale": "bn",
+    "direction": "ltr"
+  },
+  "pt": {
+    "label": "Português",
+    "locale": "pt",
+    "direction": "ltr"
+  },
+  "id": {
+    "label": "Bahasa Indonesia",
+    "locale": "id",
+    "direction": "ltr"
+  },
+  "ur": {
+    "label": "اردو",
+    "locale": "ur",
+    "direction": "rtl"
+  },
+  "ro": {
+    "label": "Română",
+    "locale": "ro",
+    "direction": "ltr"
+  }
+}

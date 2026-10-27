@@ -1,9 +1,8 @@
-import { useT } from "@/lib/i18n";
+import { useT, useFormatMoney } from "@/lib/i18n";
 import { useQuery } from "@tanstack/react-query";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { api } from "@/lib/api";
-import { formatMoney } from "@/lib/format";
 
 function MoneyBuckets({
   buckets,
@@ -13,6 +12,7 @@ function MoneyBuckets({
   emptyLabel: string;
 }) {
   const tx = useT();
+  const formatMoney = useFormatMoney();
   if (buckets.length === 0) {
     return <p className="text-sm text-muted-foreground">{tx(emptyLabel)}</p>;
   }

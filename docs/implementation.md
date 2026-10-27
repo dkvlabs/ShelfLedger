@@ -139,3 +139,15 @@ reading editors, and a cinematic responsive collection interface. See
 [audit-remediation.md](audit-remediation.md) for the finding-by-finding disposition,
 validation evidence and remaining upstream/release limitations. Phase markers are
 implementation summaries, not proof of packaging or acceptance on every OS.
+
+## Localization expansion — 27.10.2026
+
+- [x] Initial ten global languages plus Romanian, bundled offline with native-script fonts.
+- [x] Arabic/Urdu document and component direction, logical alignment, mirrored mobile navigation.
+- [x] All 165 current ISO fixed-scale currencies/fund units, localized selector names,
+      exact zero/two/three/four decimal amounts, localized digit entry.
+- [x] One-time v4 library migration and format 1 JSON compatibility preserve old displayed amounts.
+- [x] Translation completeness, official-catalog parity, per-code round trips, preference
+      validation and atomic upgrade/overflow regressions.
+
+See [localization.md](localization.md) for extension and maintenance instructions.

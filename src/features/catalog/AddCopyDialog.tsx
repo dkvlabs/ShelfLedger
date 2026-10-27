@@ -1,3 +1,4 @@
+import { CurrencySelect } from "@/components/ui/currency-select";
 import { useT } from "@/lib/i18n";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -63,7 +64,8 @@ export default function AddCopyDialog({
     queryFn: api.getSettings,
     enabled: open,
   });
-  const currency =
+  const [currencyOverride, setCurrencyOverride] = useState<string | null>(null);
+  const currency = currencyOverride ??
     (settings?.["preferences"] as { currency?: string } | undefined)
       ?.currency ?? "RON";
 
@@ -78,7 +80,7 @@ export default function AddCopyDialog({
         ? parseMoneyToMinor(price, currency)
         : null;
       if (price.trim() && priceMinor === null) {
-        throw new CommandError("validation", `Could not parse price: ${price}`);
+        throw new CommandError("validation", tx("Invalid amount"));
       }
       await api.createCopy({
         editionId: targetEdition.id,
@@ -198,6 +200,10 @@ export default function AddCopyDialog({
               value={acquiredAt}
               onChange={(e) => setAcquiredAt(e.target.value)}
             />
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="copy-currency">{tx("Currency")}</Label>
+            <CurrencySelect id="copy-currency" value={currency} onValueChange={setCurrencyOverride} />
           </div>
           <div className="space-y-1">
             <Label htmlFor="copy-price">

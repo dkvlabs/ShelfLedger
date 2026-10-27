@@ -3,24 +3,58 @@
 //! decimal input and minor units happen at the edge (UI or import) and are
 //! validated here.
 
-/// Validate an ISO 4217 currency code: exactly three ASCII letters.
-/// We do not hard-code a currency list so any ISO currency works (RON, EUR,
-/// USD, …), matching the product requirement "other ISO currencies supported".
+/// Supported fixed-scale ISO currencies, plus explicitly retained legacy codes.
+/// The frontend and backend consume the same bundled catalog.
 pub fn validate_currency(code: &str) -> Result<(), String> {
-    let currencies: serde_json::Value =
+    static CURRENCIES: std::sync::LazyLock<serde_json::Value> = std::sync::LazyLock::new(|| {
         serde_json::from_str(include_str!("../../src/lib/currencies.json"))
-            .expect("bundled ISO currency data");
-    if currencies.get(code.to_ascii_uppercase()).is_some() {
+            .expect("bundled ISO currency data")
+    });
+    if CURRENCIES.get(code.to_ascii_uppercase()).is_some() {
         Ok(())
     } else {
         Err(format!("unsupported ISO 4217 currency: {code}"))
     }
 }
 
-/// Default currencies surfaced in the UI (§17 of the plan: English/Romanian,
-/// RON/EUR with other ISO currencies supported).
-#[allow(dead_code)] // surfaced by the settings UI
-pub const DEFAULT_CURRENCIES: &[&str] = &["RON", "EUR", "USD", "GBP"];
+/// Version-one JSON snapshots used incorrect zero-decimal scales for these
+/// currencies. Match migration 0005 without rounding or risking overflow.
+pub fn upgrade_legacy_record(
+    table: &str,
+    record: &mut std::collections::BTreeMap<String, serde_json::Value>,
+) -> Result<(), String> {
+    let columns: &[&str] = match table {
+        "acquisitions" => &["price_minor", "shipping_minor", "tax_minor"],
+        "valuation_records" => &["value_minor"],
+        "sale_listings" => &["asking_price_minor"],
+        "disposals" => &["sale_price_minor", "fee_minor", "shipping_minor"],
+        "wishlist" => &["maximum_price_minor"],
+        _ => return Ok(()),
+    };
+    let factors: serde_json::Value =
+        serde_json::from_str(include_str!("../../src/lib/legacy-currency-factors.json"))
+            .expect("bundled legacy scales");
+    let factor = record
+        .get("currency")
+        .and_then(serde_json::Value::as_str)
+        .and_then(|c| factors.get(c.to_ascii_uppercase()))
+        .and_then(serde_json::Value::as_i64)
+        .unwrap_or(1);
+    for column in columns {
+        if let Some(value) = record.get_mut(*column) {
+            if value.is_null() {
+                continue;
+            }
+            let upgraded = value
+                .as_i64()
+                .and_then(|v| v.checked_mul(factor))
+                .filter(|v| *v >= 0 && *v <= 9_007_199_254_740_991)
+                .ok_or_else(|| "legacy money amount cannot be safely upgraded".to_string())?;
+            *value = upgraded.into();
+        }
+    }
+    Ok(())
+}
 
 /// Parse a decimal money string ("12.50", "12,50", "1 234,00") into integer
 /// minor units for a 2-decimal currency. Returns None when unparseable.

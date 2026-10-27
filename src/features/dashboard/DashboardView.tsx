@@ -1,10 +1,10 @@
-import { useT } from "@/lib/i18n";
+import { useT, useFormatMoney } from "@/lib/i18n";
 import { useQuery } from "@tanstack/react-query";
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { api } from "@/lib/api";
-import { formatMoney, todayIso } from "@/lib/format";
+import { todayIso } from "@/lib/format";
 import { StatCard } from "@/features/insights/InsightsView";
 
 export default function DashboardView({
@@ -15,6 +15,7 @@ export default function DashboardView({
   onNavigate: (view: "library" | "loans" | "sell" | "insights") => void;
 }) {
   const tx = useT();
+  const formatMoney = useFormatMoney();
   const today = todayIso();
   const { data, isPending, isError, error } = useQuery({
     queryKey: ["dashboard", today],

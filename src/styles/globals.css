@@ -1,3 +1,7 @@
+@import "@fontsource/noto-sans-arabic/arabic-400.css";
+@import "@fontsource/noto-sans-devanagari/devanagari-400.css";
+@import "@fontsource/noto-sans-bengali/bengali-400.css";
+@import "@fontsource/noto-sans-sc/chinese-simplified-400.css";
 @import "@fontsource/manrope/latin-400.css";
 @import "@fontsource/manrope/latin-ext-400.css";
 @import "@fontsource/manrope/latin-500.css";
@@ -157,7 +161,7 @@
   background: hsl(var(--background));
   width: 224px;
   padding: 28px 12px;
-  border-right: 1px solid hsl(var(--border));
+  border-inline-end: 1px solid hsl(var(--border));
 }
 .brand {
   font-size: 1.8rem;
@@ -166,12 +170,12 @@
 .sidebar-link {
   min-height: 52px;
   padding: 12px 18px;
-  border-left: 2px solid transparent;
+  border-inline-start: 2px solid transparent;
 }
 .sidebar-link[aria-current] {
   color: hsl(var(--primary));
   background: hsl(var(--primary) / 0.09);
-  border-left-color: hsl(var(--primary));
+  border-inline-start-color: hsl(var(--primary));
 }
 .sidebar-link svg {
   width: 21px;
@@ -214,13 +218,13 @@
 }
 .search-field svg {
   position: absolute;
-  left: 14px;
+  inset-inline-start: 14px;
   top: 14px;
   height: 18px;
   color: hsl(var(--muted-foreground));
 }
 .search-field input {
-  padding-left: 42px;
+  padding-inline-start: 42px;
   height: 46px;
 }
 .library-empty {
@@ -383,4 +387,21 @@
   .library-empty h2 {
     font-size: 2.2rem;
   }
+}
+
+/* Joining scripts need connected letters and native-script font metrics. */
+:root:lang(ar) body, :root:lang(ur) body,
+:root:lang(ar) h1, :root:lang(ur) h1,
+:root:lang(ar) h2, :root:lang(ur) h2,
+:root:lang(ar) h3, :root:lang(ur) h3 {
+  font-family: "Noto Sans Arabic", "Geeza Pro", Tahoma, sans-serif;
+  letter-spacing: normal;
+  line-height: 1.6 !important;
+}
+:root:lang(hi) body, :root:lang(hi) h1 { font-family: "Noto Sans Devanagari", "Kohinoor Devanagari", sans-serif; letter-spacing: normal; }
+:root:lang(bn) body, :root:lang(bn) h1 { font-family: "Noto Sans Bengali", "Bangla Sangam MN", sans-serif; letter-spacing: normal; }
+:root:lang(zh) body, :root:lang(zh) h1 { font-family: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif; letter-spacing: normal; }
+@media (max-width: 900px) {
+  [dir="rtl"] .app-sidebar { inset: 56px 0 0 auto; transform: translateX(100%); }
+  [dir="rtl"] .app-sidebar[data-open="true"] { transform: translateX(0); }
 }

@@ -36,7 +36,8 @@ banner height. Motion is limited to brief entrance/hover transitions and respect
   and confirmation. No import writes happen at preview or cancellation.
 - Inputs have labels, icons have accessible names, and dialogs retain Radix focus
   management. Mobile navigation is removed from focus order when closed.
-- EN/RO product dictionaries cover screens, controls and state labels. User data,
+- Eleven bundled language dictionaries cover screens, controls and state labels;
+  Arabic and Urdu use right-to-left layouts. See [localization.md](localization.md). User data,
   provider data and raw diagnostic errors are preserved as supplied.
 - Dates display DD.MM.YYYY; money uses the record's currency-specific minor units.
 

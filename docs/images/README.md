@@ -13,7 +13,7 @@ Use case: photorealistic-natural. A cinematic editorial still life for the READM
 
 ## App screenshots
 
-Unmodified 1280×720 JPEG captures of the working browser version, made with a
+Unmodified JPEG captures of the working browser version, made with a
 disposable local library. These are real interface screenshots, not generated
 mockups. The named books, copy counts and sample purchase amounts come from
 `demo/demo-library.json`; the reading session was created through the interface
@@ -25,6 +25,11 @@ for the walkthrough. None of these images contains personal library data.
 - `reading-desktop.jpg` — The Hobbit's active reading session and progress controls.
 - `import-desktop.jpg` — bundled demo JSON preview before confirmation.
 - `settings-desktop.jpg` — libraries, preferences, data tools, and locations.
+- `localization-chinese.jpg` — Simplified Chinese library, 750×822, after preference persistence verification.
+- `localization-arabic.jpg` — Arabic library with mirrored direction, 750×822, after reloading.
+
+The original desktop captures are 1280×720. The localization captures use the
+current browser viewport and the same disposable demo library.
 
 The generated artwork above is decorative and is not represented as an app
 screenshot, fetched book cover, or verified catalog record.

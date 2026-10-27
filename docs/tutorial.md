@@ -146,9 +146,13 @@ platform-specific bundle options.
 
 ## 6. Set your preferences
 
-Open **Settings**. Choose a preferred currency, English or Romanian, and a light,
-dark, or system theme. The currency is a default for new entries; existing records
+Open **Settings**. Choose a preferred currency, one of the eleven interface languages, and a light,
+dark, or system theme. Arabic and Urdu mirror the interface from right to left.
+Currency selectors include all 165 current ISO currencies/fund units with defined
+minor units; type a code while the selector is open to jump to it. The currency is a default for new entries; existing records
 keep their own currencies and reports never combine different currencies.
+See the [language and currency guide](localization.md) for the full language list,
+amount precision, old-library upgrades and adding future languages.
 
 Under **Physical locations**, add a room, then a bookcase inside it, then a shelf
 inside that bookcase. Choose the parent using **Inside**. You can assign a location
