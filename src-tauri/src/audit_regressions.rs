@@ -23,7 +23,9 @@ async fn book(ctx: &WebCtx, title: &str) -> Value {
 }
 async fn cleanup(ctx: WebCtx) {
     ctx.pool.close().await;
-    std::fs::remove_dir_all(ctx.data_dir).unwrap();
+    crate::file_cleanup::remove_dir_all(&ctx.data_dir)
+        .await
+        .unwrap();
 }
 
 #[tokio::test]
@@ -71,7 +73,9 @@ async fn restore_with_live_wal_keeps_post_restore_writes_and_safety_copy() {
         .unwrap();
     assert_eq!(titles, vec![("A".into(),), ("B".into(),)]);
     pool.close().await;
-    std::fs::remove_dir_all(ctx.data_dir).unwrap();
+    crate::file_cleanup::remove_dir_all(&ctx.data_dir)
+        .await
+        .unwrap();
 }
 
 #[tokio::test]
@@ -533,5 +537,7 @@ async fn hundred_book_offline_soak_survives_reopen_and_remains_searchable() {
         1
     );
     pool.close().await;
-    std::fs::remove_dir_all(ctx.data_dir).unwrap();
+    crate::file_cleanup::remove_dir_all(&ctx.data_dir)
+        .await
+        .unwrap();
 }

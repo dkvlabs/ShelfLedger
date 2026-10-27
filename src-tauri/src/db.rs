@@ -57,8 +57,8 @@ pub(crate) static MIGRATOR: std::sync::LazyLock<sqlx::migrate::Migrator> =
         }
     });
 
-async fn connect_opts(url: &str) -> AppResult<SqlitePool> {
-    let options = SqliteConnectOptions::from_str(url)?
+async fn connect_opts(options: SqliteConnectOptions) -> AppResult<SqlitePool> {
+    let options = options
         .create_if_missing(true)
         .foreign_keys(true)
         .journal_mode(SqliteJournalMode::Wal)
@@ -73,12 +73,48 @@ async fn connect_opts(url: &str) -> AppResult<SqlitePool> {
 
 /// Open (or create) the library database at `path` and run migrations.
 pub async fn connect(path: &std::path::Path) -> AppResult<SqlitePool> {
-    let url = format!("sqlite:{}", path.to_string_lossy());
-    connect_opts(&url).await
+    connect_opts(SqliteConnectOptions::new().filename(path)).await
 }
 
 /// In-memory database for tests: same pragmas and migrations.
 #[allow(dead_code)] // used by #[cfg(test)] modules across the crate
 pub async fn connect_memory() -> AppResult<SqlitePool> {
-    connect_opts("sqlite::memory:").await
+    connect_opts(SqliteConnectOptions::from_str("sqlite::memory:")?).await
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn database_paths_are_literal_filenames_and_survive_canonicalization() {
+        let directory = std::env::temp_dir()
+            .join(crate::ids::new_id())
+            .join("Library %25 # 文 books");
+        std::fs::create_dir_all(&directory).unwrap();
+        // Windows canonicalization adds a \\?\ prefix; URL parsing also corrupts %25.
+        let directory = directory.canonicalize().unwrap();
+        let path = directory.join("library.db");
+        let pool = connect(&path).await.unwrap();
+        sqlx::query("INSERT INTO settings(key,value_json) VALUES('path-fixture','true')")
+            .execute(&pool)
+            .await
+            .unwrap();
+        pool.close().await;
+        assert!(path.is_file());
+        let reopened = connect(&path).await.unwrap();
+        assert_eq!(
+            sqlx::query_scalar::<_, String>(
+                "SELECT value_json FROM settings WHERE key='path-fixture'"
+            )
+            .fetch_one(&reopened)
+            .await
+            .unwrap(),
+            "true"
+        );
+        reopened.close().await;
+        crate::file_cleanup::remove_dir_all(directory.parent().unwrap())
+            .await
+            .unwrap();
+    }
 }

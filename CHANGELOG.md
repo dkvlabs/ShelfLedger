@@ -6,6 +6,14 @@ All notable changes to ShelfLedger are documented here. Format follows
 
 ## [Unreleased]
 
+### Fixed
+- Open database and backup paths as literal filenames, including canonical
+  Windows paths and folder names containing percent signs or Unicode.
+- Close temporary backup verification pools on errors and remove staging files;
+  retry only transient Windows sharing/lock violations for up to two seconds.
+- Run the pinned open-source Gitleaks CLI in Security CI, retaining redacted
+  full-history secret scans without the action's organization license requirement.
+
 ## Development history (before automated releases)
 
 ### Added — release automation (2026-10-27)

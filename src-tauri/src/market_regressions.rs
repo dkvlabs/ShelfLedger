@@ -25,7 +25,9 @@ async fn context() -> (WebCtx, Value) {
 }
 async fn cleanup(ctx: WebCtx) {
     ctx.pool.close().await;
-    std::fs::remove_dir_all(ctx.data_dir).unwrap();
+    crate::file_cleanup::remove_dir_all(&ctx.data_dir)
+        .await
+        .unwrap();
 }
 async fn call(ctx: &WebCtx, cmd: &str, args: Value) -> Value {
     dispatch(ctx, cmd, &args).await.unwrap()

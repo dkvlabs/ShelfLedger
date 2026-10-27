@@ -30,7 +30,7 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 sqlx-core = { version = "=0.8.6", default-features = false, features = ["_rt-tokio", "migrate", "chrono"] }
 sqlx-sqlite = { version = "=0.8.6", features = ["bundled", "migrate", "chrono"] }
-tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "net", "signal"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "net", "signal", "time"] }
 chrono = { version = "0.4", features = ["serde"] }
 uuid = { version = "1", features = ["v4", "serde"] }
 thiserror = "2"

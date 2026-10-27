@@ -3,6 +3,7 @@ mod commands;
 mod db;
 mod domain;
 mod error;
+mod file_cleanup;
 mod ids;
 #[cfg(test)]
 mod import_regressions;

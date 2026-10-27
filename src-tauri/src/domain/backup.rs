@@ -3,7 +3,6 @@
 //! not a naive live WAL copy) plus a hashed manifest in a zip archive.
 
 use crate::sqlite_db as sqlx;
-use std::str::FromStr;
 
 use serde::Serialize;
 use sqlx::SqlitePool;
@@ -118,60 +117,72 @@ pub async fn create_backup(
         .to_str()
         .ok_or_else(|| AppError::Validation("invalid snapshot path".into()))?
         .to_string();
-    sqlx::query("VACUUM INTO ?")
-        .bind(&snapshot_str)
-        .execute(pool)
-        .await?;
-
-    // Verify the snapshot opens and passes an integrity check.
-    let verify = sqlx::sqlite::SqliteConnectOptions::from_str(&format!("sqlite:{snapshot_str}"))?
-        .read_only(true);
-    let verify_pool = sqlx::SqlitePool::connect_with(verify).await?;
-    let (check,): (String,) = sqlx::query_as("PRAGMA integrity_check")
-        .fetch_one(&verify_pool)
-        .await?;
-    if check != "ok" {
-        let _ = std::fs::remove_file(&snapshot);
-        return Err(AppError::Other(format!(
-            "snapshot failed integrity check: {check}"
-        )));
-    }
-    let (schema_version,): (i64,) =
-        sqlx::query_as("SELECT coalesce(MAX(version), 0) FROM _sqlx_migrations")
-            .fetch_one(&verify_pool)
+    let result = async {
+        sqlx::query("VACUUM INTO ?")
+            .bind(&snapshot_str)
+            .execute(pool)
             .await?;
-    verify_pool.close().await;
 
-    let db_bytes = std::fs::read(&snapshot)?;
-    let db_hash = sha256_hex(&db_bytes);
-    let manifest = BackupManifest {
-        format_version: BACKUP_FORMAT_VERSION,
-        app_version: env!("CARGO_PKG_VERSION").to_string(),
-        created_at: ids_now(),
-        schema_version,
-        database_sha256: db_hash,
-    };
-    let manifest_bytes = serde_json::to_vec_pretty(&manifest).expect("serializable manifest");
+        // Verify the snapshot opens and passes an integrity check.
+        let verify = sqlx::sqlite::SqliteConnectOptions::new()
+            .filename(&snapshot)
+            .read_only(true);
+        let verify_pool = sqlx::SqlitePool::connect_with(verify).await?;
+        let verification = async {
+            let (check,): (String,) = sqlx::query_as("PRAGMA integrity_check")
+                .fetch_one(&verify_pool)
+                .await?;
+            if check != "ok" {
+                return Err(AppError::Other(format!(
+                    "snapshot failed integrity check: {check}"
+                )));
+            }
+            let (schema_version,): (i64,) =
+                sqlx::query_as("SELECT coalesce(MAX(version), 0) FROM _sqlx_migrations")
+                    .fetch_one(&verify_pool)
+                    .await?;
+            Ok::<_, AppError>(schema_version)
+        }
+        .await;
+        // Error paths must also wait for SQLite's worker to release the file.
+        verify_pool.close().await;
+        let schema_version = verification?;
 
-    // Zip everything up (zip-slip is not applicable: we only write two fixed
-    // entry names, never entries read from the archive here).
-    let file = std::fs::OpenOptions::new()
-        .write(true)
-        .create_new(true)
-        .open(output_path)?;
-    let mut zip = zip::ZipWriter::new(file);
-    let options: zip::write::SimpleFileOptions = zip::write::SimpleFileOptions::default();
-    zip.start_file(BACKUP_DB_NAME, options)
-        .map_err(|e| AppError::Other(format!("zip error: {e}")))?;
-    std::io::Write::write_all(&mut zip, &db_bytes)
-        .map_err(|e| AppError::Other(format!("zip write error: {e}")))?;
-    zip.start_file(BACKUP_MANIFEST_NAME, options)
-        .map_err(|e| AppError::Other(format!("zip error: {e}")))?;
-    std::io::Write::write_all(&mut zip, &manifest_bytes)
-        .map_err(|e| AppError::Other(format!("zip write error: {e}")))?;
-    zip.finish()
-        .map_err(|e| AppError::Other(format!("zip finish error: {e}")))?;
-    std::fs::remove_file(&snapshot)?;
+        let db_bytes = std::fs::read(&snapshot)?;
+        let db_hash = sha256_hex(&db_bytes);
+        let manifest = BackupManifest {
+            format_version: BACKUP_FORMAT_VERSION,
+            app_version: env!("CARGO_PKG_VERSION").to_string(),
+            created_at: ids_now(),
+            schema_version,
+            database_sha256: db_hash,
+        };
+        let manifest_bytes = serde_json::to_vec_pretty(&manifest).expect("serializable manifest");
+
+        // Zip everything up (zip-slip is not applicable: we only write two fixed
+        // entry names, never entries read from the archive here).
+        let file = std::fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(output_path)?;
+        let mut zip = zip::ZipWriter::new(file);
+        let options: zip::write::SimpleFileOptions = zip::write::SimpleFileOptions::default();
+        zip.start_file(BACKUP_DB_NAME, options)
+            .map_err(|e| AppError::Other(format!("zip error: {e}")))?;
+        std::io::Write::write_all(&mut zip, &db_bytes)
+            .map_err(|e| AppError::Other(format!("zip write error: {e}")))?;
+        zip.start_file(BACKUP_MANIFEST_NAME, options)
+            .map_err(|e| AppError::Other(format!("zip error: {e}")))?;
+        std::io::Write::write_all(&mut zip, &manifest_bytes)
+            .map_err(|e| AppError::Other(format!("zip write error: {e}")))?;
+        zip.finish()
+            .map_err(|e| AppError::Other(format!("zip finish error: {e}")))?;
+        Ok::<_, AppError>(())
+    }
+    .await;
+    let cleanup = crate::file_cleanup::remove_file(&snapshot).await;
+    result?;
+    cleanup?;
     Ok(output_path.to_path_buf())
 }
 
@@ -217,26 +228,34 @@ pub async fn restore_archive(
         .join(format!("restore-{}", crate::ids::new_id()));
     std::fs::create_dir_all(&work_dir)?;
     let restored_path = work_dir.join(BACKUP_DB_NAME);
-    std::fs::write(&restored_path, &db_bytes)?;
+    let result = async {
+        std::fs::write(&restored_path, &db_bytes)?;
 
-    let verify_opts = sqlx::sqlite::SqliteConnectOptions::from_str(&format!(
-        "sqlite:{}",
-        restored_path.to_string_lossy()
-    ))?;
-    let verify_pool = sqlx::SqlitePool::connect_with(verify_opts).await?;
-    let (check,): (String,) = sqlx::query_as("PRAGMA integrity_check")
-        .fetch_one(&verify_pool)
-        .await?;
-    if check != "ok" {
-        let _ = std::fs::remove_dir_all(&work_dir);
-        return Err(AppError::Other(format!(
-            "backup failed integrity check: {check}"
-        )));
+        let verify_opts = sqlx::sqlite::SqliteConnectOptions::new().filename(&restored_path);
+        let verify_pool = sqlx::SqlitePool::connect_with(verify_opts).await?;
+        let verification = async {
+            let (check,): (String,) = sqlx::query_as("PRAGMA integrity_check")
+                .fetch_one(&verify_pool)
+                .await?;
+            if check != "ok" {
+                return Err(AppError::Other(format!(
+                    "backup failed integrity check: {check}"
+                )));
+            }
+            // Forward migrations are safe; anything older is upgraded.
+            crate::db::MIGRATOR.run(&verify_pool).await?;
+            crate::repositories::snapshot::export(&verify_pool).await
+        }
+        .await;
+        verify_pool.close().await;
+        verification
     }
-    // Forward migrations are safe; anything older is upgraded.
-    crate::db::MIGRATOR.run(&verify_pool).await?;
-    let snapshot = crate::repositories::snapshot::export(&verify_pool).await?;
-    verify_pool.close().await;
+    .await;
+    let cleanup = crate::file_cleanup::remove_dir_all(&work_dir).await;
+    let snapshot = result?;
+    // The snapshot is in memory now. Finish staging cleanup before changing
+    // the live library, so a cleanup error cannot misreport a completed restore.
+    cleanup?;
 
     let result = match mode {
         "replace" => {
@@ -267,13 +286,11 @@ pub async fn restore_archive(
             }
         }
         other => {
-            let _ = std::fs::remove_dir_all(&work_dir);
             return Err(AppError::Validation(format!(
                 "unknown restore mode {other:?}"
             )));
         }
     };
-    let _ = std::fs::remove_dir_all(&work_dir);
     Ok(result)
 }
 
@@ -454,9 +471,11 @@ mod tests {
     #[tokio::test]
     async fn backup_and_restore_roundtrip_preserves_data() {
         // Real on-disk library with one work.
-        let dir = std::env::temp_dir().join(format!("sl-backup-{}", std::process::id()));
-        let _ = std::fs::remove_dir_all(&dir);
+        let dir = std::env::temp_dir()
+            .join(crate::ids::new_id())
+            .join("Library %25 # 文 books");
         std::fs::create_dir_all(&dir).unwrap();
+        let dir = dir.canonicalize().unwrap();
         let db_path = dir.join("shelfledger.db");
         let pool = connect(&db_path).await.unwrap();
         crate::domain::catalog::create_work(
@@ -477,6 +496,11 @@ mod tests {
         let archive = dir.join("backup.zip");
         let pool = connect(&db_path).await.unwrap();
         create_backup(&pool, &db_path, &archive).await.unwrap();
+        assert!(std::fs::read_dir(&dir).unwrap().all(|entry| !entry
+            .unwrap()
+            .file_name()
+            .to_string_lossy()
+            .starts_with("snapshot-")));
 
         // Corrupt detection: tampered archive must be rejected.
         let tampered = dir.join("tampered.zip");
@@ -497,6 +521,7 @@ mod tests {
             .await
             .unwrap();
         assert!(!result.requires_restart);
+        pool.close().await;
         let pool = connect(&db_path).await.unwrap();
         let summaries = crate::repositories::works::list_work_summaries(&pool)
             .await
@@ -504,7 +529,9 @@ mod tests {
         assert_eq!(summaries.len(), 1);
         assert_eq!(summaries[0].title, "Backup Test");
         pool.close().await;
-        let _ = std::fs::remove_dir_all(&dir);
+        crate::file_cleanup::remove_dir_all(dir.parent().unwrap())
+            .await
+            .unwrap();
     }
 
     #[test]
@@ -528,5 +555,58 @@ mod tests {
         assert!(csv.contains("\"Title, with comma\""));
         assert!(csv.contains("\"Author \"\"Q\"\"\""));
         assert!(csv.contains("1250"));
+    }
+
+    #[tokio::test]
+    async fn failed_backup_verification_closes_connections_and_removes_snapshot() {
+        let dir = std::env::temp_dir().join(crate::ids::new_id());
+        std::fs::create_dir_all(&dir).unwrap();
+        let db_path = dir.join("library.db");
+        let pool = connect(&db_path).await.unwrap();
+        // Integrity succeeds, but querying the backup's schema version fails.
+        sqlx::query("DROP TABLE _sqlx_migrations")
+            .execute(&pool)
+            .await
+            .unwrap();
+        let archive = dir.join("backup.zip");
+        assert!(create_backup(&pool, &db_path, &archive).await.is_err());
+        assert!(!archive.exists());
+        assert!(std::fs::read_dir(&dir).unwrap().all(|entry| !entry
+            .unwrap()
+            .file_name()
+            .to_string_lossy()
+            .starts_with("snapshot-")));
+        pool.close().await;
+        crate::file_cleanup::remove_dir_all(&dir).await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn rejected_restore_removes_temporary_database_without_changing_live_data() {
+        let dir = std::env::temp_dir().join(crate::ids::new_id());
+        std::fs::create_dir_all(&dir).unwrap();
+        let db_path = dir.join("library.db");
+        let pool = connect(&db_path).await.unwrap();
+        sqlx::query("INSERT INTO works(id,title,created_at,updated_at) VALUES('legacy','Preserve on failure','x','x')")
+            .execute(&pool).await.unwrap();
+        let archive = dir.join("backup.zip");
+        create_backup(&pool, &db_path, &archive).await.unwrap();
+        let error = restore_archive(&pool, &db_path, &archive, "replace")
+            .await
+            .unwrap_err();
+        assert!(error.to_string().contains("invalid ISO date: x"));
+        assert_eq!(
+            sqlx::query_scalar::<_, String>("SELECT title FROM works WHERE id='legacy'")
+                .fetch_one(&pool)
+                .await
+                .unwrap(),
+            "Preserve on failure"
+        );
+        assert!(std::fs::read_dir(&dir).unwrap().all(|entry| !entry
+            .unwrap()
+            .file_name()
+            .to_string_lossy()
+            .starts_with("restore-")));
+        pool.close().await;
+        crate::file_cleanup::remove_dir_all(&dir).await.unwrap();
     }
 }

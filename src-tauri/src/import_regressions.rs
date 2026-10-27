@@ -268,7 +268,9 @@ async fn goodreads_file_import_preserves_data_with_and_without_legacy_timestamps
             4 + i64::from(legacy)
         );
         reopened.close().await;
-        std::fs::remove_dir_all(directory).unwrap();
+        crate::file_cleanup::remove_dir_all(&directory)
+            .await
+            .unwrap();
     }
 }
 
@@ -294,7 +296,9 @@ async fn json_array_import_ignores_unrelated_legacy_dates_but_validates_new_rows
         0
     );
     pool.close().await;
-    std::fs::remove_dir_all(directory).unwrap();
+    crate::file_cleanup::remove_dir_all(&directory)
+        .await
+        .unwrap();
 }
 
 #[tokio::test]
@@ -361,5 +365,7 @@ async fn private_goodreads_export_imports_every_row_and_repeat_is_idempotent() {
             .unwrap();
     println!("Verified {} Goodreads rows: {} ratings, {} finish dates; zero errors; repeat skipped all {} rows", rows.len(),rated,dated,rows.len());
     pool.close().await;
-    std::fs::remove_dir_all(directory).unwrap();
+    crate::file_cleanup::remove_dir_all(&directory)
+        .await
+        .unwrap();
 }

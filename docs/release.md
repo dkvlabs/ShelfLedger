@@ -170,6 +170,8 @@ Manual release gates still apply:
 
 - Confirm the existing Security workflow's advisory and secret scans pass;
   assess upstream warnings recorded in `audit-remediation.md`.
+  The secret job runs Gitleaks CLI 8.30.1 against all fetched Git history with
+  redaction enabled; it does not require `GITLEAKS_LICENSE`.
 - Install on clean machines: create/import a library, read, lend, sell, back up
   and restore without a terminal.
 - Test camera consent, denied-access guidance, retry and camera release on
