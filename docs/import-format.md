@@ -73,13 +73,13 @@ This opt-in check expects an export whose selected rows are distinct and have no
 matches with the test fixture. It imports into a temporary library and removes
 that test library when complete; it never commits the CSV or writes the real library.
 
-## Lossless JSON snapshot, format 3
+## Lossless JSON snapshot, format 4
 
 ```json
-{"formatVersion": 3, "tables": {"works": [], "authors": [], "editions": []}}
+{"formatVersion": 4, "tables": {"works": [], "authors": [], "editions": [], "edition_covers": []}}
 ```
 
-The abbreviated example shows the envelope only. Actual exports contain all 23
+The abbreviated example shows the envelope only. Actual exports contain all 24
 logical tables listed in [database.md](database.md), with snake_case SQL column
 names and bound JSON scalar values. They retain IDs, author names containing
 commas, descriptions, editions, archived copies, complete acquisitions, tags,
@@ -87,15 +87,20 @@ reading progress/reviews, contacts/loans, valuations/listings/disposals, setting
 metadata cache, import audit records and checked marketplace comparisons. FTS and migrations are derived/local.
 
 Format 1 snapshots remain supported and are upgraded using the old release’s
-currency-scale conventions. Format 2 and 3 amounts already use corrected ISO minor
+currency-scale conventions. Format 2–4 amounts already use corrected ISO minor
 units and are never rescaled. Complete format 1/2 exports may omit the new
-`market_comparables` table; format 3 requires it. See [currency upgrades](localization.md#upgrading-older-libraries).
+`market_comparables` table; formats 3/4 require it. Complete format 1–3 exports
+may omit `edition_covers`; format 4 requires it. Cover rows contain normalized
+JPEG bytes as a data URL, their source and saved date. Invalid images or
+inconsistent edition/cover identifiers roll back the entire import.
+See [currency upgrades](localization.md#upgrading-older-libraries).
 
 A snapshot imports as a complete unit so references and histories stay together.
 Identical existing records are allowed; conflicting IDs/ISBNs/names or invalid
 references stop the import transaction. Use a separate library for incompatible
 snapshots. Unsupported versions, columns, invalid dates/money/ISBNs and unsafe
-relative file paths are rejected. Binary assets are not embedded in JSON.
+relative file paths are rejected. Edition cover images are embedded in JSON;
+general attachment files are not.
 
 Legacy arrays of works → editions → copies remain supported for the bundled demo
 and older catalog exchanges. They preserve supplied work descriptions, author

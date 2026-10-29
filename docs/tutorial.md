@@ -203,6 +203,15 @@ ISBN manually. USB/Bluetooth barcode scanners can type into the ISBN field like 
 keyboard. Camera images are processed locally, and closing the scanner releases
 capture. Physical camera consent still needs a real-device check for each release.
 
+### Save a book cover
+
+Open the saved book and find its edition card. **Fetch cover** uses the edition's
+ISBN on desktop/web. If none is available, **Choose cover photo** accepts a JPEG,
+PNG or WebP, or use **Photograph cover → Take photo → Save photo**. The camera
+preview lets you retake or cancel before saving. Photos work offline, including
+on Android, and saved covers appear in the collection. Full JSON/ZIP exports
+carry them between devices. See [cover details and limits](covers.md).
+
 ## 8. Track reading
 
 1. Open a book in **Library** and choose **Want to read** or **Start reading**.

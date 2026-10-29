@@ -1,5 +1,6 @@
 pub mod backup;
 pub mod catalog;
+pub mod covers;
 pub mod dashboard;
 pub mod finance;
 pub mod import;

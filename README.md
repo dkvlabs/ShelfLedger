@@ -95,6 +95,13 @@ choose **Import from Libris**. Review the details before saving. Cached results
 work offline; Android only uses transferred caches and manual entry.
 See [metadata lookup](docs/metadata.md) for coverage and provider limits.
 
+Open a book and use the edition's **Fetch cover**, **Choose cover photo**, or
+**Photograph cover** controls. Review a camera capture before **Save photo**.
+Saved covers appear in the library and remain available offline. Full JSON and
+ZIP exports include them for transfer to another device. Android uses photos or
+transferred covers; online cover fetching is desktop/web only.
+See [cover images](docs/covers.md).
+
 ![An open book and clothbound volumes in warm afternoon light](docs/images/reading-atmosphere.png)
 
 *The banner and still life are generated decorative artwork. App screenshots are
@@ -134,9 +141,9 @@ Windows/Linux execution, minimum-toolchain CI, and Developer ID signing/notariza
 remain release checks. See the [audit record](docs/audit-remediation.md) and
 [release checklist](docs/release.md).
 
-Phase 6 remains deferred: receipts/OCR, attachment-byte portability, ebooks/devices,
+Phase 6 remains deferred: receipts/OCR, general attachment-byte portability, ebooks/devices,
 automatic marketplace collection, and optional encrypted sync. Current snapshots preserve
-attachment records and relative paths, not attachment files.
+cover images as well as attachment records/relative paths; other attachment files remain deferred.
 
 ## Development
 

@@ -36,6 +36,8 @@ uuid = { version = "1", features = ["v4", "serde"] }
 thiserror = "2"
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
 scraper = { version = "0.24", default-features = false }
+base64 = "0.22"
+image = { version = "0.25", default-features = false, features = ["jpeg", "png", "webp"] }
 csv = "1"
 zip = { version = "9.0.4", default-features = false, features = ["deflate"] }
 tauri-plugin-dialog = "2"

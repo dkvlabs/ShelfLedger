@@ -66,6 +66,13 @@ describe("web transport (browser mode)", () => {
     expect(err.message).toBe("copy is already lent out");
   });
 
+  it("sends cover bytes and edition IDs through named commands", async () => {
+    const fn = mockFetch(200, "covers/test.jpg");
+    await api.saveCoverPhoto("edition", "data:image/jpeg;base64,AA==");
+    const [, init] = fn.mock.calls.find(([url]) => url === "/api/save_cover_photo")!;
+    expect(JSON.parse(String(init?.body))).toEqual({ editionId: "edition", dataUrl: "data:image/jpeg;base64,AA==" });
+  });
+
   it("treats 204 responses as empty results", async () => {
     mockFetch(204, undefined);
     await expect(api.archiveCopy("copy-1")).resolves.toBeNull();

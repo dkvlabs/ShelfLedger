@@ -13,6 +13,7 @@ pub const TABLES: &[&str] = &[
     "works",
     "work_authors",
     "editions",
+    "edition_covers",
     "market_comparables",
     "locations",
     "copies",
@@ -72,7 +73,7 @@ pub async fn export(pool: &SqlitePool) -> AppResult<Snapshot> {
     }
     tx.commit().await?;
     Ok(Snapshot {
-        format_version: 3,
+        format_version: 4,
         tables,
     })
 }
@@ -120,7 +121,7 @@ async fn apply_inner(
     replace: bool,
     validate_incoming: bool,
 ) -> AppResult<()> {
-    if ![1, 2, 3].contains(&snapshot.format_version)
+    if ![1, 2, 3, 4].contains(&snapshot.format_version)
         || snapshot
             .tables
             .keys()
@@ -134,6 +135,7 @@ async fn apply_inner(
         && TABLES.iter().any(|t| {
             !snapshot.tables.contains_key(*t)
                 && !(snapshot.format_version < 3 && *t == "market_comparables")
+                && !(snapshot.format_version < 4 && *t == "edition_covers")
         })
     {
         return Err(AppError::Validation("incomplete library snapshot".into()));
@@ -275,6 +277,17 @@ async fn apply_inner(
             "library contains invalid references".into(),
         ));
     }
+    let invalid_covers: (i64,) = sqlx::query_as(
+        "SELECT count(*) FROM edition_covers c JOIN editions e ON e.id=c.edition_id WHERE e.cover_path IS NOT ('covers/' || c.id || '.jpg')")
+        .fetch_one(&mut *tx).await?;
+    let missing_covers: (i64,) = sqlx::query_as(
+        "SELECT count(*) FROM editions e WHERE e.cover_path LIKE 'covers/%' AND NOT EXISTS (SELECT 1 FROM edition_covers c WHERE c.edition_id=e.id AND e.cover_path=('covers/' || c.id || '.jpg'))")
+        .fetch_one(&mut *tx).await?;
+    if invalid_covers.0 != 0 || missing_covers.0 != 0 {
+        return Err(AppError::Validation(
+            "cover image reference does not match its edition".into(),
+        ));
+    }
     let mismatched: (i64,) = sqlx::query_as("SELECT count(*) FROM reading_sessions r JOIN editions e ON e.id=r.edition_id WHERE e.work_id<>r.work_id").fetch_one(&mut *tx).await?;
     if mismatched.0 != 0 {
         return Err(AppError::Validation(
@@ -298,6 +311,14 @@ fn validate_record(table: &str, record: &BTreeMap<String, Value>) -> AppResult<(
     let text = |key: &str| record.get(key).and_then(Value::as_str);
     let number = |key: &str| record.get(key).and_then(Value::as_i64);
     let invalid = |message: String| AppError::Validation(format!("{table}: {message}"));
+    if table == "edition_covers" {
+        crate::domain::covers::validate_stored(
+            text("data_url").ok_or_else(|| invalid("missing cover image".into()))?,
+        )?;
+        if !matches!(text("source"), Some("photo" | "openlibrary")) {
+            return Err(invalid("invalid cover source".into()));
+        }
+    }
     for (key, value) in record {
         if (key.ends_with("_at") || key == "date") && key != "published_at" {
             crate::models::validate_date(value.as_str()).map_err(invalid)?;

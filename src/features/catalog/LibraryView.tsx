@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import BookCover from "./BookCover";
 import { useQuery } from "@tanstack/react-query";
 import {
   BookOpen,
@@ -229,6 +230,7 @@ export default function LibraryView({
               onClick={() => onOpenWork(w.id)}
             >
               <span>
+                {w.coverPath && <BookCover path={w.coverPath} title={w.title} className="mb-4 w-full shadow-lg" />}
                 <span className="mb-4 block text-xs text-primary">
                   {w.authorNames.join(", ") || t("Unknown author")}
                 </span>

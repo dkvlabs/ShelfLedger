@@ -73,9 +73,10 @@ For example, an old UI-entered 12 PKR becomes 1,200 minor units and still displa
 disposal price/fee/shipping and wishlist limits. Nulls remain null. The migration
 runs once and refuses unsafe multiplication atomically rather than rounding.
 
-New JSON exports use **formatVersion 3**, adding checked marketplace comparisons.
+New JSON exports use **formatVersion 4**, including edition cover images alongside
+the checked marketplace comparisons introduced in format 3.
 Format 1 snapshots remain importable
-and receive the same scale correction transactionally. Format 2/3 snapshots are
+and receive the same scale correction transactionally. Format 2/3/4 snapshots are
 already in ISO units and are not rescaled. Old ZIP backups run database migrations
 before being restored. Do not label newly authored ISO-scale JSON as format 1.
 

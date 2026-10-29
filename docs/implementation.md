@@ -99,6 +99,12 @@ request — see below.
 
 Scope beyond the original plan, implemented on explicit request:
 
+- [x] Edition cover images: explicit Open Library ISBN fetch, local JPEG/PNG/WebP
+      photo selection, camera preview/capture/retake/save, offline display in the
+      library and edition details, removal, orientation correction and metadata
+      stripping. SQLite storage, migration 0007 and JSON format 4 preserve images
+      in JSON/ZIP transfers. Android remains offline. See [covers.md](covers.md).
+
 - [x] OLX Romania comparison workflow per edition: external ISBN/title searches,
       user-verified listing URLs and prices, observation dates, condition notes,
       currency-separated medians/ranges, exclusions, exact net-proceeds simulation,

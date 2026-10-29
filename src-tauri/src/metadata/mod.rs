@@ -98,7 +98,7 @@ async fn fetch_text(url: &str, provider: &str) -> AppResult<Option<String>> {
         .map_err(|_| AppError::Network(format!("{provider} response is not UTF-8")))
 }
 
-async fn require_online(pool: &SqlitePool) -> AppResult<()> {
+pub(crate) async fn require_online(pool: &SqlitePool) -> AppResult<()> {
     // Even restored desktop preferences cannot enable Android networking.
     if !cfg!(target_os = "android")
         && settings::get_json(pool, SETTING_ENABLED)

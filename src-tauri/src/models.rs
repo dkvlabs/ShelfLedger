@@ -50,6 +50,14 @@ pub struct WorkSummary {
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
+pub struct CoverImage {
+    pub data_url: String,
+    pub source: String,
+    pub created_at: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct EditionDto {
     pub id: String,
     pub work_id: String,

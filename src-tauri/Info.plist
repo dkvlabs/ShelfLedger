@@ -3,6 +3,6 @@
 <plist version="1.0">
 <dict>
     <key>NSCameraUsageDescription</key>
-    <string>ShelfLedger uses your camera to scan ISBN barcodes when you choose Scan barcode. Camera images are processed on your device.</string>
+    <string>ShelfLedger uses your camera to scan ISBN barcodes or photograph book covers when you choose those actions. Camera images are processed on your device.</string>
 </dict>
 </plist>

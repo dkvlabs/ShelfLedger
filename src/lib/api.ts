@@ -6,6 +6,7 @@
 
 import { invoke } from "@tauri-apps/api/core";
 import type {
+  CoverImage,
   MarketReport,
   SaveMarketComparableInput,
   SaveMarketEstimateInput,
@@ -201,6 +202,11 @@ export const api = {
     call("set_setting", { key, value }),
 
   // metadata
+  getCover: (path: string): Promise<CoverImage | null> => call("get_cover", { path }),
+  saveCoverPhoto: (editionId: string, dataUrl: string): Promise<string> =>
+    call("save_cover_photo", { editionId, dataUrl }),
+  fetchCover: (editionId: string): Promise<string | null> => call("fetch_cover", { editionId }),
+  removeCover: (editionId: string): Promise<void> => call("remove_cover", { editionId }),
   lookupIsbn: (isbn: string): Promise<LookupIsbnResult | null> =>
     call("lookup_isbn", { isbn }),
   lookupLibrisBook: (url: string, isbn: string | null): Promise<LookupIsbnResult | null> =>

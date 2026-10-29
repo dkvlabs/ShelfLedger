@@ -36,6 +36,11 @@ links explicitly open another app/browser and require its connection. Debug
 builds permit INTERNET for the optional Vite development server; the library
 still works in airplane mode and Android metadata fetching remains disabled.
 
+Edition covers can be selected from JPEG/PNG/WebP photos or captured with
+**Photograph cover → Take photo → Save photo**. Saved covers display offline and
+are included in full-library JSON/ZIP transfers. Android does not fetch remote
+covers; desktop-fetched covers transfer with the library. See [covers.md](covers.md).
+
 ## Transfer a complete library between PC and phone
 
 Use the same or a newer ShelfLedger version on the receiving device.

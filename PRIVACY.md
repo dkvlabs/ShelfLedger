@@ -33,6 +33,11 @@ Only what you explicitly trigger:
 - **OLX links:** clicking a comparison search or listing opens OLX in your
   browser, sharing the chosen ISBN/title/author or URL with OLX. Saved comparisons
   remain local; no pages are fetched or monitored in the background.
+- **Cover fetch:** only when you press "Fetch cover", the edition ISBN is sent
+  to covers.openlibrary.org. Its image may be served through archive.org and
+  Internet Archive image servers. Saved images display from SQLite with no
+  subsequent provider request. Android and disabled metadata settings block
+  this fetch. There are no background or bulk cover downloads.
 
 Contacts, loans, saved valuations and financial records are never automatically
 transmitted. There is no automatic message sending.
@@ -43,6 +48,13 @@ Camera scanning requests video access when you open the barcode scanner. Frames
 are processed on your device and are not saved or uploaded. Closing the scanner
 releases the camera. Microphone access is not requested. You can use a photo or
 manual ISBN entry without camera access.
+
+Cover photography separately requests video only after **Photograph cover** is
+opened. It stops the camera on preview or close. Only **Save photo** stores the
+captured image. Selected/captured photos stay local and are never uploaded to a
+provider. JPEG/PNG/WebP input is normalized to a bounded JPEG, correcting phone
+orientation and removing EXIF/GPS metadata. JSON and ZIP exports include saved
+cover images, so anyone receiving an export can see those images too.
 
 - **Location:** OS user-data directory (e.g.
   `~/Library/Application Support/io.github.shelfledger.app` on macOS).

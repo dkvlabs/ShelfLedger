@@ -27,7 +27,7 @@ See [Android and portability](android.md).
 - `src-tauri/src/commands`: Tauri entry points and shared data-file operations.
 - `src-tauri/src/domain`: catalog, reading, loans, finance, imports, backup, profiles.
 - `src-tauri/src/repositories`: SQLite persistence, derived FTS index and versioned snapshots.
-- `src-tauri/src/db.rs`: WAL, foreign keys, six embedded migrations and connection pool.
+- `src-tauri/src/db.rs`: WAL, foreign keys, seven embedded migrations and connection pool.
 - `src-tauri/src/sqlite_db.rs`: SQLite-only SQLx facade. Direct driver/core versions
   are pinned together at 0.8.6; upgrades must verify the facade and migration checksums.
   Unused MySQL/Postgres drivers and their crypto dependencies are excluded.
@@ -46,8 +46,10 @@ Shared bounded HTTPS requests restrict providers and redirects; all successful
 results are cached, including compatibility with older Open Library cache keys.
 Every provider obeys `metadata.lookup_enabled`, and Android blocks network
 lookups regardless of restored settings. Manual entry retains typed ISBNs after
-failed lookups. See [metadata.md](metadata.md). Cover URLs
-are not fetched automatically. Display fonts and decorative artwork are bundled.
+failed lookups. See [metadata.md](metadata.md). Covers are fetched only through
+an explicit edition action, or supplied as a local photo. Validated, resized JPEGs
+live in SQLite and display offline without remote image URLs. See [covers.md](covers.md).
+Display fonts and decorative artwork are bundled.
 Camera scanning requests video only when opened, preserves platform consent,
 handles denied/missing/busy cameras and releases streams when closed. No scanning
 image is uploaded; photo and manual ISBN input remain available.
@@ -73,7 +75,7 @@ patches distinguish omitted fields from explicit null clears. Active loans and
 active sale listings have partial unique indexes. Listing/disposal transitions
 are transactional; disposal closes active listings for every terminal state.
 
-JSON snapshot format 3 preserves every logical table, including archived copies,
+JSON snapshot format 4 preserves every logical table, including edition cover bytes, archived copies,
 financial/reading/loan history, settings, cache and import logs. Restore first
 verifies archive hashes, SQLite integrity and migrations. Replace creates a
 consistent safety ZIP, then replaces records in a transaction on the live pool:
@@ -87,8 +89,8 @@ full validation. Re-importing with skip rechecks live duplicates before staging.
 
 Generated exports, backups, uploads and profile files stay under app data.
 Canonical ancestor checks reject traversal and symlink escapes before directory
-creation. Snapshot attachment paths must be relative. Binary receipt/cover
-attachments are deferred; JSON is a record interchange, not an asset package.
+creation. Snapshot attachment paths must be relative. Edition covers are embedded
+in JSON and ZIP backups; general attachment files and receipts remain deferred.
 
 ## Deliberate limits
 

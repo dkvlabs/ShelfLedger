@@ -273,7 +273,7 @@ async fn snapshot_three_roundtrips_evidence_and_imports_old_complete_exports() {
     .await;
     call(&ctx, "save_market_estimate", estimate(&book, "RON")).await;
     let current = snapshot::export(&ctx.pool).await.unwrap();
-    assert_eq!(current.format_version, 3);
+    assert_eq!(current.format_version, 4);
     let target = db::connect_memory().await.unwrap();
     snapshot::apply(&target, &current, true).await.unwrap();
     assert_eq!(

@@ -71,9 +71,9 @@ not run locally. No private release signing/notarization credentials were used.
 No clean-machine installation, Windows/Linux native execution, physical webcam
 capture or OS consent prompt was claimed. Follow `release.md` for these gates.
 
-Phase 6 remains deferred: receipt/OCR/binary attachment portability, automated
+Phase 6 remains deferred: receipt/OCR/general attachment portability, automated
 marketplace collection, ebooks/devices and optional encrypted sync. Snapshot files preserve
-attachment records/relative paths, not attachment bytes; do not represent this as
+edition cover bytes and attachment records/relative paths, not general attachment bytes; do not represent this as
 an implemented receipt archive.
 
 Manual OLX comparisons were subsequently pulled forward on explicit request;

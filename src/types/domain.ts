@@ -1,6 +1,12 @@
 // TypeScript counterparts of the Rust DTOs in src-tauri/src/models.rs.
 // Keep both sides in sync (AGENTS.md).
 
+export interface CoverImage {
+  dataUrl: string;
+  source: "photo" | "openlibrary";
+  createdAt: string;
+}
+
 export interface WorkDto {
   id: string;
   title: string;

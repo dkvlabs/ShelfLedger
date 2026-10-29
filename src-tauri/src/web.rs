@@ -80,6 +80,17 @@ fn ok<T: serde::Serialize>(value: T) -> AppResult<Value> {
 pub async fn dispatch(ctx: &WebCtx, cmd: &str, args: &Value) -> AppResult<Value> {
     let pool = &ctx.pool;
     match cmd {
+        "get_cover" => ok(repositories::covers::get(pool, &arg::<String>(args, "path")?).await?),
+        "save_cover_photo" => ok(domain::covers::save_photo(
+            pool,
+            &arg::<String>(args, "editionId")?,
+            arg::<String>(args, "dataUrl")?,
+        )
+        .await?),
+        "fetch_cover" => ok(domain::covers::fetch(pool, &arg::<String>(args, "editionId")?).await?),
+        "remove_cover" => {
+            ok(repositories::covers::remove(pool, &arg::<String>(args, "editionId")?).await?)
+        }
         "list_market_comparisons" => {
             ok(domain::market::report(pool, &arg::<String>(args, "editionId")?).await?)
         }

@@ -1,6 +1,6 @@
 # Database
 
-Status: migrations `0001_init` through `0006_market_comparables`, 27.10.2026.
+Status: migrations `0001_init` through `0007_edition_covers`, 29.10.2026.
 SQLite uses WAL, foreign keys and integer money. Existing migration SQL is never
 rewritten; the embedded migration list preserves its checksums.
 
@@ -10,6 +10,7 @@ rewritten; the embedded migration list preserves its checksums.
 | --- | --- |
 | `works`, `authors`, `work_authors` | Literary identity, ordered authors, description and original language |
 | `editions` | Work-linked publication, ISBN-10/13, publisher, language, pages and binding |
+| `edition_covers` | One validated local JPEG per edition, source and saved date; image bytes are embedded as a bounded data URL |
 | `copies`, `acquisitions`, `locations` | Physical inventory, ownership, location hierarchy, condition and provenance |
 | `tags`, `work_tags` | Editable categorization and searchable tags |
 | `reading_sessions`, `reading_progress_events` | Re-reads, independent reading status, dates, rating, review and progress |
@@ -53,7 +54,7 @@ runs in a transaction with deferred FK checking, semantic validation and a final
 FTS rebuild. Replace rejects duplicate input rows; merge permits identical rows
 and rejects differing conflicts. Invalid input rolls the transaction back.
 
-The snapshot contains the 23 logical tables above (excluding derived FTS and
+The snapshot contains the 24 logical tables above (excluding derived FTS and
 migration bookkeeping). Full reading, loan and finance fixture round trips are
 covered in `src-tauri/src/audit_regressions.rs`. See [import-format.md](import-format.md).
 
@@ -73,6 +74,13 @@ comparison edits cannot rewrite history. These are asking prices, never verified
 sale outcomes. The estimate date is its UTC creation time; source dates are in
 the retained evidence.
 
-New JSON exports use format 3, including this table. Complete format 1/2 exports
-without the table still restore; comparisons start empty. Format 2/3 amounts are
+Format 3 added this table. Complete format 1/2 exports
+without the table still restore; comparisons start empty. Format 2–4 amounts are
 already corrected ISO units. Format 1 alone receives legacy scale conversion.
+
+Migration 0007 adds `edition_covers`, with a unique edition FK and cascade delete.
+`editions.cover_path` holds a generated logical `covers/<UUID>.jpg` identifier;
+it never resolves to an external file. Replacements update the row and identifier
+atomically. New JSON exports use format 4 and include validated image bytes.
+Complete format 1–3 snapshots without `edition_covers` still import. CSV remains
+record-only; full JSON and ZIP transfer include covers. See [covers.md](covers.md).

@@ -46,6 +46,10 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            commands::covers::get_cover,
+            commands::covers::save_cover_photo,
+            commands::covers::fetch_cover,
+            commands::covers::remove_cover,
             commands::transfer::pick_import_file,
             commands::transfer::save_export,
             commands::catalog::unarchive_copy,

@@ -1,4 +1,5 @@
 pub mod catalog;
+pub mod covers;
 pub mod data;
 pub mod finance;
 pub mod loans;

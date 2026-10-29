@@ -40,6 +40,7 @@ import {
 import SessionEditor from "@/features/reading/SessionEditor";
 import EditBookDialog, { type EditTarget } from "./EditBookDialog";
 import AddCopyDialog from "./AddCopyDialog";
+import CoverEditor from "./CoverEditor";
 
 function LendDialog({
   open,
@@ -552,6 +553,7 @@ export default function WorkDetail({
               )}
               {editions.map((e) => (
                 <div key={e.id} className="rounded-md border p-2">
+                  <CoverEditor edition={e} title={work.title} />
                   <div className="font-medium">
                     {e.publisher ?? tx("Unknown publisher")}
                   </div>

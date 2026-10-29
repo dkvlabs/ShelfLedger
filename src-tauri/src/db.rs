@@ -39,6 +39,11 @@ pub(crate) static MIGRATOR: std::sync::LazyLock<sqlx::migrate::Migrator> =
                 "market comparables",
                 include_str!("../migrations/0006_market_comparables.sql"),
             ),
+            (
+                7,
+                "edition covers",
+                include_str!("../migrations/0007_edition_covers.sql"),
+            ),
         ]
         .into_iter()
         .map(|(version, name, sql)| {

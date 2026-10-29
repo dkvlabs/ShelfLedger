@@ -25,8 +25,8 @@ changes and removes its listener when preferences change.
 
 A 224px desktop sidebar anchors navigation. The library pairs a large title with
 Scan ISBN/Add book actions, warm photographic atmosphere, search/filter/sort,
-and grid/table views. Book tiles use typographic treatments of actual saved
-metadata, not fabricated covers. Smaller screens use a collapsible navigation
+and grid/table views. Book tiles display saved edition covers, with typographic
+treatments of actual metadata when no cover is saved. Smaller screens use a collapsible navigation
 menu, wrapping controls and scrollable tables. Short desktop windows reduce
 banner height. Motion is limited to brief entrance/hover transitions and respects
 `prefers-reduced-motion`.
