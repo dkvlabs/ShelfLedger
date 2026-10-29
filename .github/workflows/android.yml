@@ -39,6 +39,10 @@ jobs:
           distribution: temurin
           java-version: 21
       - uses: android-actions/setup-android@v3
+        with:
+          # v3 defaults include the retired "tools" package. Command-line
+          # tools are installed by the action; request only Platform Tools.
+          packages: platform-tools
       - name: Install Android build tools
         run: |
           sdkmanager "platforms;android-36" "build-tools;36.0.0" "ndk;$NDK_VERSION"
