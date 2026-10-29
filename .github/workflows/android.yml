@@ -1,0 +1,91 @@
+name: Android
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      signed_release:
+        description: Build a signed offline release APK (requires Android signing secrets)
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  apk:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      NDK_VERSION: 28.2.13676358
+      SIGNED_RELEASE: ${{ github.event_name == 'workflow_dispatch' && inputs.signed_release }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: android-actions/setup-android@v3
+      - name: Install Android build tools
+        run: |
+          sdkmanager "platforms;android-36" "build-tools;36.0.0" "ndk;$NDK_VERSION"
+          echo "NDK_HOME=$ANDROID_HOME/ndk/$NDK_VERSION" >> "$GITHUB_ENV"
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+          key: android-arm64
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test:web
+      - name: Load release signing key
+        if: env.SIGNED_RELEASE == 'true'
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          test -n "$KEYSTORE_BASE64" && test -n "$STORE_PASSWORD" && test -n "$KEY_ALIAS" && test -n "$KEY_PASSWORD" || { echo 'Configure all four Android signing secrets first.'; exit 1; }
+          umask 077
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/shelfledger.jks"
+          echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/shelfledger.jks" >> "$GITHUB_ENV"
+      - name: Build APK
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          if [ "$SIGNED_RELEASE" = true ]; then pnpm android:build; else pnpm android:build:debug; fi
+      - name: Verify packaged permissions and stage APK
+        run: |
+          mkdir -p release-assets
+          if [ "$SIGNED_RELEASE" = true ]; then variant=release; else variant=debug; fi
+          apk="src-tauri/gen/android/app/build/outputs/apk/universal/$variant/app-universal-$variant.apk"
+          node scripts/check-android-apk.mjs "$apk" "$variant"
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify "$apk"
+          cp "$apk" "release-assets/ShelfLedger-android-arm64-$variant.apk"
+          cd release-assets
+          sha256sum *.apk > SHA256SUMS.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ShelfLedger-android-arm64-${{ env.SIGNED_RELEASE == 'true' && 'release' || 'debug' }}
+          path: release-assets/*
+          if-no-files-found: error
+      - name: Remove signing material
+        if: always()
+        run: rm -f "$RUNNER_TEMP/shelfledger.jks"

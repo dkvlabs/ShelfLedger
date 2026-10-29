@@ -17,7 +17,10 @@
     "test:release": "node --test scripts/release.test.mjs",
     "release:check": "node scripts/release.mjs check",
     "web:server": "cargo run --manifest-path src-tauri/Cargo.toml --bin shelfledger-web",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "android:dev": "tauri android dev",
+    "android:build": "tauri android build --target aarch64 --apk",
+    "android:build:debug": "tauri android build --debug --target aarch64 --apk"
   },
   "dependencies": {
     "@fontsource/cormorant-garamond": "^5.3.0",

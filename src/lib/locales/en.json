@@ -456,5 +456,14 @@
   "Copy": "Copy",
   "Save median estimate": "Save median estimate",
   "Estimate saved with its evidence.": "Estimate saved with its evidence.",
-  "Saved estimate evidence": "Saved estimate evidence"
+  "Saved estimate evidence": "Saved estimate evidence",
+  "Transfer your full library between Android and desktop. Export a ZIP, copy it by USB or another method you choose, then import it on the other device. No account or internet connection is needed.": "Transfer your full library between Android and desktop. Export a ZIP, copy it by USB or another method you choose, then import it on the other device. No account or internet connection is needed.",
+  "Preparing library…": "Preparing library…",
+  "Export for another device": "Export for another device",
+  "Import from another device": "Import from another device",
+  "Library exported. Import this ZIP on the other device.": "Library exported. Import this ZIP on the other device.",
+  "Save cancelled. Your backup is ready; use Save file to try again.": "Save cancelled. Your backup is ready; use Save file to try again.",
+  "Save file": "Save file",
+  "File saved.": "File saved.",
+  "Camera access is blocked. On Android, open Settings → Apps → ShelfLedger → Permissions → Camera, allow access, then retry.": "Camera access is blocked. On Android, open Settings → Apps → ShelfLedger → Permissions → Camera, allow access, then retry."
 }

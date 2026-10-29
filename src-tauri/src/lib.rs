@@ -26,6 +26,7 @@ pub struct AppState {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_opener::init())
         // Preserve the platform's consent prompt rather than granting webview capture.
         .on_permission_request(|_, _| tauri::webview::PermissionResponse::Default)
@@ -45,6 +46,8 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            commands::transfer::pick_import_file,
+            commands::transfer::save_export,
             commands::catalog::unarchive_copy,
             commands::catalog::update_edition,
             commands::catalog::update_copy_details,

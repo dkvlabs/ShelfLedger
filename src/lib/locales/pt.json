@@ -456,5 +456,14 @@
   "Copy": "Exemplar",
   "Save median estimate": "Salvar estimativa mediana",
   "Estimate saved with its evidence.": "Estimativa salva com suas evidências.",
-  "Saved estimate evidence": "Evidências da estimativa salva"
+  "Saved estimate evidence": "Evidências da estimativa salva",
+  "Transfer your full library between Android and desktop. Export a ZIP, copy it by USB or another method you choose, then import it on the other device. No account or internet connection is needed.": "Transfira toda a biblioteca entre Android e computador. Exporte um ZIP, copie por USB ou outro método e importe no outro dispositivo. Não precisa de conta nem internet.",
+  "Preparing library…": "Preparando biblioteca…",
+  "Export for another device": "Exportar para outro dispositivo",
+  "Import from another device": "Importar de outro dispositivo",
+  "Library exported. Import this ZIP on the other device.": "Biblioteca exportada. Importe este ZIP no outro dispositivo.",
+  "Save cancelled. Your backup is ready; use Save file to try again.": "Salvamento cancelado. O backup está pronto; use Salvar arquivo para tentar novamente.",
+  "Save file": "Salvar arquivo",
+  "File saved.": "Arquivo salvo.",
+  "Camera access is blocked. On Android, open Settings → Apps → ShelfLedger → Permissions → Camera, allow access, then retry.": "O acesso à câmera está bloqueado. No Android, abra Configurações → Aplicativos → ShelfLedger → Permissões → Câmera, permita o acesso e tente novamente."
 }

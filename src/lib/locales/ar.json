@@ -456,5 +456,14 @@
   "Copy": "نسخة",
   "Save median estimate": "حفظ تقدير الوسيط",
   "Estimate saved with its evidence.": "تم حفظ التقدير مع أدلته.",
-  "Saved estimate evidence": "أدلة التقدير المحفوظ"
+  "Saved estimate evidence": "أدلة التقدير المحفوظ",
+  "Transfer your full library between Android and desktop. Export a ZIP, copy it by USB or another method you choose, then import it on the other device. No account or internet connection is needed.": "انقل مكتبتك كاملة بين Android والكمبيوتر. صدّر ملف ZIP وانسخه عبر USB أو أي وسيلة تختارها، ثم استورده على الجهاز الآخر. لا حاجة لحساب أو اتصال بالإنترنت.",
+  "Preparing library…": "جارٍ تجهيز المكتبة…",
+  "Export for another device": "تصدير إلى جهاز آخر",
+  "Import from another device": "استيراد من جهاز آخر",
+  "Library exported. Import this ZIP on the other device.": "تم تصدير المكتبة. استورد ملف ZIP هذا على الجهاز الآخر.",
+  "Save cancelled. Your backup is ready; use Save file to try again.": "أُلغي الحفظ. النسخة الاحتياطية جاهزة؛ اختر حفظ الملف للمحاولة مجددًا.",
+  "Save file": "حفظ الملف",
+  "File saved.": "تم حفظ الملف.",
+  "Camera access is blocked. On Android, open Settings → Apps → ShelfLedger → Permissions → Camera, allow access, then retry.": "الوصول إلى الكاميرا محظور. على Android، افتح الإعدادات → التطبيقات → ShelfLedger → الأذونات → الكاميرا، واسمح بالوصول ثم أعد المحاولة."
 }

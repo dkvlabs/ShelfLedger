@@ -31,5 +31,11 @@ for the walkthrough. None of these images contains personal library data.
 The original desktop captures are 1280×720. The localization captures use the
 current browser viewport and the same disposable demo library.
 
+Android captures, 29.10.2026: unmodified 1080×2220 screenshots of the installed
+offline release variant on an isolated Android 14 emulator, in airplane mode.
+`android-library.png` shows the bundled demo's three works/four copies after
+native ZIP restore. `android-transfer.png` shows the system-save workflow's
+completion state. These contain disposable QA data, never a personal library.
+
 The generated artwork above is decorative and is not represented as an app
 screenshot, fetched book cover, or verified catalog record.

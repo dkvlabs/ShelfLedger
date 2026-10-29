@@ -44,9 +44,12 @@ type View =
   | { name: "import" }
   | { name: "settings" };
 
-const queryClient = new QueryClient({
+export const queryClient = new QueryClient({
   defaultOptions: {
-    queries: { retry: 1, staleTime: 5_000 },
+    // Native IPC reads and writes work in airplane mode; never pause them
+    // based on the WebView's network connectivity signal.
+    queries: { retry: 1, staleTime: 5_000, networkMode: "always" },
+    mutations: { networkMode: "always" },
   },
 });
 
@@ -86,6 +89,37 @@ function Shell() {
   const [importPath, setImportPath] = useState<string | null>(null);
   const language = useLanguage();
   const t = (key: string) => translate(language, key);
+
+  useEffect(() => {
+    const main = document.querySelector("main");
+    if (main) main.scrollTop = 0;
+  }, [view]);
+
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const trigger = document.querySelector<HTMLButtonElement>(".mobile-bar button");
+    const buttons = [trigger, ...document.querySelectorAll<HTMLButtonElement>(".app-sidebar button")]
+      .filter((button): button is HTMLButtonElement => button !== null);
+    buttons[1]?.focus();
+    const key = (event: KeyboardEvent) => {
+      if (event.key !== "Tab") return;
+      const first = buttons[0];
+      const last = buttons.at(-1);
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault(); last?.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault(); first?.focus();
+      }
+    };
+    const resize = () => { if (window.innerWidth > 900) setMobileOpen(false); };
+    window.addEventListener("keydown", key);
+    window.addEventListener("resize", resize);
+    return () => {
+      window.removeEventListener("keydown", key);
+      window.removeEventListener("resize", resize);
+      trigger?.focus();
+    };
+  }, [mobileOpen]);
 
   useEffect(() => {
     document.documentElement.lang = languageInfo(language).locale;
@@ -173,6 +207,27 @@ function Shell() {
 
   const activeKey = view.name === "work" ? "library" : view.name;
 
+  useEffect(() => {
+    const back = (event: Event) => {
+      if (mobileOpen) {
+        setMobileOpen(false);
+        event.preventDefault();
+      } else if (view.name !== "library") {
+        setView({ name: "library" });
+        event.preventDefault();
+      }
+    };
+    const escape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMobileOpen(false);
+    };
+    window.addEventListener("shelfledger:back", back);
+    window.addEventListener("keydown", escape);
+    return () => {
+      window.removeEventListener("shelfledger:back", back);
+      window.removeEventListener("keydown", escape);
+    };
+  }, [mobileOpen, view.name]);
+
   return (
     <DirectionProvider dir={languageInfo(language).direction}>
     <div className="flex h-full flex-col">
@@ -187,6 +242,7 @@ function Shell() {
         </button>
       </div>
       <div className="flex min-h-0 flex-1">
+        {mobileOpen && <button className="navigation-scrim" tabIndex={-1} aria-label={tx("Close navigation")} onClick={() => setMobileOpen(false)} />}
         <nav
           aria-label={tx("Main navigation")}
           data-open={mobileOpen}
@@ -216,7 +272,7 @@ function Shell() {
             </p>
           </div>
         </nav>
-        <main className="min-w-0 flex-1 overflow-y-auto">
+        <main inert={mobileOpen} className="min-w-0 flex-1 overflow-y-auto">
           <Suspense fallback={<p className="p-8">{t("common.loading")}</p>}>
             <section key={view.name} className="page-enter">
               {view.name === "dashboard" && (

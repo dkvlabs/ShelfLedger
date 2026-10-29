@@ -405,3 +405,33 @@
   [dir="rtl"] .app-sidebar { inset: 56px 0 0 auto; transform: translateX(100%); }
   [dir="rtl"] .app-sidebar[data-open="true"] { transform: translateX(0); }
 }
+
+/* Android edge-to-edge insets and thumb-sized controls. */
+.navigation-scrim { display: none; }
+@media (max-width: 900px) {
+  #root { height: 100dvh; }
+  .mobile-bar {
+    height: calc(56px + env(safe-area-inset-top, 0px));
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-inline: max(16px, env(safe-area-inset-left, 0px)) max(16px, env(safe-area-inset-right, 0px));
+  }
+  .app-sidebar, [dir="rtl"] .app-sidebar {
+    top: calc(56px + env(safe-area-inset-top, 0px));
+    padding-bottom: max(24px, env(safe-area-inset-bottom, 0px));
+    overflow-y: auto;
+    max-width: calc(100vw - 48px);
+  }
+  .navigation-scrim {
+    display: block; position: fixed; inset: calc(56px + env(safe-area-inset-top, 0px)) 0 0;
+    background: #0009; z-index: 29;
+  }
+  main { padding-bottom: env(safe-area-inset-bottom, 0px); }
+  main > section { overflow-wrap: anywhere; }
+  button, input:not([type="checkbox"]):not([type="radio"]), select, [role="combobox"] {
+    min-height: 48px;
+  }
+  button:has(> svg:only-child) { min-width: 48px; }
+  input, textarea, select { font-size: 16px; }
+  [role="dialog"] { max-height: calc(100dvh - 32px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)); }
+  [role="dialog"] > button:last-child { min-width: 48px; inset-inline-end: 4px; top: 4px; }
+}

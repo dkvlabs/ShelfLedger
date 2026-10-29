@@ -1,7 +1,7 @@
 # ShelfLedger tutorial: build, run, and use the app
 
 This guide takes you from a fresh checkout to a local library. Choose the desktop
-app or the browser version; both use the same Rust domain logic. Screenshots use
+app, the [Android app](android.md), or the browser version; all use the same Rust domain logic. Screenshots use
 the bundled demo dataset in a disposable local browser library, not personal data.
 
 ## 1. Install prerequisites

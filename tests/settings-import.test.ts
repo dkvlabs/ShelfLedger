@@ -8,9 +8,10 @@ import {
   within,
 } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
-import App from "@/app/App";
+import App, { queryClient } from "@/app/App";
+import { onlineManager } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import { pickFile } from "@/lib/files";
+import { pickFile, saveExport } from "@/lib/files";
 vi.mock("@/lib/i18n", async (importOriginal) => ({
   ...await importOriginal<typeof import("@/lib/i18n")>(),
   useT: () => (s: string) => s,
@@ -22,7 +23,7 @@ vi.mock("@/lib/theme", () => ({ applyTheme: vi.fn() }));
 vi.mock("@/features/catalog/LibraryView", () => ({
   default: () => createElement("p", null, "Library ready"),
 }));
-vi.mock("@/lib/files", () => ({ pickFile: vi.fn(), downloadExport: vi.fn() }));
+vi.mock("@/lib/files", () => ({ pickFile: vi.fn(), saveExport: vi.fn() }));
 vi.mock("@/lib/api", () => ({
   isDesktop: () => false,
   api: {
@@ -32,11 +33,49 @@ vi.mock("@/lib/api", () => ({
     previewImport: vi.fn(),
     commitImport: vi.fn(),
     restoreBackup: vi.fn(),
+    createBackup: vi.fn(),
   },
 }));
 afterEach(() => {
   cleanup();
+  queryClient.clear();
+  onlineManager.setOnline(true);
   vi.clearAllMocks();
+});
+
+it("exports a complete library while offline and lets a cancelled save be retried", async () => {
+  onlineManager.setOnline(false);
+  vi.mocked(api.createBackup).mockResolvedValue({ path: "/app-data/backups/library.zip" });
+  vi.mocked(saveExport).mockResolvedValueOnce(false).mockResolvedValueOnce(true);
+  render(createElement(App));
+  await screen.findByText("Library ready");
+  fireEvent.click(screen.getByRole("button", { name: "nav.settings" }));
+  fireEvent.click(await screen.findByRole("button", { name: "Export for another device" }));
+  expect(await screen.findByRole("status")).toHaveTextContent("Save cancelled.");
+  expect(api.createBackup).toHaveBeenCalledExactlyOnceWith(null);
+  expect(saveExport).toHaveBeenCalledWith("/app-data/backups/library.zip");
+  fireEvent.click(screen.getByRole("button", { name: "Save file" }));
+  await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("File saved."));
+  expect(api.createBackup).toHaveBeenCalledTimes(1);
+  const mutation = queryClient.getMutationCache().build(queryClient, { mutationFn: async () => "local write" });
+  expect(await mutation.execute(undefined)).toBe("local write");
+});
+
+it("handles Android Back by closing navigation, then returning to the library", async () => {
+  render(createElement(App));
+  await screen.findByText("Library ready");
+  fireEvent.click(screen.getByRole("button", { name: "nav.settings" }));
+  await screen.findByRole("heading", { name: "Settings" });
+  screen.getByRole("main").scrollTop = 1200;
+  fireEvent.click(screen.getByRole("button", { name: "Open navigation" }));
+  expect(screen.getByRole("main")).toHaveAttribute("inert");
+  expect(window.dispatchEvent(new Event("shelfledger:back", { cancelable: true }))).toBe(false);
+  await waitFor(() => expect(screen.getByRole("button", { name: "Open navigation" })).toBeInTheDocument());
+  expect(screen.getByRole("heading", { name: "Settings" })).toBeInTheDocument();
+  fireEvent(window, new Event("shelfledger:back", { cancelable: true }));
+  await screen.findByText("Library ready");
+  expect(screen.getByRole("main").scrollTop).toBe(0);
+  expect(window.dispatchEvent(new Event("shelfledger:back", { cancelable: true }))).toBe(true);
 });
 it("carries the Settings picker result through the real app shell and previews it exactly once", async () => {
   vi.mocked(pickFile).mockResolvedValue("/app-data/uploaded.csv");

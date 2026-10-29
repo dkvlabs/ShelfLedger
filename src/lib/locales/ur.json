@@ -456,5 +456,14 @@
   "Copy": "نقل",
   "Save median estimate": "وسطانی تخمینہ محفوظ کریں",
   "Estimate saved with its evidence.": "تخمینہ اپنے شواہد کے ساتھ محفوظ ہو گیا۔",
-  "Saved estimate evidence": "محفوظ تخمینے کے شواہد"
+  "Saved estimate evidence": "محفوظ تخمینے کے شواہد",
+  "Transfer your full library between Android and desktop. Export a ZIP, copy it by USB or another method you choose, then import it on the other device. No account or internet connection is needed.": "اپنی پوری لائبریری Android اور کمپیوٹر کے درمیان منتقل کریں۔ ZIP برآمد کریں، USB یا کسی اور طریقے سے نقل کریں، پھر دوسرے آلے پر درآمد کریں۔ اکاؤنٹ یا انٹرنیٹ درکار نہیں۔",
+  "Preparing library…": "لائبریری تیار ہو رہی ہے…",
+  "Export for another device": "دوسرے آلے کے لیے برآمد کریں",
+  "Import from another device": "دوسرے آلے سے درآمد کریں",
+  "Library exported. Import this ZIP on the other device.": "لائبریری برآمد ہو گئی۔ یہ ZIP دوسرے آلے پر درآمد کریں۔",
+  "Save cancelled. Your backup is ready; use Save file to try again.": "محفوظ کرنا منسوخ ہو گیا۔ بیک اپ تیار ہے؛ دوبارہ کوشش کے لیے فائل محفوظ کریں منتخب کریں۔",
+  "Save file": "فائل محفوظ کریں",
+  "File saved.": "فائل محفوظ ہو گئی۔",
+  "Camera access is blocked. On Android, open Settings → Apps → ShelfLedger → Permissions → Camera, allow access, then retry.": "کیمرے تک رسائی مسدود ہے۔ Android پر سیٹنگز → ایپس → ShelfLedger → اجازتیں → کیمرا کھولیں، رسائی کی اجازت دیں، پھر دوبارہ کوشش کریں۔"
 }

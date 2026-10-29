@@ -38,3 +38,7 @@ Thumbs.db
 
 # Tauri dev artifacts
 src-tauri/gen/apple/
+**/*.jks
+**/*.keystore
+src-tauri/gen/android/app/tauri.build.gradle.kts
+src-tauri/gen/android/app/tauri.properties

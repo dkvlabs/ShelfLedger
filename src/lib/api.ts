@@ -1,6 +1,6 @@
 // Typed wrappers around the backend commands. The webview never sends SQL —
 // only validated DTOs to named commands (AGENTS.md). One contract, two
-// transports: Tauri IPC inside the desktop app, loopback HTTP
+// transports: Tauri IPC inside desktop/Android, loopback HTTP
 // (`POST /api/<command>`) in the web version — the argument object and the
 // `{kind, message}` error shape are identical.
 
@@ -62,7 +62,7 @@ export class CommandError extends Error {
   }
 }
 
-/** True inside the Tauri webview; false in a plain browser (web version). */
+/** True inside native Tauri (desktop or Android); false in a plain browser. */
 export function isDesktop(): boolean {
   return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 }

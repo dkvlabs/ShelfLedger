@@ -1,6 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
+  "platforms": ["macOS", "windows", "linux"],
   "description": "Least-privilege baseline: core window/event/path access plus the dialog plugin (file open/save pickers return a path to Rust, which does all file I/O itself). No filesystem, shell, or HTTP permissions are granted to the webview.",
   "windows": ["main"],
   "permissions": [

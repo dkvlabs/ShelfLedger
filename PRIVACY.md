@@ -2,7 +2,11 @@
 
 ShelfLedger is **local-first**: your library, reading history, contacts, and
 financial records live in a SQLite database and media files inside your operating
-system's user-data directory on your own computer.
+system's user-data directory on your own computer or Android device.
+
+The Android release has no INTERNET permission and disables Android's automatic
+cloud backup. Open Library fetching is disabled on Android; transferred metadata
+caches remain usable offline. Development builds allow a local Vite server.
 
 ## What we collect
 
@@ -34,7 +38,9 @@ manual ISBN entry without camera access.
 - **Location:** OS user-data directory (e.g.
   `~/Library/Application Support/io.github.shelfledger.app` on macOS).
 - **Portability:** plain SQLite; CSV/JSON export and complete backup/restore from
-  Settings.
+  Settings. Native exports are copied only to a location chosen in the system
+  save dialog. You can transfer a full-library ZIP by USB between PC and Android.
+  These archives are not encrypted; they include contacts and financial history.
 - **Deletion:** delete the app's data directory to remove everything. Backups you
   create are ordinary files you control.
 

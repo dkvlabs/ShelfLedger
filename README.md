@@ -11,7 +11,7 @@ journal, lend to friends, and record the journey from purchase to resale.
 Your data stays on your device in a readable SQLite database. No account,
 subscription, hosted database, or Docker required.
 
-[Build & run tutorial](docs/tutorial.md) · [Features](#what-you-can-do) ·
+[Build & run tutorial](docs/tutorial.md) · [Android & device transfer](docs/android.md) · [Features](#what-you-can-do) ·
 [Development](#development) · [Privacy](PRIVACY.md) · [MIT license](LICENSE)
 
 ## A quieter home for your collection
@@ -33,7 +33,22 @@ themes; eleven interface languages (the initial global top ten plus Romanian); g
 | **Understand your spending** | Purchase costs, sourced manual estimates, asking prices, and realized sales recorded separately. Integer minor units and ISO currency codes; currencies are never summed together. |
 | **Use your language and currency** | English, Simplified Chinese, Hindi, Spanish, Arabic, French, Bengali, Portuguese, Indonesian, Urdu, and Romanian. All 165 current ISO currencies/fund units with defined minor units, localized names and exact 0–4 decimal handling. Arabic/Urdu use right-to-left layouts. |
 | **Bring your collection along** | Goodreads/custom CSV mapping, preview, duplicate policies, row selection, confirmation, and import logs. |
-| **Keep control of your data** | CSV/JSON exports, consistent SQLite backups, transactional restore, and separately restored libraries you can switch between. |
+| **Keep control of your data** | CSV/JSON exports, consistent SQLite backups, transactional restore, and separately restored libraries you can switch between. Transfer the complete library by ZIP between Android and Windows/macOS/Linux without an account or internet. |
+
+### Take your library offline on Android
+
+The Android app shares the desktop library and domain model, with touch-sized
+controls and native file pickers. The release APK has no internet permission;
+books, reading, loans, finances, barcode decoding, translations and backup/restore
+stay on the device. Uncached ISBN metadata requires manual entry on Android.
+
+Use **Settings → Data → Export for another device**, copy the ZIP by USB, then
+**Import from another device** on the receiver. Restore requires confirmation;
+transfers are manual snapshots. See [Android installation, build and transfer](docs/android.md).
+
+| Android collection, in airplane mode | Native device-transfer controls |
+| --- | --- |
+| ![Android library with three demo works, running offline](docs/images/android-library.png) | ![Android full-library ZIP export and import controls](docs/images/android-transfer.png) |
 
 ### Compare local asking prices
 
@@ -79,7 +94,7 @@ user-initiated network request.
 ![An open book and clothbound volumes in warm afternoon light](docs/images/reading-atmosphere.png)
 
 *The banner and still life are generated decorative artwork. App screenshots are
-unmodified captures of the working browser version using disposable demo data.
+unmodified captures of the working browser and Android versions using disposable demo data.
 See [image provenance and prompts](docs/images/README.md).*
 
 ## Built around your books

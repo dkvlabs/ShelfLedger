@@ -162,3 +162,18 @@ implementation summaries, not proof of packaging or acceptance on every OS.
       validation and atomic upgrade/overflow regressions.
 
 See [localization.md](localization.md) for extension and maintenance instructions.
+
+## Android and device transfer — 29.10.2026
+
+- [x] Committed native Android project sharing typed Rust IPC and SQLite, ARM64
+      build scripts and Android CI APK artifacts, optional production signing.
+- [x] Offline release manifest (no INTERNET), disabled OS cloud backup and Android
+      network metadata provider; all fonts, translations and decoding bundled.
+- [x] Local queries and mutations execute even when the device reports offline.
+- [x] Native document-provider streams staged under app data with size/format
+      checks; generated exports copied through an OS-selected save destination.
+- [x] Complete-library ZIP transfer controls, cancellation/retry and explicit
+      replace/separate confirmation; shared desktop/Android archive contract.
+- [x] Phone touch targets, safe-area layout, drawer dismissal and Android Back.
+
+Build/install instructions and verification scope: [android.md](android.md).

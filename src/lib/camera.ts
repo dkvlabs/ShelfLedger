@@ -5,6 +5,9 @@ export function cameraErrorMessage(error: unknown, desktop: boolean): string {
     case "NotAllowedError":
     case "PermissionDeniedError":
     case "SecurityError":
+      if (desktop && typeof navigator !== "undefined" && /Android/i.test(navigator.userAgent)) {
+        return "Camera access is blocked. On Android, open Settings → Apps → ShelfLedger → Permissions → Camera, allow access, then retry.";
+      }
       return desktop
         ? "Camera access is blocked. Allow ShelfLedger in your system's camera privacy settings " +
             "(on macOS: System Settings → Privacy & Security → Camera), then retry. " +

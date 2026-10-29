@@ -210,6 +210,11 @@ describe("scanner camera access", () => {
 });
 
 describe("camera permission recovery", () => {
+  it("directs Android users to the app's camera permission settings", () => {
+    vi.spyOn(navigator, "userAgent", "get").mockReturnValue("Mozilla/5.0 (Linux; Android 14) wv");
+    expect(cameraErrorMessage({ name: "NotAllowedError" }, true)).toContain("Settings → Apps → ShelfLedger → Permissions → Camera");
+    expect(cameraErrorMessage({ name: "NotAllowedError" }, false)).toContain("browser permissions");
+  });
   it("directs desktop users to system settings", () => {
     expect(cameraErrorMessage({ name: "NotAllowedError" }, true)).toContain(
       "System Settings → Privacy & Security → Camera",

@@ -456,5 +456,14 @@
   "Copy": "কপি",
   "Save median estimate": "মধ্যক অনুমান সংরক্ষণ করুন",
   "Estimate saved with its evidence.": "প্রমাণসহ অনুমান সংরক্ষিত হয়েছে।",
-  "Saved estimate evidence": "সংরক্ষিত অনুমানের প্রমাণ"
+  "Saved estimate evidence": "সংরক্ষিত অনুমানের প্রমাণ",
+  "Transfer your full library between Android and desktop. Export a ZIP, copy it by USB or another method you choose, then import it on the other device. No account or internet connection is needed.": "Android ও কম্পিউটারের মধ্যে পুরো লাইব্রেরি স্থানান্তর করুন। ZIP রপ্তানি করুন, USB বা অন্য উপায়ে কপি করুন, তারপর অন্য ডিভাইসে আমদানি করুন। অ্যাকাউন্ট বা ইন্টারনেট লাগে না।",
+  "Preparing library…": "লাইব্রেরি প্রস্তুত হচ্ছে…",
+  "Export for another device": "অন্য ডিভাইসের জন্য রপ্তানি",
+  "Import from another device": "অন্য ডিভাইস থেকে আমদানি",
+  "Library exported. Import this ZIP on the other device.": "লাইব্রেরি রপ্তানি হয়েছে। অন্য ডিভাইসে এই ZIP আমদানি করুন।",
+  "Save cancelled. Your backup is ready; use Save file to try again.": "সংরক্ষণ বাতিল হয়েছে। ব্যাকআপ প্রস্তুত; আবার চেষ্টা করতে ফাইল সংরক্ষণ করুন বেছে নিন।",
+  "Save file": "ফাইল সংরক্ষণ করুন",
+  "File saved.": "ফাইল সংরক্ষিত হয়েছে।",
+  "Camera access is blocked. On Android, open Settings → Apps → ShelfLedger → Permissions → Camera, allow access, then retry.": "ক্যামেরা ব্যবহারের অনুমতি নেই। Android-এ সেটিংস → অ্যাপস → ShelfLedger → অনুমতি → ক্যামেরা খুলে অনুমতি দিন, তারপর আবার চেষ্টা করুন।"
 }

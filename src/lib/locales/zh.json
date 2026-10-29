@@ -456,5 +456,14 @@
   "Copy": "藏书副本",
   "Save median estimate": "保存中位数估值",
   "Estimate saved with its evidence.": "已保存估值及其依据。",
-  "Saved estimate evidence": "已保存估值的依据"
+  "Saved estimate evidence": "已保存估值的依据",
+  "Transfer your full library between Android and desktop. Export a ZIP, copy it by USB or another method you choose, then import it on the other device. No account or internet connection is needed.": "在 Android 和电脑之间传输完整书库。导出 ZIP，通过 USB 或其他方式复制，然后在另一台设备上导入。无需账户或互联网连接。",
+  "Preparing library…": "正在准备书库…",
+  "Export for another device": "导出到其他设备",
+  "Import from another device": "从其他设备导入",
+  "Library exported. Import this ZIP on the other device.": "书库已导出。请在另一台设备上导入此 ZIP。",
+  "Save cancelled. Your backup is ready; use Save file to try again.": "已取消保存。备份已就绪；点击保存文件重试。",
+  "Save file": "保存文件",
+  "File saved.": "文件已保存。",
+  "Camera access is blocked. On Android, open Settings → Apps → ShelfLedger → Permissions → Camera, allow access, then retry.": "相机访问被阻止。在 Android 上，打开设置 → 应用 → ShelfLedger → 权限 → 相机，允许访问后重试。"
 }

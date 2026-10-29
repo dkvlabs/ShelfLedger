@@ -1,0 +1,8 @@
+{
+  "$schema": "../gen/schemas/android-schema.json",
+  "identifier": "android",
+  "description": "Android uses typed Rust commands and OS document pickers. No generic filesystem, network, shell, dialog or development-tools commands are exposed to the webview.",
+  "platforms": ["android"],
+  "windows": ["main"],
+  "permissions": ["core:default"]
+}

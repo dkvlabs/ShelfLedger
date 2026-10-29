@@ -133,6 +133,72 @@ async fn complete_snapshot_preserves_history_and_rejects_duplicates_atomically()
     let snapshot = crate::repositories::snapshot::export(&ctx.pool)
         .await
         .unwrap();
+    // Simulate a PC -> Android -> different PC transfer, including the native
+    // document-provider staging step. All records and identifiers must survive.
+    let phone = context().await;
+    let archive = ctx.data_dir.join("desktop.zip");
+    crate::domain::backup::create_backup(&ctx.pool, &ctx.data_dir.join("shelfledger.db"), &archive)
+        .await
+        .unwrap();
+    let staged = crate::commands::transfer::stage_import(
+        &phone.data_dir,
+        std::fs::File::open(archive).unwrap(),
+        &["zip".into()],
+        512 * 1024 * 1024,
+    )
+    .unwrap();
+    crate::domain::backup::restore_archive(
+        &phone.pool,
+        &phone.data_dir.join("shelfledger.db"),
+        &staged,
+        "replace",
+    )
+    .await
+    .unwrap();
+    assert_eq!(
+        serde_json::to_value(&snapshot).unwrap(),
+        serde_json::to_value(
+            crate::repositories::snapshot::export(&phone.pool)
+                .await
+                .unwrap()
+        )
+        .unwrap()
+    );
+    let returned = phone.data_dir.join("phone.zip");
+    crate::domain::backup::create_backup(
+        &phone.pool,
+        &phone.data_dir.join("shelfledger.db"),
+        &returned,
+    )
+    .await
+    .unwrap();
+    let other_pc = context().await;
+    let staged = crate::commands::transfer::stage_import(
+        &other_pc.data_dir,
+        std::fs::File::open(returned).unwrap(),
+        &["zip".into()],
+        512 * 1024 * 1024,
+    )
+    .unwrap();
+    crate::domain::backup::restore_archive(
+        &other_pc.pool,
+        &other_pc.data_dir.join("shelfledger.db"),
+        &staged,
+        "replace",
+    )
+    .await
+    .unwrap();
+    assert_eq!(
+        serde_json::to_value(&snapshot).unwrap(),
+        serde_json::to_value(
+            crate::repositories::snapshot::export(&other_pc.pool)
+                .await
+                .unwrap()
+        )
+        .unwrap()
+    );
+    cleanup(phone).await;
+    cleanup(other_pc).await;
     let target = db::connect_memory().await.unwrap();
     crate::repositories::snapshot::apply(&target, &snapshot, true)
         .await

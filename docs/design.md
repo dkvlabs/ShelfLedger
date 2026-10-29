@@ -2,6 +2,12 @@
 
 Status: cinematic library redesign implemented 27.10.2026.
 
+Android reuses this visual system with edge-to-edge safe-area padding, 48px
+controls, readable 16px form inputs, scrollable dialogs and a dismissible drawer.
+System Back dismisses dialogs/drawer before returning to the collection or exiting.
+The primary portability controls export a complete ZIP and require confirmation
+before replacing or restoring a separate library.
+
 The interface takes its direction from a quiet, warmly lit private library:
 ink-dark surfaces, restrained copper accents, warm ivory text, generous space
 and large literary typography. It starts with the collection rather than a

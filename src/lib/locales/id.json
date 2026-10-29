@@ -456,5 +456,14 @@
   "Copy": "Eksemplar",
   "Save median estimate": "Simpan perkiraan median",
   "Estimate saved with its evidence.": "Perkiraan disimpan beserta buktinya.",
-  "Saved estimate evidence": "Bukti perkiraan tersimpan"
+  "Saved estimate evidence": "Bukti perkiraan tersimpan",
+  "Transfer your full library between Android and desktop. Export a ZIP, copy it by USB or another method you choose, then import it on the other device. No account or internet connection is needed.": "Pindahkan seluruh perpustakaan antara Android dan komputer. Ekspor ZIP, salin melalui USB atau cara lain, lalu impor di perangkat lain. Tidak memerlukan akun atau internet.",
+  "Preparing library…": "Menyiapkan perpustakaan…",
+  "Export for another device": "Ekspor untuk perangkat lain",
+  "Import from another device": "Impor dari perangkat lain",
+  "Library exported. Import this ZIP on the other device.": "Perpustakaan diekspor. Impor ZIP ini di perangkat lain.",
+  "Save cancelled. Your backup is ready; use Save file to try again.": "Penyimpanan dibatalkan. Cadangan siap; gunakan Simpan berkas untuk mencoba lagi.",
+  "Save file": "Simpan berkas",
+  "File saved.": "Berkas disimpan.",
+  "Camera access is blocked. On Android, open Settings → Apps → ShelfLedger → Permissions → Camera, allow access, then retry.": "Akses kamera diblokir. Di Android, buka Setelan → Aplikasi → ShelfLedger → Izin → Kamera, izinkan akses, lalu coba lagi."
 }

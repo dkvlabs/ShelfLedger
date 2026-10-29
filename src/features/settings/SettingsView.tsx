@@ -14,8 +14,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { api, isDesktop } from "@/lib/api";
-import { downloadExport, pickFile as chooseFile } from "@/lib/files";
+import { api } from "@/lib/api";
+import { saveExport, pickFile as chooseFile } from "@/lib/files";
 import { type Theme } from "@/lib/theme";
 import { translate, useLanguage, LANGUAGES, type Language } from "@/lib/i18n";
 import {
@@ -64,10 +64,12 @@ export default function SettingsView() {
   const [dataNote, setDataNote] = useState<string | null>(null);
   const [dataError, setDataError] = useState<string | null>(null);
   const [restorePath, setRestorePath] = useState<string | null>(null);
+  const [dataBusy, setDataBusy] = useState(false);
   const selectFile = async (
     extensions: string[],
     selected: (path: string) => void,
   ) => {
+    setDataBusy(true);
     try {
       const file = await chooseFile(extensions);
       if (file) {
@@ -76,6 +78,8 @@ export default function SettingsView() {
       }
     } catch (error) {
       setDataError((error as Error).message);
+    } finally {
+      setDataBusy(false);
     }
   };
 
@@ -250,6 +254,39 @@ export default function SettingsView() {
           <CardTitle className="text-sm">{t("settings.data")}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
+          <fieldset disabled={dataBusy} className="min-w-0 space-y-3">
+          <p className="text-sm text-muted-foreground">{tx("Transfer your full library between Android and desktop. Export a ZIP, copy it by USB or another method you choose, then import it on the other device. No account or internet connection is needed.")}</p>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              disabled={dataBusy}
+              onClick={async () => {
+                setDataBusy(true);
+                setDataError(null);
+                try {
+                  const result = await api.createBackup(null);
+                  setLastExport(result.path);
+                  const saved = await saveExport(result.path);
+                  setDataNote(saved
+                    ? "Library exported. Import this ZIP on the other device."
+                    : "Save cancelled. Your backup is ready; use Save file to try again.");
+                } catch (error) {
+                  setDataError((error as Error).message);
+                } finally {
+                  setDataBusy(false);
+                }
+              }}
+            >
+              <Download />
+              {tx(dataBusy ? "Preparing library…" : "Export for another device")}
+            </Button>
+            <Button
+              variant="outline"
+              disabled={dataBusy}
+              onClick={() => void selectFile(["zip"], setRestorePath)}
+            >
+              {tx("Import from another device")}
+            </Button>
+          </div>
           <div className="flex flex-wrap gap-2">
             <Button
               variant="outline"
@@ -316,12 +353,25 @@ export default function SettingsView() {
             >
               {t("settings.import")}
             </Button>
-            {lastExport && !isDesktop() && (
+            {lastExport && (
               <Button
                 variant="secondary"
-                onClick={() => downloadExport(lastExport)}
+                disabled={dataBusy}
+                onClick={async () => {
+                  setDataBusy(true);
+                  try {
+                    if (await saveExport(lastExport)) {
+                      setDataNote("File saved.");
+                      setDataError(null);
+                    }
+                  } catch (error) {
+                    setDataError((error as Error).message);
+                  } finally {
+                    setDataBusy(false);
+                  }
+                }}
               >
-                <Download /> {tx("Download")}
+                <Download /> {tx("Save file")}
               </Button>
             )}
           </div>
@@ -345,7 +395,9 @@ export default function SettingsView() {
                 <Button
                   size="sm"
                   variant="destructive"
+                  disabled={dataBusy}
                   onClick={async () => {
+                    setDataBusy(true);
                     try {
                       const res = await api.restoreBackup(
                         restorePath,
@@ -358,6 +410,7 @@ export default function SettingsView() {
                       setDataError((err as Error).message);
                     }
                     setRestorePath(null);
+                    setDataBusy(false);
                   }}
                 >
                   {tx("Replace current library")}
@@ -365,7 +418,9 @@ export default function SettingsView() {
                 <Button
                   size="sm"
                   variant="secondary"
+                  disabled={dataBusy}
                   onClick={async () => {
+                    setDataBusy(true);
                     try {
                       const res = await api.restoreBackup(
                         restorePath,
@@ -378,6 +433,7 @@ export default function SettingsView() {
                       setDataError((err as Error).message);
                     }
                     setRestorePath(null);
+                    setDataBusy(false);
                   }}
                 >
                   {tx("Restore as separate library")}
@@ -385,6 +441,7 @@ export default function SettingsView() {
                 <Button
                   size="sm"
                   variant="ghost"
+                  disabled={dataBusy}
                   onClick={() => setRestorePath(null)}
                 >
                   {t("common.cancel")}
@@ -397,6 +454,7 @@ export default function SettingsView() {
               "Backups are crash-safe SQLite snapshots plus a hashed manifest, zipped. Restoring replaces the current library only after your explicit confirmation.",
             )}
           </p>
+          </fieldset>
         </CardContent>
       </Card>
 

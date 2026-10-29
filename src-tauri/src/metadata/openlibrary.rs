@@ -40,6 +40,11 @@ fn client() -> &'static reqwest::Client {
 }
 
 async fn is_provider_enabled(pool: &SqlitePool) -> bool {
+    // The Android distribution is fully offline, including after restoring
+    // desktop preferences. Imported metadata caches remain usable.
+    if cfg!(target_os = "android") {
+        return false;
+    }
     settings::get_json(pool, SETTING_ENABLED)
         .await
         .ok()

@@ -456,5 +456,14 @@
   "Copy": "Exemplar",
   "Save median estimate": "Salvează estimarea mediană",
   "Estimate saved with its evidence.": "Estimarea și dovezile au fost salvate.",
-  "Saved estimate evidence": "Dovezile estimării salvate"
+  "Saved estimate evidence": "Dovezile estimării salvate",
+  "Transfer your full library between Android and desktop. Export a ZIP, copy it by USB or another method you choose, then import it on the other device. No account or internet connection is needed.": "Transferă biblioteca completă între Android și desktop. Exportă un ZIP, copiază-l prin USB sau altă metodă, apoi importă-l pe celălalt dispozitiv. Nu ai nevoie de cont sau internet.",
+  "Preparing library…": "Se pregătește biblioteca…",
+  "Export for another device": "Exportă pentru alt dispozitiv",
+  "Import from another device": "Importă de pe alt dispozitiv",
+  "Library exported. Import this ZIP on the other device.": "Biblioteca a fost exportată. Importă acest ZIP pe celălalt dispozitiv.",
+  "Save cancelled. Your backup is ready; use Save file to try again.": "Salvare anulată. Copia de siguranță este pregătită; folosește Salvează fișierul pentru a reîncerca.",
+  "Save file": "Salvează fișierul",
+  "File saved.": "Fișier salvat.",
+  "Camera access is blocked. On Android, open Settings → Apps → ShelfLedger → Permissions → Camera, allow access, then retry.": "Accesul la cameră este blocat. Pe Android, deschide Setări → Aplicații → ShelfLedger → Permisiuni → Cameră, permite accesul și reîncearcă."
 }

@@ -10,6 +10,16 @@ Rust domain over **127.0.0.1 only**; there is no cloud service, account or remot
 access feature. Both transports validate Rust DTOs before writes. Neither accepts
 SQL from the frontend.
 
+The Android application shares these typed commands and SQLite database. Its
+release manifest has no INTERNET permission and disables OS cloud backups.
+The Open Library provider is always disabled on Android, while imported caches
+remain readable. React Query uses `networkMode: always` for local IPC operations.
+Native document commands stage bounded content-provider streams under app data;
+only generated export/backup files may be copied to a destination chosen through
+the OS save dialog. This explicit user-directed transfer is the only external
+file-write exception. No raw content URI reaches import/restore domain code.
+See [Android and portability](android.md).
+
 ## Boundaries
 
 - `src/features/*`: React screens; `src/components/ui`: shared accessible primitives.

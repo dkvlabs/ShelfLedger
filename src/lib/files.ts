@@ -1,14 +1,12 @@
-// File picking across transports. The desktop app opens native dialogs and
-// hands filesystem paths to the commands; the web version uploads the chosen
+// File picking across transports. Native document streams are staged inside
+// app data (including Android content URIs); the web version uploads the chosen
 // file to the local server (`/api/upload`), which stores it under a generated
 // name inside the app data directory and returns that path — so the backend
-// commands read plain paths in both modes (AGENTS.md: all writes stay inside
-// the app data directory). Downloads in web mode go through `/api/download`,
+// commands read plain paths in both modes. Native saves copy generated files
+// to an OS-selected destination. Downloads in web mode go through `/api/download`,
 // which the server restricts to the exports/ and backups/ directories.
 
-import { open } from "@tauri-apps/plugin-dialog";
-
-import { CommandError, webToken } from "@/lib/api";
+import { call, CommandError, webToken } from "@/lib/api";
 
 function inTauri(): boolean {
   return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
@@ -46,10 +44,7 @@ async function uploadFile(file: File): Promise<string> {
  */
 export function pickFile(extensions: string[]): Promise<string | null> {
   if (inTauri()) {
-    return open({
-      multiple: false,
-      filters: [{ name: "Files", extensions }],
-    }).then((file) => (typeof file === "string" ? file : null));
+    return call<string | null>("pick_import_file", { extensions });
   }
   return new Promise((resolve, reject) => {
     const input = document.createElement("input");
@@ -82,4 +77,12 @@ export function pickFile(extensions: string[]): Promise<string | null> {
  */
 export function downloadExport(path: string): void {
   window.location.href = `/api/download?path=${encodeURIComponent(path)}`;
+}
+
+/** Save a generated file using the native document picker, or download it in
+ * the browser. Android content URIs are resolved in Rust, not treated as paths. */
+export async function saveExport(path: string): Promise<boolean> {
+  if (inTauri()) return call<boolean>("save_export", { path });
+  downloadExport(path);
+  return true;
 }
