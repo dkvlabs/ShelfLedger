@@ -4,6 +4,13 @@ All notable changes to ShelfLedger are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning is
 [SemVer](https://semver.org/).
 
+## [0.3.0](https://github.com/dkvlabs/ShelfLedger/compare/v0.2.1...v0.3.0) (2026-10-29)
+
+
+### Features
+
+* **catalog:** save edition covers from ISBN lookup or photos ([d8db651](https://github.com/dkvlabs/ShelfLedger/commit/d8db651a0ab5f577b27a11c954302fd0f3f6ea27))
+
 ## [0.2.1](https://github.com/dkvlabs/ShelfLedger/compare/v0.2.0...v0.2.1) (2026-10-29)
 
 
