@@ -1,6 +1,6 @@
 [package]
 name = "shelfledger"
-version = "0.1.0"
+version = "0.1.1"
 description = "Local-first personal library, reading journal, and copy ledger"
 authors = ["ShelfLedger contributors"]
 license = "MIT"
