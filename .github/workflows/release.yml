@@ -58,7 +58,13 @@ jobs:
       tag: ${{ steps.release.outputs.tag }}
       sha: ${{ steps.release.outputs.sha }}
       release_id: ${{ steps.release.outputs.release_id }}
+      allow_published: ${{ steps.release.outputs.allow_published }}
     steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: /scripts/
       - name: Resolve the release and immutable source commit
         id: release
         uses: actions/github-script@v7
@@ -68,6 +74,8 @@ jobs:
           REPAIR_PUBLISHED: ${{ inputs.repair_published }}
         with:
           script: |
+            const { pathToFileURL } = require('node:url');
+            const { prepareRelease } = await import(pathToFileURL(`${process.env.GITHUB_WORKSPACE}/scripts/release-github.mjs`).href);
             const { owner, repo } = context.repo;
             const tag = process.env.RETRY_TAG;
             if (tag && !/^v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(tag)) {
@@ -81,17 +89,10 @@ jobs:
               release = (await github.rest.repos.getRelease({ owner, repo, release_id: Number(process.env.RELEASE_ID) })).data;
             }
             if (!release) throw new Error('Release not found');
-            if (release.immutable) throw new Error('Release is immutable; create a patch release');
-            if (!release.draft && process.env.REPAIR_PUBLISHED !== 'true') {
-              throw new Error('Enable repair_published to add missing public release assets');
-            }
-            if (!/^v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(release.tag_name)) {
-              throw new Error('Release tag must be stable SemVer');
-            }
+            const prepared = prepareRelease(release, tag || release.tag_name, process.env.REPAIR_PUBLISHED === 'true');
             const commit = await github.rest.repos.getCommit({ owner, repo, ref: `tags/${release.tag_name}` });
-            core.setOutput('tag', release.tag_name);
             core.setOutput('sha', commit.data.sha);
-            core.setOutput('release_id', String(release.id));
+            for (const [key, value] of Object.entries(prepared)) core.setOutput(key, value);
 
   checks:
     needs: prepare
@@ -222,7 +223,9 @@ jobs:
       RELEASE_TAG: ${{ needs.prepare.outputs.tag }}
       RELEASE_ID: ${{ needs.prepare.outputs.release_id }}
       RELEASE_SHA: ${{ needs.prepare.outputs.sha }}
-      REPAIR_PUBLISHED: ${{ inputs.repair_published }}
+      # Carry preparation's authorization for this exact release. It may become
+      # public while installers are building, even on a push without inputs.
+      ALLOW_PUBLISHED: ${{ needs.prepare.outputs.allow_published }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -265,6 +268,6 @@ jobs:
               sha: process.env.RELEASE_SHA,
               directory: 'release-assets',
               notes: fs.readFileSync('release-notes.md', 'utf8'),
-              allowPublished: process.env.REPAIR_PUBLISHED === 'true',
+              allowPublished: process.env.ALLOW_PUBLISHED === 'true',
             });
             core.notice(`Completed ${process.env.RELEASE_TAG} with ${names.length} assets`);

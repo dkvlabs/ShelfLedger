@@ -10,6 +10,18 @@ export function validateRelease(release, tag, allowPublished = false) {
   if (!release.draft && !allowPublished) throw new Error('Enable repair_published explicitly to add missing public release assets');
 }
 
+// A draft accepted before a long native build may be published by a maintainer
+// before uploads finish. Keep authorization scoped to this release and tag;
+// public binary collisions are still checked before every upload batch.
+export function prepareRelease(release, tag, repairPublished = false) {
+  validateRelease(release, tag, repairPublished);
+  return {
+    tag,
+    release_id: String(release.id),
+    allow_published: 'true',
+  };
+}
+
 export async function publishRelease({ github, owner, repo, releaseId, tag, sha, directory, notes, allowPublished = false }) {
   const release_id = Number(releaseId);
   const { data: release } = await github.rest.repos.getRelease({ owner, repo, release_id });

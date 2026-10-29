@@ -51,6 +51,15 @@ test('draft release preparation has write access while build jobs remain read-on
   }
 });
 
+test('publish uses authorization from prepare rather than missing push-event inputs', () => {
+  const workflow = readFileSync(new URL('../.github/workflows/release.yml', import.meta.url), 'utf8');
+  const publish = workflow.slice(workflow.indexOf('\n  publish:\n'));
+  assert.match(workflow, /allow_published: \$\{\{ steps\.release\.outputs\.allow_published \}\}/);
+  assert.match(publish, /ALLOW_PUBLISHED: \$\{\{ needs\.prepare\.outputs\.allow_published \}\}/);
+  assert.match(publish, /allowPublished: process\.env\.ALLOW_PUBLISHED === 'true'/);
+  assert.doesNotMatch(publish, /inputs\.repair_published/);
+});
+
 test('all four versions and the release manifest must agree with the tag', (t) => {
   const root = fixture(t);
   assert.equal(validateVersions(root, 'v0.1.0'), '0.1.0');

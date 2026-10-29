@@ -122,6 +122,22 @@ resume when existing asset SHA-256 digests match. Conflicting existing assets or
 an immutable release require a new patch release. Leave the checkbox off for
 normal draft retries.
 
+If a maintainer publishes an accepted draft while its installer jobs are still
+running, publishing now carries the authorization recorded by `prepare` for that
+same release ID and tag. A push event has no `repair_published` input, so the
+publish job must use the preparation output instead. It rereads the current
+release and still rejects immutable releases, moved tags and conflicting public
+assets before any upload. A release that was already public when preparation
+started still requires the explicit **repair_published** checkbox.
+
+For the specific error `Enable repair_published explicitly to add missing public
+release assets`, start a **new manual run** on `main`, set **retry_tag** to the
+failed release tag (for example `v0.2.0`), and enable **repair_published**. Merely
+rerunning the original push keeps its original workflow and empty inputs. When
+all native jobs already succeeded, a maintainer may instead recover the exact
+run's installer artifacts, verify their archive digests and the unchanged source
+tag, generate the complete checksum list, and add only the missing assets.
+
 Leave `retry_tag` empty to refresh the release PR. For a code fix in an already
 tagged release, create a patch release: retries do not include newer `main`
 commits. Do not move release tags. If release-please failed before creating a
