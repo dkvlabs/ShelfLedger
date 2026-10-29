@@ -51,6 +51,15 @@ it("keeps a typed ISBN when saving directly without any provider request", async
   openDialog(); enterIsbn(); await saveManually();
   expect(api.lookupIsbn).not.toHaveBeenCalled();
 });
+it("distinguishes a Libris page without book metadata from disabled lookup", async () => {
+  vi.mocked(api.lookupLibrisBook).mockResolvedValue(null);
+  openDialog(); enterIsbn();
+  fireEvent.change(screen.getByLabelText("Libris book link (optional)"), { target: { value: URL } });
+  fireEvent.click(screen.getByRole("button", { name: "Import from Libris" }));
+  await screen.findByText("No book metadata found on this Libris page. Enter the details manually.");
+  expect(screen.queryByText(/Online lookup is disabled/)).not.toBeInTheDocument();
+  await saveManually();
+});
 it("does not show an invalid-checksum warning while a valid lookup is pending", async () => {
   let complete!: (book: LookupIsbnResult | null) => void;
   vi.mocked(api.lookupIsbn).mockImplementation(() => new Promise((resolve) => { complete = resolve; }));
@@ -94,5 +103,18 @@ it("keeps manual entry available after a provider quota or network error", async
   vi.mocked(api.lookupIsbn).mockRejectedValue(new CommandError("network", "HTTP 429"));
   openDialog(); enterIsbn(); fireEvent.click(screen.getByRole("button", { name: "Look up" }));
   await screen.findByText(/Lookup failed \(offline or provider unavailable\)/);
+  await saveManually();
+});
+it.each(["isbn", "libris"])("explains a disabled %s lookup without claiming a provider miss", async (provider) => {
+  const error = new CommandError("metadata_disabled", "backend diagnostic");
+  vi.mocked(api.lookupIsbn).mockRejectedValue(error);
+  vi.mocked(api.lookupLibrisBook).mockRejectedValue(error);
+  openDialog(); enterIsbn();
+  if (provider === "libris") {
+    fireEvent.change(screen.getByLabelText("Libris book link (optional)"), { target: { value: URL } });
+  }
+  fireEvent.click(screen.getByRole("button", { name: provider === "isbn" ? "Look up" : "Import from Libris" }));
+  await screen.findByText("Online lookup is disabled on this device and no cached metadata was found. Enter details manually or import a library backup with cached metadata.");
+  expect(screen.queryByText(/No match in Open Library or Google Books/)).not.toBeInTheDocument();
   await saveManually();
 });

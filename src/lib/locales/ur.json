@@ -469,8 +469,9 @@
   "Found in local cache ({value}). Review the metadata before saving.": "مقامی کیش میں مل گیا ({value})۔ محفوظ کرنے سے پہلے میٹا ڈیٹا دیکھیں۔",
   "Metadata fetched from {value}. Review and correct it before saving.": "{value} سے میٹا ڈیٹا حاصل ہوا۔ محفوظ کرنے سے پہلے جانچیں اور درست کریں۔",
   "No match in Open Library or Google Books. Try a Libris book link or enter the details manually.": "Open Library یا Google Books میں کوئی نتیجہ نہیں ملا۔ Libris کتاب کا لنک آزمائیں یا تفصیلات خود درج کریں۔",
-  "No book metadata found, or online lookup is disabled. Enter the details manually.": "کتاب کا میٹا ڈیٹا نہیں ملا یا آن لائن تلاش بند ہے۔ تفصیلات خود درج کریں۔",
+  "No book metadata found on this Libris page. Enter the details manually.": "اس Libris صفحے پر کتاب کا میٹاڈیٹا نہیں ملا۔ تفصیلات خود درج کریں۔",
   "Lookup failed (offline or provider unavailable). Try a Libris book link or enter the details manually.": "تلاش ناکام (آف لائن یا فراہم کنندہ دستیاب نہیں)۔ Libris کتاب کا لنک آزمائیں یا تفصیلات خود درج کریں۔",
   "Libris book link (optional)": "Libris کتاب کا لنک (اختیاری)",
-  "Import from Libris": "Libris سے درآمد کریں"
+  "Import from Libris": "Libris سے درآمد کریں",
+  "Online lookup is disabled on this device and no cached metadata was found. Enter details manually or import a library backup with cached metadata.": "اس آلے پر آن لائن تلاش بند ہے اور محفوظ شدہ میٹاڈیٹا نہیں ملا۔ تفصیلات خود درج کریں یا محفوظ میٹاڈیٹا والا لائبریری بیک اپ درآمد کریں۔"
 }

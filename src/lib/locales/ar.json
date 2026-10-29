@@ -469,8 +469,9 @@
   "Found in local cache ({value}). Review the metadata before saving.": "عُثر عليه في الذاكرة المحلية ({value}). راجع البيانات قبل الحفظ.",
   "Metadata fetched from {value}. Review and correct it before saving.": "جُلبت البيانات من {value}. راجعها وصححها قبل الحفظ.",
   "No match in Open Library or Google Books. Try a Libris book link or enter the details manually.": "لا توجد نتيجة في Open Library أو Google Books. جرّب رابط كتاب من Libris أو أدخل التفاصيل يدويًا.",
-  "No book metadata found, or online lookup is disabled. Enter the details manually.": "لم تُعثر على بيانات الكتاب أو البحث عبر الإنترنت معطل. أدخل التفاصيل يدويًا.",
+  "No book metadata found on this Libris page. Enter the details manually.": "لم يتم العثور على بيانات وصفية للكتاب في صفحة Libris هذه. أدخل التفاصيل يدويًا.",
   "Lookup failed (offline or provider unavailable). Try a Libris book link or enter the details manually.": "فشل البحث (لا اتصال أو المزود غير متاح). جرّب رابط كتاب من Libris أو أدخل التفاصيل يدويًا.",
   "Libris book link (optional)": "رابط كتاب من Libris (اختياري)",
-  "Import from Libris": "استيراد من Libris"
+  "Import from Libris": "استيراد من Libris",
+  "Online lookup is disabled on this device and no cached metadata was found. Enter details manually or import a library backup with cached metadata.": "البحث عبر الإنترنت معطل على هذا الجهاز ولم يتم العثور على بيانات وصفية مخزنة محليًا. أدخل التفاصيل يدويًا أو استورد نسخة احتياطية للمكتبة تحتوي على بيانات وصفية مخزنة."
 }

@@ -39,6 +39,13 @@ and manual entry only, including when desktop settings are restored. Setting
 `metadata.lookup_enabled` to false blocks all online providers on desktop too;
 already-cached results remain readable.
 
+An uncached ISBN or Libris link with online providers disabled reports that lookup
+is disabled on this device, rather than claiming the providers have no match.
+On Android, fetch/import the metadata on desktop first and transfer a complete
+library ZIP through **Settings → Export for another device**, then import it on
+the phone. Scanning reads the ISBN; book details require cached metadata or manual
+entry when offline.
+
 ## Provider limits and privacy
 
 There is no background lookup, no request while typing, no universal ISBN

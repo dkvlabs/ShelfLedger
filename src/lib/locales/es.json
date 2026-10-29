@@ -469,8 +469,9 @@
   "Found in local cache ({value}). Review the metadata before saving.": "Encontrado en la caché local ({value}). Revisa los metadatos antes de guardar.",
   "Metadata fetched from {value}. Review and correct it before saving.": "Metadatos obtenidos de {value}. Revísalos y corrígelos antes de guardar.",
   "No match in Open Library or Google Books. Try a Libris book link or enter the details manually.": "Sin coincidencias en Open Library ni Google Books. Prueba un enlace de libro de Libris o introduce los datos.",
-  "No book metadata found, or online lookup is disabled. Enter the details manually.": "No se encontraron metadatos o la búsqueda en línea está desactivada. Introduce los datos.",
+  "No book metadata found on this Libris page. Enter the details manually.": "No se encontraron metadatos del libro en esta página de Libris. Introduce los datos manualmente.",
   "Lookup failed (offline or provider unavailable). Try a Libris book link or enter the details manually.": "Error de búsqueda (sin conexión o proveedor no disponible). Prueba un enlace de libro de Libris o introduce los datos.",
   "Libris book link (optional)": "Enlace de libro de Libris (opcional)",
-  "Import from Libris": "Importar desde Libris"
+  "Import from Libris": "Importar desde Libris",
+  "Online lookup is disabled on this device and no cached metadata was found. Enter details manually or import a library backup with cached metadata.": "La búsqueda en línea está desactivada en este dispositivo y no se encontraron metadatos en caché. Introduce los datos manualmente o importa una copia de seguridad de la biblioteca con metadatos en caché."
 }

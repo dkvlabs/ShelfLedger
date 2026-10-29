@@ -4,7 +4,8 @@ use scraper::{Html, Selector};
 use serde_json::Value;
 
 use super::{
-    cache_get, cache_put, enabled, fetch_text, parse_requested, publication_date, CACHE_PREFIX,
+    cache_get, cache_put, fetch_text, parse_requested, publication_date, require_online,
+    CACHE_PREFIX,
 };
 use crate::{
     error::{AppError, AppResult},
@@ -139,9 +140,7 @@ pub async fn lookup(
         check_expected(&cached, expected)?;
         return Ok(Some(cached));
     }
-    if !enabled(pool).await {
-        return Ok(None);
-    }
+    require_online(pool).await?;
     let Some(html) = fetch_text(&url, "Libris").await? else {
         return Ok(None);
     };
@@ -208,7 +207,10 @@ mod tests {
         )
         .await
         .unwrap();
-        assert!(lookup(&pool, URL, None).await.unwrap().is_none());
+        assert!(matches!(
+            lookup(&pool, URL, None).await,
+            Err(AppError::MetadataDisabled)
+        ));
         let result = parse_html(HTML).unwrap();
         cache_put(&pool, &format!("libris:url:{URL}"), &result)
             .await

@@ -18,6 +18,8 @@ pub enum AppError {
     Conflict(String),
     #[error("network error: {0}")]
     Network(String),
+    #[error("Online lookup is disabled on this device and no cached metadata was found. Enter details manually or import a library backup with cached metadata.")]
+    MetadataDisabled,
     #[error("io error: {0}")]
     Io(#[from] std::io::Error),
     #[error("{0}")]
@@ -34,6 +36,7 @@ impl AppError {
             AppError::NotFound(_) => "not_found",
             AppError::Conflict(_) => "conflict",
             AppError::Network(_) => "network",
+            AppError::MetadataDisabled => "metadata_disabled",
             AppError::Io(_) => "io",
             AppError::Other(_) => "other",
         }

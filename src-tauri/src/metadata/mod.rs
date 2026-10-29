@@ -98,15 +98,20 @@ async fn fetch_text(url: &str, provider: &str) -> AppResult<Option<String>> {
         .map_err(|_| AppError::Network(format!("{provider} response is not UTF-8")))
 }
 
-async fn enabled(pool: &SqlitePool) -> bool {
+async fn require_online(pool: &SqlitePool) -> AppResult<()> {
     // Even restored desktop preferences cannot enable Android networking.
-    !cfg!(target_os = "android")
+    if !cfg!(target_os = "android")
         && settings::get_json(pool, SETTING_ENABLED)
             .await
             .ok()
             .flatten()
             .and_then(|v| v.as_bool())
             .unwrap_or(true)
+    {
+        Ok(())
+    } else {
+        Err(AppError::MetadataDisabled)
+    }
 }
 
 async fn cache_get(pool: &SqlitePool, key: &str) -> AppResult<Option<LookupIsbnResult>> {
@@ -191,9 +196,7 @@ async fn lookup_with_providers(
             }
         }
     }
-    if !enabled(pool).await {
-        return Ok(None);
-    }
+    require_online(pool).await?;
     let result = match primary.await {
         Ok(Some(result)) => Some(result),
         first => match secondary.await {
@@ -253,15 +256,17 @@ mod tests {
         settings::set_json(&pool, SETTING_ENABLED, &serde_json::json!(false))
             .await
             .unwrap();
-        assert!(lookup_with_providers(
-            &pool,
-            "9786067882629",
-            async { panic!("network") },
-            async { panic!("network") }
-        )
-        .await
-        .unwrap()
-        .is_none());
+        let error =
+            lookup_with_providers(&pool, "9786067882629", async { panic!("network") }, async {
+                panic!("network")
+            })
+            .await
+            .unwrap_err();
+        assert!(matches!(error, AppError::MetadataDisabled));
+        assert_eq!(
+            serde_json::to_value(error).unwrap()["kind"],
+            "metadata_disabled"
+        );
         cache_put(&pool, "openlibrary:isbn:9786067882629", &book())
             .await
             .unwrap();
@@ -297,7 +302,10 @@ mod tests {
         cache_put(&pool, "openlibrary:isbn:9786067882629", &result)
             .await
             .unwrap();
-        assert!(lookup_isbn(&pool, "9786067882629").await.unwrap().is_none());
+        assert!(matches!(
+            lookup_isbn(&pool, "9786067882629").await,
+            Err(AppError::MetadataDisabled)
+        ));
     }
     #[tokio::test]
     async fn primary_match_skips_fallback_and_missing_is_distinct_from_failure() {

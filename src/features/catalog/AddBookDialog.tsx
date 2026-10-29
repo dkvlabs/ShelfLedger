@@ -154,14 +154,16 @@ export default function AddBookDialog({
         });
       } else {
         setLookupNote({ key: request.url
-          ? "No book metadata found, or online lookup is disabled. Enter the details manually."
+          ? "No book metadata found on this Libris page. Enter the details manually."
           : "No match in Open Library or Google Books. Try a Libris book link or enter the details manually." });
       }
     },
     onError: (err, request) => {
       if (request.epoch !== lookupEpoch.current) return;
       const msg =
-        err instanceof CommandError && err.kind === "network"
+        err instanceof CommandError && err.kind === "metadata_disabled"
+          ? "Online lookup is disabled on this device and no cached metadata was found. Enter details manually or import a library backup with cached metadata."
+          : err instanceof CommandError && err.kind === "network"
           ? "Lookup failed (offline or provider unavailable). Try a Libris book link or enter the details manually."
           : (err as Error).message;
       setLookupNote({ key: msg });

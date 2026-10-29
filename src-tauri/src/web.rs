@@ -682,6 +682,7 @@ fn status_for(err: &AppError) -> StatusCode {
         AppError::NotFound(_) => StatusCode::NOT_FOUND,
         AppError::Conflict(_) => StatusCode::CONFLICT,
         AppError::Network(_) => StatusCode::BAD_GATEWAY,
+        AppError::MetadataDisabled => StatusCode::FORBIDDEN,
         _ => StatusCode::INTERNAL_SERVER_ERROR,
     }
 }
@@ -836,6 +837,10 @@ mod tests {
         assert_eq!(
             status_for(&AppError::Network("x".into())),
             StatusCode::BAD_GATEWAY
+        );
+        assert_eq!(
+            status_for(&AppError::MetadataDisabled),
+            StatusCode::FORBIDDEN
         );
         assert_eq!(
             status_for(&AppError::Other("x".into())),

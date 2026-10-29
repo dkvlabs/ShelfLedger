@@ -469,8 +469,9 @@
   "Found in local cache ({value}). Review the metadata before saving.": "Found in local cache ({value}). Review the metadata before saving.",
   "Metadata fetched from {value}. Review and correct it before saving.": "Metadata fetched from {value}. Review and correct it before saving.",
   "No match in Open Library or Google Books. Try a Libris book link or enter the details manually.": "No match in Open Library or Google Books. Try a Libris book link or enter the details manually.",
-  "No book metadata found, or online lookup is disabled. Enter the details manually.": "No book metadata found, or online lookup is disabled. Enter the details manually.",
+  "No book metadata found on this Libris page. Enter the details manually.": "No book metadata found on this Libris page. Enter the details manually.",
   "Lookup failed (offline or provider unavailable). Try a Libris book link or enter the details manually.": "Lookup failed (offline or provider unavailable). Try a Libris book link or enter the details manually.",
   "Libris book link (optional)": "Libris book link (optional)",
-  "Import from Libris": "Import from Libris"
+  "Import from Libris": "Import from Libris",
+  "Online lookup is disabled on this device and no cached metadata was found. Enter details manually or import a library backup with cached metadata.": "Online lookup is disabled on this device and no cached metadata was found. Enter details manually or import a library backup with cached metadata."
 }

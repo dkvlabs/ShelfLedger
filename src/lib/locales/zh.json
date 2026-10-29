@@ -469,8 +469,9 @@
   "Found in local cache ({value}). Review the metadata before saving.": "在本地缓存中找到（{value}）。保存前请检查元数据。",
   "Metadata fetched from {value}. Review and correct it before saving.": "已从 {value} 获取元数据。保存前请检查并修正。",
   "No match in Open Library or Google Books. Try a Libris book link or enter the details manually.": "Open Library 和 Google Books 中没有匹配项。请尝试 Libris 图书链接或手动输入详情。",
-  "No book metadata found, or online lookup is disabled. Enter the details manually.": "未找到图书元数据，或在线查询已禁用。请手动输入详情。",
+  "No book metadata found on this Libris page. Enter the details manually.": "此 Libris 页面上未找到图书元数据。请手动输入详情。",
   "Lookup failed (offline or provider unavailable). Try a Libris book link or enter the details manually.": "查询失败（离线或服务不可用）。请尝试 Libris 图书链接或手动输入详情。",
   "Libris book link (optional)": "Libris 图书链接（可选）",
-  "Import from Libris": "从 Libris 导入"
+  "Import from Libris": "从 Libris 导入",
+  "Online lookup is disabled on this device and no cached metadata was found. Enter details manually or import a library backup with cached metadata.": "此设备已禁用在线查询，且未找到本地缓存的元数据。请手动输入详情，或导入包含缓存元数据的书库备份。"
 }

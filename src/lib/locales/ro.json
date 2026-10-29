@@ -469,8 +469,9 @@
   "Found in local cache ({value}). Review the metadata before saving.": "Găsit în memoria locală ({value}). Verifică metadatele înainte de salvare.",
   "Metadata fetched from {value}. Review and correct it before saving.": "Metadate preluate de la {value}. Verifică și corectează înainte de salvare.",
   "No match in Open Library or Google Books. Try a Libris book link or enter the details manually.": "Nicio potrivire în Open Library sau Google Books. Încearcă un link de carte Libris sau introdu detaliile manual.",
-  "No book metadata found, or online lookup is disabled. Enter the details manually.": "Nu s-au găsit metadate sau căutarea online este dezactivată. Introdu detaliile manual.",
+  "No book metadata found on this Libris page. Enter the details manually.": "Nu s-au găsit metadate de carte pe această pagină Libris. Introdu detaliile manual.",
   "Lookup failed (offline or provider unavailable). Try a Libris book link or enter the details manually.": "Căutarea a eșuat (fără internet sau furnizor indisponibil). Încearcă un link de carte Libris sau introdu detaliile manual.",
   "Libris book link (optional)": "Link de carte Libris (opțional)",
-  "Import from Libris": "Importă din Libris"
+  "Import from Libris": "Importă din Libris",
+  "Online lookup is disabled on this device and no cached metadata was found. Enter details manually or import a library backup with cached metadata.": "Căutarea online este dezactivată pe acest dispozitiv și nu s-au găsit metadate în memoria locală. Introdu detaliile manual sau importă o copie de siguranță a bibliotecii cu metadate salvate."
 }
