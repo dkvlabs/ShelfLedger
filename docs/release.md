@@ -197,8 +197,8 @@ Manual release gates still apply:
   schema changes, and verify the private reporting channel in `SECURITY.md`.
 
 Local checks cannot establish Windows/Linux packaging, actual GitHub runner
-results, Developer ID notarization or physical-camera consent. Inspect the first
-live workflow and complete the corresponding installation checks.
+results, Developer ID notarization or physical-camera consent. The native packaging workflow has now passed on all five targets; complete
+the corresponding clean-machine installation and physical-camera checks.
 
 ## v0.1.1 installer recovery
 
@@ -212,3 +212,21 @@ to the existing release. The two automatic source archives are not installers.
 Use **Actions → Release → Run workflow → main**, set `retry_tag` to `v0.1.1`
 and check `repair_published`. Watch the checks, five installer jobs and publish
 job; downloads appear in **Releases → v0.1.1 → Assets** after all builds pass.
+
+### Verified live result — 29.10.2026
+
+[Recovery run 40803465058](https://github.com/dkvlabs/ShelfLedger/actions/runs/40803465058)
+passed checks, all five native installer jobs and publication.
+[v0.1.1](https://github.com/dkvlabs/ShelfLedger/releases/tag/v0.1.1) now contains
+seven installers and `SHA256SUMS`: Mac ARM64/Intel DMGs, Windows x64 EXE, and
+Linux x64/ARM64 AppImage and Debian packages. The published checksum list was
+checked against GitHub's digest for every asset and the source tag remains
+`6e0491243571306af13e12019f9e95d59cd6348f`.
+
+Mac packaging compiles first, applies an ad-hoc signature to both executables
+before Tauri creates the bundle (including the Intel cross-compiled helper),
+then bundles `app,dmg` so the `.app` remains available for strict signature
+verification. Tauri applies the configured final identity and camera
+entitlements during bundling. These releases use ad-hoc Mac signatures and
+unsigned Windows installers; Developer ID notarization, Authenticode signing and
+clean-machine installation acceptance remain outstanding.
