@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { assetNames, buildArguments, checksumAssets, releaseNotes, signingEnvironment, stageAssets, validateVersions } from './release.mjs';
+import { assetNames, buildArguments, checksumAssets, macPackagingSteps, releaseNotes, signingEnvironment, stageAssets, validateVersions } from './release.mjs';
 
 function fixture(t) {
   const root = mkdtempSync(join(tmpdir(), 'shelfledger-release-'));
@@ -18,11 +18,18 @@ function fixture(t) {
   return root;
 }
 
-test('Mac builds retain the app for signature checks while published assets remain DMGs', () => {
+test('Mac builds sign both executables before bundling and retain the app for signature checks', () => {
   for (const platform of ['macos-arm64', 'macos-x64']) {
     const args = buildArguments(platform);
-    assert.equal(args[args.indexOf('--bundles') + 1], 'app,dmg');
+    assert.ok(args.includes('--no-bundle'));
     assert.ok(args.includes('--locked'));
+    const steps = macPackagingSteps('/source', platform);
+    assert.equal(steps.length, 3);
+    assert.equal(steps[0][0], 'codesign');
+    assert.ok(steps[0][1].at(-1).endsWith('shelfledger-web'));
+    assert.equal(steps[1][0], 'codesign');
+    assert.ok(steps[1][1].at(-1).endsWith('shelfledger'));
+    assert.deepEqual(steps[2][1].slice(-2), ['--bundles', 'app,dmg']);
   }
   assert.ok(assetNames('0.1.1').every(name => !name.endsWith('.app')));
   assert.ok(buildArguments('windows-x64').includes('nsis'));

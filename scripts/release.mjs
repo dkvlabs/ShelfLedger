@@ -113,10 +113,23 @@ export function signingEnvironment(environment) {
 export function buildArguments(platform) {
   const spec = platforms[platform];
   if (!spec) throw new Error(`Unknown release platform: ${platform}`);
-  // Tauri deletes the intermediate .app after a DMG-only build. Retain it so
-  // signature/notarization verification can inspect the packaged application.
-  const bundles = platform.startsWith('macos-') ? ['app', ...spec.bundles] : spec.bundles;
-  return ['tauri', 'build', '--ci', '--target', spec.target, '--bundles', bundles.join(','), '--', '--locked'];
+  const packaging = platform.startsWith('macos-') ? ['--no-bundle'] : ['--bundles', spec.bundles.join(',')];
+  return ['tauri', 'build', '--ci', '--target', spec.target, ...packaging, '--', '--locked'];
+}
+
+export function macPackagingSteps(root, platform) {
+  const spec = platforms[platform];
+  if (!spec || !platform.startsWith('macos-')) throw new Error('Expected a macOS release platform');
+  const directory = join(root, 'src-tauri/target', spec.target, 'release');
+  // Intel cross-compiled executables have no linker signature. Sign each
+  // outside the bundle first, so signing the main executable cannot encounter
+  // an unsigned nested helper. Tauri then applies its configured final identity
+  // and camera entitlements to the executables and app, and notarizes if set up.
+  return [
+    ...['shelfledger-web', 'shelfledger'].map(binary => ['codesign', ['--force', '--sign', '-', join(directory, binary)]]),
+    // Retain the .app: a DMG-only build deletes it before our verification.
+    ['pnpm', ['tauri', 'bundle', '--ci', '--target', spec.target, '--bundles', 'app,dmg']],
+  ];
 }
 
 function run(command, args, env = process.env) {
@@ -141,6 +154,7 @@ function main() {
     const env = process.platform === 'darwin' ? signingEnvironment(process.env) : process.env;
     run('pnpm', buildArguments(argument), env);
     if (process.platform === 'darwin') {
+      for (const [command, args] of macPackagingSteps(root, argument)) run(command, args, env);
       const app = join(root, 'src-tauri/target', spec.target, 'release/bundle/macos/ShelfLedger.app');
       run('codesign', ['--verify', '--deep', '--strict', app]);
       if (env.APPLE_CERTIFICATE) run('xcrun', ['stapler', 'validate', app]);
