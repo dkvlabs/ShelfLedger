@@ -1,7 +1,7 @@
 {
   "name": "shelfledger",
   "private": true,
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Local-first personal library, reading journal, and copy ledger",
   "license": "MIT",
   "type": "module",
