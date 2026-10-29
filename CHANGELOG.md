@@ -4,6 +4,30 @@ All notable changes to ShelfLedger are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning is
 [SemVer](https://semver.org/).
 
+## [0.2.0](https://github.com/dkvlabs/ShelfLedger/compare/v0.1.1...v0.2.0) (2026-10-29)
+
+
+### Features
+
+* **android:** add offline app and portable library transfer ([b7a65e2](https://github.com/dkvlabs/ShelfLedger/commit/b7a65e2bb7aa023de66805cea3c6f72f8972b0e4))
+
+
+### Fixes
+
+* **ci:** skip retired Android SDK tools package ([66bf7be](https://github.com/dkvlabs/ShelfLedger/commit/66bf7bee409196ff3cafdeee507cb43204b534e8))
+* **release:** build and recover versioned native installers ([d17d979](https://github.com/dkvlabs/ShelfLedger/commit/d17d979750c92f76cedaa1f2ed20fa2113a9a2f0))
+* **release:** build and recover versioned native installers ([98a69e5](https://github.com/dkvlabs/ShelfLedger/commit/98a69e5ac73b541c0427bbb4543679f3c7a42d7f))
+* **release:** retain macOS app for signature verification ([8dab842](https://github.com/dkvlabs/ShelfLedger/commit/8dab84217a3d7d7562c0a10672270706083285bd))
+* **release:** retain macOS app for signature verification ([ca19918](https://github.com/dkvlabs/ShelfLedger/commit/ca1991861bcef28491bce26e912836ba23f5064d))
+* **release:** sign cross-compiled Mac helpers before bundling ([41d229f](https://github.com/dkvlabs/ShelfLedger/commit/41d229fe35c5698c023921523c43180a1397608b))
+* **release:** sign cross-compiled Mac helpers before bundling ([c0d5e2e](https://github.com/dkvlabs/ShelfLedger/commit/c0d5e2e731bca9c53745e7c4cce9c4664194f624))
+
+
+### Documentation
+
+* **release:** record verified native installer publication ([ecb0157](https://github.com/dkvlabs/ShelfLedger/commit/ecb0157019427a973c6aed4be4ca003cd2eb6530))
+* **release:** record verified native installer publication ([d11351e](https://github.com/dkvlabs/ShelfLedger/commit/d11351ee76a179f914b6827b3870dfe98ffeceb3))
+
 ## [0.1.1](https://github.com/dkvlabs/ShelfLedger/compare/v0.1.0...v0.1.1) (2026-10-27)
 
 
