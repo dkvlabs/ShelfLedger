@@ -8,6 +8,7 @@ export const platforms = {
   'macos-arm64': { target: 'aarch64-apple-darwin', bundles: ['dmg'] },
   'macos-x64': { target: 'x86_64-apple-darwin', bundles: ['dmg'] },
   'windows-x64': { target: 'x86_64-pc-windows-msvc', bundles: ['nsis'] },
+  'linux-arm64': { target: 'aarch64-unknown-linux-gnu', bundles: ['deb', 'appimage'] },
   'linux-x64': { target: 'x86_64-unknown-linux-gnu', bundles: ['deb', 'appimage'] },
 };
 const extensions = { dmg: '.dmg', nsis: '.exe', deb: '.deb', appimage: '.AppImage' };
@@ -85,8 +86,8 @@ export function checksumAssets(directory, version) {
 
 export function releaseNotes(changelog, version, repository) {
   if (!/^[A-Za-z0-9][A-Za-z0-9-]*\/[A-Za-z0-9][A-Za-z0-9_.-]*$/.test(repository)) throw new Error('Invalid GitHub repository');
-  const sections = changelog.split(/^## /m).slice(1);
-  const section = sections.find((text) => new RegExp(`^\\[?${version.replaceAll('.', '\\.')}\\]?(?:\\s|$)`).test(text));
+  const sections = changelog.replaceAll('\r\n', '\n').split(/^## /m).slice(1);
+  const section = sections.find((text) => new RegExp(`^\\[?${version.replaceAll('.', '\\.')}\\]?(?:\\([^\\n]*\\))?(?:\\s|$)`).test(text));
   if (!section) throw new Error(`Missing changelog section for ${version}`);
   const content = (text) => text.includes('\n') ? text.slice(text.indexOf('\n') + 1).trim() : '';
   let notes = content(section);
@@ -116,7 +117,7 @@ function run(command, args, env = process.env) {
 }
 
 function main() {
-  const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+  const root = process.env.RELEASE_ROOT ? resolve(process.env.RELEASE_ROOT) : resolve(dirname(fileURLToPath(import.meta.url)), '..');
   const [command = 'check', argument] = process.argv.slice(2);
   const version = validateVersions(root, process.env.RELEASE_TAG);
   if (command === 'check') console.log(`Release versions agree: ${version}`);

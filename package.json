@@ -14,7 +14,7 @@
     "lint": "pnpm build",
     "test:web": "vitest run",
     "test:rust": "cargo test --manifest-path src-tauri/Cargo.toml",
-    "test:release": "node --test scripts/release.test.mjs",
+    "test:release": "node --test scripts/release.test.mjs scripts/release-github.test.mjs",
     "release:check": "node scripts/release.mjs check",
     "web:server": "cargo run --manifest-path src-tauri/Cargo.toml --bin shelfledger-web",
     "tauri": "tauri",
