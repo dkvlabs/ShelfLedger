@@ -430,7 +430,7 @@ pub struct DuplicateQuery {
     pub author_name: Option<String>,
 }
 
-/// Metadata lookup result from a provider (Open Library) or cache.
+/// Metadata lookup result from Open Library, Google Books, Libris or local cache.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LookupIsbnResult {

@@ -195,7 +195,6 @@
   "Record another physical copy of this work with its condition and purchase details.": "Catat eksemplar fisik lain beserta kondisi dan detail pembelian.",
   "I own a copy (uncheck for tracking-only / wishlist)": "Saya punya eksemplar (hapus centang untuk pelacakan/daftar keinginan)",
   "Look up": "Cari",
-  "Look up by ISBN (Open Library, works offline via cache or manual entry), then record the owned copy.": "Cari lewat ISBN (Open Library; luring melalui cache atau entri manual), lalu catat eksemplar.",
   "Possible duplicates in your library": "Kemungkinan duplikat di perpustakaan",
   "Add as a new work anyway": "Tetap tambahkan sebagai karya baru",
   "That ISBN checksum is not valid.": "Checksum ISBN tidak valid.",
@@ -465,5 +464,13 @@
   "Save cancelled. Your backup is ready; use Save file to try again.": "Penyimpanan dibatalkan. Cadangan siap; gunakan Simpan berkas untuk mencoba lagi.",
   "Save file": "Simpan berkas",
   "File saved.": "Berkas disimpan.",
-  "Camera access is blocked. On Android, open Settings → Apps → ShelfLedger → Permissions → Camera, allow access, then retry.": "Akses kamera diblokir. Di Android, buka Setelan → Aplikasi → ShelfLedger → Izin → Kamera, izinkan akses, lalu coba lagi."
+  "Camera access is blocked. On Android, open Settings → Apps → ShelfLedger → Permissions → Camera, allow access, then retry.": "Akses kamera diblokir. Di Android, buka Setelan → Aplikasi → ShelfLedger → Izin → Kamera, izinkan akses, lalu coba lagi.",
+  "Look up an ISBN with Open Library and Google Books, or import a Libris book link. Offline, use cached data or enter details manually.": "Cari ISBN di Open Library dan Google Books, atau impor tautan buku Libris. Saat luring, gunakan cache atau isi detail secara manual.",
+  "Found in local cache ({value}). Review the metadata before saving.": "Ditemukan di cache lokal ({value}). Periksa metadata sebelum menyimpan.",
+  "Metadata fetched from {value}. Review and correct it before saving.": "Metadata diambil dari {value}. Periksa dan koreksi sebelum menyimpan.",
+  "No match in Open Library or Google Books. Try a Libris book link or enter the details manually.": "Tidak ada hasil di Open Library atau Google Books. Coba tautan buku Libris atau isi detail secara manual.",
+  "No book metadata found, or online lookup is disabled. Enter the details manually.": "Metadata buku tidak ditemukan, atau pencarian daring dinonaktifkan. Isi detail secara manual.",
+  "Lookup failed (offline or provider unavailable). Try a Libris book link or enter the details manually.": "Pencarian gagal (luring atau penyedia tidak tersedia). Coba tautan buku Libris atau isi detail secara manual.",
+  "Libris book link (optional)": "Tautan buku Libris (opsional)",
+  "Import from Libris": "Impor dari Libris"
 }

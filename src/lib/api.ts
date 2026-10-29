@@ -203,6 +203,8 @@ export const api = {
   // metadata
   lookupIsbn: (isbn: string): Promise<LookupIsbnResult | null> =>
     call("lookup_isbn", { isbn }),
+  lookupLibrisBook: (url: string, isbn: string | null): Promise<LookupIsbnResult | null> =>
+    call("lookup_libris_book", { url, isbn }),
 
   // reading (Phase 2)
   listReadingSessions: (status?: string | null): Promise<ReadingSessionDto[]> =>

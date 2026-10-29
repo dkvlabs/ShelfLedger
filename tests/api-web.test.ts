@@ -51,6 +51,13 @@ describe("web transport (browser mode)", () => {
     expect(JSON.parse(String(init.body))).toEqual({ localToday: "2026-10-27" });
   });
 
+  it("sends the Libris URL and optional expected ISBN through typed IPC", async () => {
+    const fn = mockFetch(200, null);
+    await api.lookupLibrisBook("https://www.libris.ro/carte/book/1", "9786067882629");
+    const [, init] = fn.mock.calls.find(([url]) => url === "/api/lookup_libris_book")!;
+    expect(JSON.parse(String(init?.body))).toEqual({ url: "https://www.libris.ro/carte/book/1", isbn: "9786067882629" });
+  });
+
   it("maps {kind, message} error bodies onto CommandError", async () => {
     mockFetch(409, { kind: "conflict", message: "copy is already lent out" });
     const err = (await api.getSettings().catch((e) => e)) as CommandError;

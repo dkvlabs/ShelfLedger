@@ -195,7 +195,6 @@
   "Record another physical copy of this work with its condition and purchase details.": "Record another physical copy of this work with its condition and purchase details.",
   "I own a copy (uncheck for tracking-only / wishlist)": "I own a copy (uncheck for tracking-only / wishlist)",
   "Look up": "Look up",
-  "Look up by ISBN (Open Library, works offline via cache or manual entry), then record the owned copy.": "Look up by ISBN (Open Library, works offline via cache or manual entry), then record the owned copy.",
   "Possible duplicates in your library": "Possible duplicates in your library",
   "Add as a new work anyway": "Add as a new work anyway",
   "That ISBN checksum is not valid.": "That ISBN checksum is not valid.",
@@ -465,5 +464,13 @@
   "Save cancelled. Your backup is ready; use Save file to try again.": "Save cancelled. Your backup is ready; use Save file to try again.",
   "Save file": "Save file",
   "File saved.": "File saved.",
-  "Camera access is blocked. On Android, open Settings → Apps → ShelfLedger → Permissions → Camera, allow access, then retry.": "Camera access is blocked. On Android, open Settings → Apps → ShelfLedger → Permissions → Camera, allow access, then retry."
+  "Camera access is blocked. On Android, open Settings → Apps → ShelfLedger → Permissions → Camera, allow access, then retry.": "Camera access is blocked. On Android, open Settings → Apps → ShelfLedger → Permissions → Camera, allow access, then retry.",
+  "Look up an ISBN with Open Library and Google Books, or import a Libris book link. Offline, use cached data or enter details manually.": "Look up an ISBN with Open Library and Google Books, or import a Libris book link. Offline, use cached data or enter details manually.",
+  "Found in local cache ({value}). Review the metadata before saving.": "Found in local cache ({value}). Review the metadata before saving.",
+  "Metadata fetched from {value}. Review and correct it before saving.": "Metadata fetched from {value}. Review and correct it before saving.",
+  "No match in Open Library or Google Books. Try a Libris book link or enter the details manually.": "No match in Open Library or Google Books. Try a Libris book link or enter the details manually.",
+  "No book metadata found, or online lookup is disabled. Enter the details manually.": "No book metadata found, or online lookup is disabled. Enter the details manually.",
+  "Lookup failed (offline or provider unavailable). Try a Libris book link or enter the details manually.": "Lookup failed (offline or provider unavailable). Try a Libris book link or enter the details manually.",
+  "Libris book link (optional)": "Libris book link (optional)",
+  "Import from Libris": "Import from Libris"
 }

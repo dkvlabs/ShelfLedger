@@ -12,7 +12,7 @@ SQL from the frontend.
 
 The Android application shares these typed commands and SQLite database. Its
 release manifest has no INTERNET permission and disables OS cloud backups.
-The Open Library provider is always disabled on Android, while imported caches
+All online metadata providers are always disabled on Android, while imported caches
 remain readable. React Query uses `networkMode: always` for local IPC operations.
 Native document commands stage bounded content-provider streams under app data;
 only generated export/backup files may be copied to a destination chosen through
@@ -39,8 +39,14 @@ and a validated ISO currency; reports group by currency and never invent rates.
 
 ## Offline and privacy
 
-All core workflows use SQLite without network. Open Library lookup happens only
-on request, is cached, and leaves manual entry available after failure. Cover URLs
+All core workflows use SQLite without network. ISBN lookup tries Open Library
+then Google Books on explicit request, with exact edition matching. A separate
+user-supplied Libris product link imports Book JSON-LD and rejects ISBN mismatches.
+Shared bounded HTTPS requests restrict providers and redirects; all successful
+results are cached, including compatibility with older Open Library cache keys.
+Every provider obeys `metadata.lookup_enabled`, and Android blocks network
+lookups regardless of restored settings. Manual entry retains typed ISBNs after
+failed lookups. See [metadata.md](metadata.md). Cover URLs
 are not fetched automatically. Display fonts and decorative artwork are bundled.
 Camera scanning requests video only when opened, preserves platform consent,
 handles denied/missing/busy cameras and releases streams when closed. No scanning

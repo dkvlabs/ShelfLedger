@@ -195,7 +195,6 @@
   "Record another physical copy of this work with its condition and purchase details.": "এই রচনার আরেকটি ছাপা কপির অবস্থা ও কেনার তথ্য নথিভুক্ত করুন।",
   "I own a copy (uncheck for tracking-only / wishlist)": "আমার একটি কপি আছে (শুধু অনুসরণ বা ইচ্ছেতালিকার জন্য টিক সরান)",
   "Look up": "খুঁজুন",
-  "Look up by ISBN (Open Library, works offline via cache or manual entry), then record the owned copy.": "ISBN দিয়ে খুঁজুন (Open Library; অফলাইনে ক্যাশ বা হাতে এন্ট্রি), তারপর নিজের কপি নথিভুক্ত করুন।",
   "Possible duplicates in your library": "পাঠাগারে সম্ভাব্য সদৃশ বই",
   "Add as a new work anyway": "তবুও নতুন রচনা হিসেবে যোগ করুন",
   "That ISBN checksum is not valid.": "এই ISBN চেকসাম সঠিক নয়।",
@@ -465,5 +464,13 @@
   "Save cancelled. Your backup is ready; use Save file to try again.": "সংরক্ষণ বাতিল হয়েছে। ব্যাকআপ প্রস্তুত; আবার চেষ্টা করতে ফাইল সংরক্ষণ করুন বেছে নিন।",
   "Save file": "ফাইল সংরক্ষণ করুন",
   "File saved.": "ফাইল সংরক্ষিত হয়েছে।",
-  "Camera access is blocked. On Android, open Settings → Apps → ShelfLedger → Permissions → Camera, allow access, then retry.": "ক্যামেরা ব্যবহারের অনুমতি নেই। Android-এ সেটিংস → অ্যাপস → ShelfLedger → অনুমতি → ক্যামেরা খুলে অনুমতি দিন, তারপর আবার চেষ্টা করুন।"
+  "Camera access is blocked. On Android, open Settings → Apps → ShelfLedger → Permissions → Camera, allow access, then retry.": "ক্যামেরা ব্যবহারের অনুমতি নেই। Android-এ সেটিংস → অ্যাপস → ShelfLedger → অনুমতি → ক্যামেরা খুলে অনুমতি দিন, তারপর আবার চেষ্টা করুন।",
+  "Look up an ISBN with Open Library and Google Books, or import a Libris book link. Offline, use cached data or enter details manually.": "Open Library এবং Google Books-এ ISBN খুঁজুন অথবা Libris বইয়ের লিংক আমদানি করুন। অফলাইনে ক্যাশ ব্যবহার করুন অথবা নিজে তথ্য লিখুন।",
+  "Found in local cache ({value}). Review the metadata before saving.": "স্থানীয় ক্যাশে পাওয়া গেছে ({value})। সংরক্ষণের আগে মেটাডেটা যাচাই করুন।",
+  "Metadata fetched from {value}. Review and correct it before saving.": "{value} থেকে মেটাডেটা আনা হয়েছে। সংরক্ষণের আগে যাচাই ও সংশোধন করুন।",
+  "No match in Open Library or Google Books. Try a Libris book link or enter the details manually.": "Open Library বা Google Books-এ মিল পাওয়া যায়নি। Libris বইয়ের লিংক চেষ্টা করুন অথবা নিজে তথ্য লিখুন।",
+  "No book metadata found, or online lookup is disabled. Enter the details manually.": "বইয়ের মেটাডেটা পাওয়া যায়নি অথবা অনলাইন অনুসন্ধান বন্ধ আছে। নিজে তথ্য লিখুন।",
+  "Lookup failed (offline or provider unavailable). Try a Libris book link or enter the details manually.": "অনুসন্ধান ব্যর্থ (অফলাইন বা প্রদানকারী অনুপলব্ধ)। Libris বইয়ের লিংক চেষ্টা করুন অথবা নিজে তথ্য লিখুন।",
+  "Libris book link (optional)": "Libris বইয়ের লিংক (ঐচ্ছিক)",
+  "Import from Libris": "Libris থেকে আমদানি করুন"
 }

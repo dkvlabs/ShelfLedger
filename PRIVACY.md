@@ -5,7 +5,7 @@ financial records live in a SQLite database and media files inside your operatin
 system's user-data directory on your own computer or Android device.
 
 The Android release has no INTERNET permission and disables Android's automatic
-cloud backup. Open Library fetching is disabled on Android; transferred metadata
+cloud backup. All online metadata fetching is disabled on Android; transferred metadata
 caches remain usable offline. Development builds allow a local Vite server.
 
 ## What we collect
@@ -17,10 +17,19 @@ and no tracking of any kind.
 
 Only what you explicitly trigger:
 
-- **ISBN metadata lookup (Open Library):** when you press "Look up", the app sends
-  the ISBN you typed to openlibrary.org with a User-Agent identifying the app.
-  Responses are cached locally so repeat lookups work offline. You can disable
-  this provider in settings; manual entry always works offline.
+- **ISBN metadata lookup:** when you press "Look up", the app sends the ISBN
+  you typed to openlibrary.org, then www.googleapis.com (Google Books) if Open
+  Library has no match or fails. Only checksum-valid matching editions are used.
+  Requests identify ShelfLedger in the User-Agent. Successful responses are
+  cached locally so repeat lookups work offline. No requests run while typing.
+- **Libris metadata import:** only when you press "Import from Libris", the app
+  fetches the supplied HTTPS book page from www.libris.ro. It reads factual Book
+  metadata (ISBN, title, authors, publisher, publication date, language, pages),
+  checks an entered ISBN against it, and caches the result locally. It does not
+  load images, execute page scripts, fetch tracking resources, or import reviews
+  and prices from the page.
+  Manual entry always works offline. The `metadata.lookup_enabled` setting
+  disables all provider requests; Android enforces this regardless of settings.
 - **OLX links:** clicking a comparison search or listing opens OLX in your
   browser, sharing the chosen ISBN/title/author or URL with OLX. Saved comparisons
   remain local; no pages are fetched or monitored in the background.
@@ -46,12 +55,12 @@ manual ISBN entry without camera access.
 
 ## Third-party content
 
-Metadata fetched from Open Library remains subject to its own
-terms; the app caches it locally for your personal use and does not redistribute
-it.
+Metadata fetched from Open Library, Google Books, or Libris remains subject to
+the respective provider’s terms. The app caches factual metadata locally for
+your personal use; your explicit library exports include these caches.
 
-OLX’s own privacy policy applies in your browser. ShelfLedger does not scrape
-pages, embed OLX, or send your library or saved comparisons to OLX.
+OLX’s own privacy policy applies in your browser. ShelfLedger does not fetch
+OLX pages, embed OLX, or send your library or saved comparisons to OLX.
 
 ## Changes
 

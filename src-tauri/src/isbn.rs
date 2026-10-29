@@ -151,6 +151,10 @@ mod tests {
     fn valid_isbn13_accepted() {
         assert!(parse("978-0-306-40615-7").is_some());
         assert!(parse("9780306406157").is_some());
+        assert_eq!(
+            parse("978-606-788-262-9").unwrap().isbn13.as_deref(),
+            Some("9786067882629")
+        );
     }
 
     #[test]

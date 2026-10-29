@@ -195,7 +195,6 @@
   "Record another physical copy of this work with its condition and purchase details.": "اس تخلیق کا ایک اور طبعی نسخہ، اس کی حالت اور خرید کی تفصیل درج کریں۔",
   "I own a copy (uncheck for tracking-only / wishlist)": "میرے پاس نسخہ ہے (صرف سراغ یا خواہش کی فہرست کے لیے نشان ہٹائیں)",
   "Look up": "تلاش کریں",
-  "Look up by ISBN (Open Library, works offline via cache or manual entry), then record the owned copy.": "ISBN سے تلاش کریں (Open Library؛ آف لائن کیش یا دستی اندراج)، پھر اپنا نسخہ درج کریں۔",
   "Possible duplicates in your library": "آپ کے کتب خانے میں ممکنہ نقلیں",
   "Add as a new work anyway": "پھر بھی نئی تخلیق کے طور پر شامل کریں",
   "That ISBN checksum is not valid.": "اس ISBN کا چیک سم درست نہیں۔",
@@ -465,5 +464,13 @@
   "Save cancelled. Your backup is ready; use Save file to try again.": "محفوظ کرنا منسوخ ہو گیا۔ بیک اپ تیار ہے؛ دوبارہ کوشش کے لیے فائل محفوظ کریں منتخب کریں۔",
   "Save file": "فائل محفوظ کریں",
   "File saved.": "فائل محفوظ ہو گئی۔",
-  "Camera access is blocked. On Android, open Settings → Apps → ShelfLedger → Permissions → Camera, allow access, then retry.": "کیمرے تک رسائی مسدود ہے۔ Android پر سیٹنگز → ایپس → ShelfLedger → اجازتیں → کیمرا کھولیں، رسائی کی اجازت دیں، پھر دوبارہ کوشش کریں۔"
+  "Camera access is blocked. On Android, open Settings → Apps → ShelfLedger → Permissions → Camera, allow access, then retry.": "کیمرے تک رسائی مسدود ہے۔ Android پر سیٹنگز → ایپس → ShelfLedger → اجازتیں → کیمرا کھولیں، رسائی کی اجازت دیں، پھر دوبارہ کوشش کریں۔",
+  "Look up an ISBN with Open Library and Google Books, or import a Libris book link. Offline, use cached data or enter details manually.": "Open Library اور Google Books میں ISBN تلاش کریں یا Libris کتاب کا لنک درآمد کریں۔ آف لائن ہونے پر کیش استعمال کریں یا تفصیلات خود درج کریں۔",
+  "Found in local cache ({value}). Review the metadata before saving.": "مقامی کیش میں مل گیا ({value})۔ محفوظ کرنے سے پہلے میٹا ڈیٹا دیکھیں۔",
+  "Metadata fetched from {value}. Review and correct it before saving.": "{value} سے میٹا ڈیٹا حاصل ہوا۔ محفوظ کرنے سے پہلے جانچیں اور درست کریں۔",
+  "No match in Open Library or Google Books. Try a Libris book link or enter the details manually.": "Open Library یا Google Books میں کوئی نتیجہ نہیں ملا۔ Libris کتاب کا لنک آزمائیں یا تفصیلات خود درج کریں۔",
+  "No book metadata found, or online lookup is disabled. Enter the details manually.": "کتاب کا میٹا ڈیٹا نہیں ملا یا آن لائن تلاش بند ہے۔ تفصیلات خود درج کریں۔",
+  "Lookup failed (offline or provider unavailable). Try a Libris book link or enter the details manually.": "تلاش ناکام (آف لائن یا فراہم کنندہ دستیاب نہیں)۔ Libris کتاب کا لنک آزمائیں یا تفصیلات خود درج کریں۔",
+  "Libris book link (optional)": "Libris کتاب کا لنک (اختیاری)",
+  "Import from Libris": "Libris سے درآمد کریں"
 }

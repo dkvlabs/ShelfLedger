@@ -195,7 +195,6 @@
   "Record another physical copy of this work with its condition and purchase details.": "سجّل نسخة مادية أخرى من هذا العمل مع حالتها وتفاصيل شرائها.",
   "I own a copy (uncheck for tracking-only / wishlist)": "أملك نسخة (أزل التحديد للتتبع فقط أو قائمة الرغبات)",
   "Look up": "بحث",
-  "Look up by ISBN (Open Library, works offline via cache or manual entry), then record the owned copy.": "ابحث برقم ISBN عبر Open Library (دون اتصال عبر التخزين المؤقت أو الإدخال اليدوي)، ثم سجل نسختك.",
   "Possible duplicates in your library": "تكرارات محتملة في مكتبتك",
   "Add as a new work anyway": "إضافة كعمل جديد على أي حال",
   "That ISBN checksum is not valid.": "رقم التحقق من ISBN غير صالح.",
@@ -465,5 +464,13 @@
   "Save cancelled. Your backup is ready; use Save file to try again.": "أُلغي الحفظ. النسخة الاحتياطية جاهزة؛ اختر حفظ الملف للمحاولة مجددًا.",
   "Save file": "حفظ الملف",
   "File saved.": "تم حفظ الملف.",
-  "Camera access is blocked. On Android, open Settings → Apps → ShelfLedger → Permissions → Camera, allow access, then retry.": "الوصول إلى الكاميرا محظور. على Android، افتح الإعدادات → التطبيقات → ShelfLedger → الأذونات → الكاميرا، واسمح بالوصول ثم أعد المحاولة."
+  "Camera access is blocked. On Android, open Settings → Apps → ShelfLedger → Permissions → Camera, allow access, then retry.": "الوصول إلى الكاميرا محظور. على Android، افتح الإعدادات → التطبيقات → ShelfLedger → الأذونات → الكاميرا، واسمح بالوصول ثم أعد المحاولة.",
+  "Look up an ISBN with Open Library and Google Books, or import a Libris book link. Offline, use cached data or enter details manually.": "ابحث عن ISBN في Open Library وGoogle Books، أو استورد رابط كتاب من Libris. دون اتصال، استخدم البيانات المخزنة أو أدخل التفاصيل يدويًا.",
+  "Found in local cache ({value}). Review the metadata before saving.": "عُثر عليه في الذاكرة المحلية ({value}). راجع البيانات قبل الحفظ.",
+  "Metadata fetched from {value}. Review and correct it before saving.": "جُلبت البيانات من {value}. راجعها وصححها قبل الحفظ.",
+  "No match in Open Library or Google Books. Try a Libris book link or enter the details manually.": "لا توجد نتيجة في Open Library أو Google Books. جرّب رابط كتاب من Libris أو أدخل التفاصيل يدويًا.",
+  "No book metadata found, or online lookup is disabled. Enter the details manually.": "لم تُعثر على بيانات الكتاب أو البحث عبر الإنترنت معطل. أدخل التفاصيل يدويًا.",
+  "Lookup failed (offline or provider unavailable). Try a Libris book link or enter the details manually.": "فشل البحث (لا اتصال أو المزود غير متاح). جرّب رابط كتاب من Libris أو أدخل التفاصيل يدويًا.",
+  "Libris book link (optional)": "رابط كتاب من Libris (اختياري)",
+  "Import from Libris": "استيراد من Libris"
 }

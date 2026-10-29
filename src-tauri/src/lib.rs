@@ -74,6 +74,7 @@ pub fn run() {
             commands::settings::get_settings,
             commands::settings::set_setting,
             commands::metadata::lookup_isbn,
+            commands::metadata::lookup_libris_book,
             commands::reading::list_reading_sessions,
             commands::reading::list_reading_sessions_for_work,
             commands::reading::create_reading_session,

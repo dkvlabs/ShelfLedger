@@ -30,7 +30,7 @@ use crate::commands;
 use crate::db;
 use crate::domain;
 use crate::error::{AppError, AppResult};
-use crate::metadata::openlibrary;
+use crate::metadata;
 use crate::models::{
     AddBookInput, AddProgressInput, AddValuationInput, CreateContactInput, CreateCopyInput,
     CreateEditionInput, CreateListingInput, CreateLocationInput, CreateReadingSessionInput,
@@ -202,8 +202,14 @@ pub async fn dispatch(ctx: &WebCtx, cmd: &str, args: &Value) -> AppResult<Value>
             ok(())
         }
 
-        // metadata (user-initiated Open Library lookup, cached)
-        "lookup_isbn" => ok(openlibrary::lookup_isbn(pool, &arg::<String>(args, "isbn")?).await?),
+        // Metadata: user-initiated, cached, shared with native transports.
+        "lookup_isbn" => ok(metadata::lookup_isbn(pool, &arg::<String>(args, "isbn")?).await?),
+        "lookup_libris_book" => ok(metadata::libris::lookup(
+            pool,
+            &arg::<String>(args, "url")?,
+            arg_opt::<String>(args, "isbn")?.as_deref(),
+        )
+        .await?),
 
         // reading
         "list_reading_sessions" => {
@@ -703,6 +709,53 @@ mod tests {
 
     fn cleanup(ctx: WebCtx) {
         let _ = std::fs::remove_dir_all(&ctx.data_dir);
+    }
+
+    #[tokio::test]
+    async fn dispatch_libris_lookup_uses_cache_and_validates_its_arguments() {
+        let ctx = make_ctx().await;
+        repositories::settings::set_json(&ctx.pool, "metadata.lookup_enabled", &json!(false))
+            .await
+            .unwrap();
+        let url = "https://www.libris.ro/carte/mitologie-nordica-neil-gaiman/1258850";
+        let result = json!({"source":"libris","isbn13":"9786067882629","isbn10":"6067882620",
+            "title":"Mitologie nordica","subtitle":null,"publisher":"GRUPUL EDITORIAL ART",
+            "publishedAt":"2017","language":"ro","pageCount":250,"authorNames":["Neil Gaiman"],"cached":false});
+        sqlx::query(
+            "INSERT INTO metadata_cache (cache_key,payload_json,fetched_at) VALUES (?1,?2,?3)",
+        )
+        .bind(format!("libris:url:{url}"))
+        .bind(result.to_string())
+        .bind(crate::ids::now_iso())
+        .execute(&ctx.pool)
+        .await
+        .unwrap();
+        let found = dispatch(
+            &ctx,
+            "lookup_libris_book",
+            &json!({"url":url,"isbn":"978-606-788-262-9"}),
+        )
+        .await
+        .unwrap();
+        assert_eq!(found["title"], "Mitologie nordica");
+        assert_eq!(found["cached"], true);
+        assert!(matches!(
+            dispatch(
+                &ctx,
+                "lookup_libris_book",
+                &json!({"url":url,"isbn":"9780306406157"})
+            )
+            .await,
+            Err(AppError::Validation(_))
+        ));
+        assert!(dispatch(
+            &ctx,
+            "lookup_libris_book",
+            &json!({"url":"https://example.com/book","isbn":null})
+        )
+        .await
+        .is_err());
+        cleanup(ctx);
     }
 
     #[tokio::test]

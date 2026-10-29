@@ -195,7 +195,6 @@
   "Record another physical copy of this work with its condition and purchase details.": "记录此作品的另一实体藏本及其品相和购买信息。",
   "I own a copy (uncheck for tracking-only / wishlist)": "我拥有藏本（仅跟踪／愿望单请取消勾选）",
   "Look up": "查询",
-  "Look up by ISBN (Open Library, works offline via cache or manual entry), then record the owned copy.": "按 ISBN 查询（Open Library；离线可用缓存或手动输入），然后记录自有藏本。",
   "Possible duplicates in your library": "藏书中可能存在重复项",
   "Add as a new work anyway": "仍作为新作品添加",
   "That ISBN checksum is not valid.": "该 ISBN 校验码无效。",
@@ -465,5 +464,13 @@
   "Save cancelled. Your backup is ready; use Save file to try again.": "已取消保存。备份已就绪；点击保存文件重试。",
   "Save file": "保存文件",
   "File saved.": "文件已保存。",
-  "Camera access is blocked. On Android, open Settings → Apps → ShelfLedger → Permissions → Camera, allow access, then retry.": "相机访问被阻止。在 Android 上，打开设置 → 应用 → ShelfLedger → 权限 → 相机，允许访问后重试。"
+  "Camera access is blocked. On Android, open Settings → Apps → ShelfLedger → Permissions → Camera, allow access, then retry.": "相机访问被阻止。在 Android 上，打开设置 → 应用 → ShelfLedger → 权限 → 相机，允许访问后重试。",
+  "Look up an ISBN with Open Library and Google Books, or import a Libris book link. Offline, use cached data or enter details manually.": "通过 Open Library 和 Google Books 查询 ISBN，或导入 Libris 图书链接。离线时可使用缓存或手动输入详情。",
+  "Found in local cache ({value}). Review the metadata before saving.": "在本地缓存中找到（{value}）。保存前请检查元数据。",
+  "Metadata fetched from {value}. Review and correct it before saving.": "已从 {value} 获取元数据。保存前请检查并修正。",
+  "No match in Open Library or Google Books. Try a Libris book link or enter the details manually.": "Open Library 和 Google Books 中没有匹配项。请尝试 Libris 图书链接或手动输入详情。",
+  "No book metadata found, or online lookup is disabled. Enter the details manually.": "未找到图书元数据，或在线查询已禁用。请手动输入详情。",
+  "Lookup failed (offline or provider unavailable). Try a Libris book link or enter the details manually.": "查询失败（离线或服务不可用）。请尝试 Libris 图书链接或手动输入详情。",
+  "Libris book link (optional)": "Libris 图书链接（可选）",
+  "Import from Libris": "从 Libris 导入"
 }

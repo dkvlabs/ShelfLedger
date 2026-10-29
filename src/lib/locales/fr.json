@@ -195,7 +195,6 @@
   "Record another physical copy of this work with its condition and purchase details.": "Enregistrez un autre exemplaire physique avec son état et ses détails d’achat.",
   "I own a copy (uncheck for tracking-only / wishlist)": "Je possède un exemplaire (décocher pour le suivi ou la liste d’envies)",
   "Look up": "Rechercher",
-  "Look up by ISBN (Open Library, works offline via cache or manual entry), then record the owned copy.": "Recherchez par ISBN (Open Library, hors ligne via cache ou saisie manuelle), puis enregistrez l’exemplaire.",
   "Possible duplicates in your library": "Doublons possibles dans votre bibliothèque",
   "Add as a new work anyway": "Ajouter quand même comme nouvelle œuvre",
   "That ISBN checksum is not valid.": "La clé de contrôle ISBN n’est pas valide.",
@@ -465,5 +464,13 @@
   "Save cancelled. Your backup is ready; use Save file to try again.": "Enregistrement annulé. Votre sauvegarde est prête ; utilisez Enregistrer le fichier pour réessayer.",
   "Save file": "Enregistrer le fichier",
   "File saved.": "Fichier enregistré.",
-  "Camera access is blocked. On Android, open Settings → Apps → ShelfLedger → Permissions → Camera, allow access, then retry.": "L’accès à la caméra est bloqué. Sur Android, ouvrez Paramètres → Applications → ShelfLedger → Autorisations → Caméra, autorisez l’accès et réessayez."
+  "Camera access is blocked. On Android, open Settings → Apps → ShelfLedger → Permissions → Camera, allow access, then retry.": "L’accès à la caméra est bloqué. Sur Android, ouvrez Paramètres → Applications → ShelfLedger → Autorisations → Caméra, autorisez l’accès et réessayez.",
+  "Look up an ISBN with Open Library and Google Books, or import a Libris book link. Offline, use cached data or enter details manually.": "Recherchez un ISBN sur Open Library et Google Books, ou importez un lien de livre Libris. Hors ligne, utilisez le cache ou saisissez les détails.",
+  "Found in local cache ({value}). Review the metadata before saving.": "Trouvé dans le cache local ({value}). Vérifiez les métadonnées avant de les enregistrer.",
+  "Metadata fetched from {value}. Review and correct it before saving.": "Métadonnées récupérées depuis {value}. Vérifiez et corrigez avant de les enregistrer.",
+  "No match in Open Library or Google Books. Try a Libris book link or enter the details manually.": "Aucun résultat sur Open Library ou Google Books. Essayez un lien de livre Libris ou saisissez les détails.",
+  "No book metadata found, or online lookup is disabled. Enter the details manually.": "Aucune métadonnée trouvée, ou la recherche en ligne est désactivée. Saisissez les détails.",
+  "Lookup failed (offline or provider unavailable). Try a Libris book link or enter the details manually.": "Échec de la recherche (hors ligne ou fournisseur indisponible). Essayez un lien de livre Libris ou saisissez les détails.",
+  "Libris book link (optional)": "Lien de livre Libris (facultatif)",
+  "Import from Libris": "Importer depuis Libris"
 }

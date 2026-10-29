@@ -195,7 +195,6 @@
   "Record another physical copy of this work with its condition and purchase details.": "Registra otro ejemplar físico de esta obra con su estado y compra.",
   "I own a copy (uncheck for tracking-only / wishlist)": "Tengo un ejemplar (desmarca para seguimiento o lista de deseos)",
   "Look up": "Consultar",
-  "Look up by ISBN (Open Library, works offline via cache or manual entry), then record the owned copy.": "Consulta por ISBN (Open Library; sin conexión mediante caché o entrada manual) y registra el ejemplar.",
   "Possible duplicates in your library": "Posibles duplicados en tu biblioteca",
   "Add as a new work anyway": "Añadir como obra nueva igualmente",
   "That ISBN checksum is not valid.": "La suma de comprobación del ISBN no es válida.",
@@ -465,5 +464,13 @@
   "Save cancelled. Your backup is ready; use Save file to try again.": "Guardado cancelado. Tu copia está lista; usa Guardar archivo para reintentarlo.",
   "Save file": "Guardar archivo",
   "File saved.": "Archivo guardado.",
-  "Camera access is blocked. On Android, open Settings → Apps → ShelfLedger → Permissions → Camera, allow access, then retry.": "El acceso a la cámara está bloqueado. En Android, abre Ajustes → Aplicaciones → ShelfLedger → Permisos → Cámara, permite el acceso y reinténtalo."
+  "Camera access is blocked. On Android, open Settings → Apps → ShelfLedger → Permissions → Camera, allow access, then retry.": "El acceso a la cámara está bloqueado. En Android, abre Ajustes → Aplicaciones → ShelfLedger → Permisos → Cámara, permite el acceso y reinténtalo.",
+  "Look up an ISBN with Open Library and Google Books, or import a Libris book link. Offline, use cached data or enter details manually.": "Busca un ISBN en Open Library y Google Books, o importa un enlace de libro de Libris. Sin conexión, usa la caché o introduce los datos.",
+  "Found in local cache ({value}). Review the metadata before saving.": "Encontrado en la caché local ({value}). Revisa los metadatos antes de guardar.",
+  "Metadata fetched from {value}. Review and correct it before saving.": "Metadatos obtenidos de {value}. Revísalos y corrígelos antes de guardar.",
+  "No match in Open Library or Google Books. Try a Libris book link or enter the details manually.": "Sin coincidencias en Open Library ni Google Books. Prueba un enlace de libro de Libris o introduce los datos.",
+  "No book metadata found, or online lookup is disabled. Enter the details manually.": "No se encontraron metadatos o la búsqueda en línea está desactivada. Introduce los datos.",
+  "Lookup failed (offline or provider unavailable). Try a Libris book link or enter the details manually.": "Error de búsqueda (sin conexión o proveedor no disponible). Prueba un enlace de libro de Libris o introduce los datos.",
+  "Libris book link (optional)": "Enlace de libro de Libris (opcional)",
+  "Import from Libris": "Importar desde Libris"
 }

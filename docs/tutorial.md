@@ -163,8 +163,13 @@ when adding or editing a physical copy.
 ## 7. Add your first book
 
 1. Open **Library** and choose **Add book**.
-2. Enter an ISBN and choose **Look up** if you want to fetch metadata from Open
-   Library. You can also enter the title and authors manually without an ISBN.
+2. Enter an ISBN and choose **Look up** to try Open Library and Google Books.
+   If neither has the edition, paste its `https://www.libris.ro/carte/...` link
+   in **Libris book link (optional)** and choose **Import from Libris**. If you
+   entered an ISBN, the linked book must match it. You can also enter details
+   manually; a typed ISBN is retained even after a failed lookup. Android uses
+   transferred caches or manual entry, without contacting providers. See
+   [metadata lookup](metadata.md) for details.
 3. Review the metadata. Separate multiple authors with semicolons.
 4. Keep **I own a copy** checked to record a physical item, or uncheck it for a
    wishlist/tracking-only entry.
@@ -312,7 +317,7 @@ are in [audit remediation](audit-remediation.md).
 | Browser cannot connect | Keep `pnpm web:server` running. Use the printed loopback URL. For the built UI, run `pnpm build` first from the same checkout. |
 | UI opens but data operations fail in development | Start the Rust backend on port 8787 as well as Vite. |
 | An ISBN is rejected | Check the digits/checksum. Leave it empty for a manual edition rather than guessing an identifier. |
-| Metadata lookup is offline or has no match | Continue with manual entry; cached lookups remain available. |
+| Metadata lookup is offline or has no match | Try a Libris product link on desktop, or enter details manually. Cached results remain available offline; valid typed ISBNs are retained. |
 | Camera permission is blocked or capture is unavailable | Follow the scanning steps above, or use photo/manual entry. |
 | Import skips a row | Expand the row log, correct invalid values, and review the duplicate policy before retrying. |
 | Library looks empty in another app mode | Desktop and browser data directories differ by default. Check the active library in Settings and use export/restore to transfer your records. |

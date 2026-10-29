@@ -195,7 +195,6 @@
   "Record another physical copy of this work with its condition and purchase details.": "इस कृति की एक और भौतिक प्रति, उसकी स्थिति और खरीद विवरण दर्ज करें।",
   "I own a copy (uncheck for tracking-only / wishlist)": "मेरे पास एक प्रति है (केवल ट्रैकिंग / इच्छा सूची के लिए हटाएं)",
   "Look up": "खोजें",
-  "Look up by ISBN (Open Library, works offline via cache or manual entry), then record the owned copy.": "ISBN से खोजें (Open Library; ऑफ़लाइन में कैश या मैन्युअल प्रविष्टि), फिर अपनी प्रति दर्ज करें।",
   "Possible duplicates in your library": "आपके पुस्तकालय में संभावित डुप्लिकेट",
   "Add as a new work anyway": "फिर भी नई कृति के रूप में जोड़ें",
   "That ISBN checksum is not valid.": "यह ISBN चेकसम मान्य नहीं है।",
@@ -465,5 +464,13 @@
   "Save cancelled. Your backup is ready; use Save file to try again.": "सहेजना रद्द हुआ। बैकअप तैयार है; फिर प्रयास करने के लिए फ़ाइल सहेजें चुनें।",
   "Save file": "फ़ाइल सहेजें",
   "File saved.": "फ़ाइल सहेज दी गई।",
-  "Camera access is blocked. On Android, open Settings → Apps → ShelfLedger → Permissions → Camera, allow access, then retry.": "कैमरा पहुँच अवरुद्ध है। Android पर सेटिंग → ऐप्स → ShelfLedger → अनुमतियाँ → कैमरा खोलें, पहुँच की अनुमति दें और फिर प्रयास करें।"
+  "Camera access is blocked. On Android, open Settings → Apps → ShelfLedger → Permissions → Camera, allow access, then retry.": "कैमरा पहुँच अवरुद्ध है। Android पर सेटिंग → ऐप्स → ShelfLedger → अनुमतियाँ → कैमरा खोलें, पहुँच की अनुमति दें और फिर प्रयास करें।",
+  "Look up an ISBN with Open Library and Google Books, or import a Libris book link. Offline, use cached data or enter details manually.": "Open Library और Google Books में ISBN खोजें या Libris पुस्तक लिंक आयात करें। ऑफ़लाइन होने पर कैश का उपयोग करें या विवरण स्वयं भरें।",
+  "Found in local cache ({value}). Review the metadata before saving.": "स्थानीय कैश में मिला ({value})। सहेजने से पहले मेटाडेटा जाँचें।",
+  "Metadata fetched from {value}. Review and correct it before saving.": "{value} से मेटाडेटा प्राप्त हुआ। सहेजने से पहले जाँचें और सुधारें।",
+  "No match in Open Library or Google Books. Try a Libris book link or enter the details manually.": "Open Library या Google Books में कोई मिलान नहीं मिला। Libris पुस्तक लिंक आज़माएँ या विवरण स्वयं भरें।",
+  "No book metadata found, or online lookup is disabled. Enter the details manually.": "पुस्तक मेटाडेटा नहीं मिला या ऑनलाइन खोज बंद है। विवरण स्वयं भरें।",
+  "Lookup failed (offline or provider unavailable). Try a Libris book link or enter the details manually.": "खोज विफल (ऑफ़लाइन या प्रदाता अनुपलब्ध)। Libris पुस्तक लिंक आज़माएँ या विवरण स्वयं भरें।",
+  "Libris book link (optional)": "Libris पुस्तक लिंक (वैकल्पिक)",
+  "Import from Libris": "Libris से आयात करें"
 }

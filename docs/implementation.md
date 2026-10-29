@@ -21,7 +21,7 @@ offline launch works. Windows/Linux workflows are configured; this local audit d
       metadata cache, editable tags, activity events, FTS5)
 - [x] CRUD for works, editions, owned copies (typed Tauri commands)
 - [x] Local search (FTS5 prefix matching) and sorting; typographic book grid and table view
-- [x] ISBN lookup with cache (Open Library) and manual fallback; offline degrades to manual
+- [x] ISBN lookup with cache (Open Library → Google Books), explicit Libris product-link import, and manual fallback; Android remains offline
 - [x] Duplicate detection by ISBN and title+author with user confirmation
 - [x] Multiple owned copies with locations; purchase amount, currency, date, condition
 

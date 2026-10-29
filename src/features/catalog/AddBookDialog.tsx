@@ -1,6 +1,6 @@
 import { CurrencySelect } from "@/components/ui/currency-select";
 import { useT } from "@/lib/i18n";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, Loader2, ScanBarcode, Search } from "lucide-react";
 
@@ -108,7 +108,9 @@ export default function AddBookDialog({
   const tx = useT();
   const queryClient = useQueryClient();
   const [isbnInput, setIsbnInput] = useState("");
-  const [lookupNote, setLookupNote] = useState<string | null>(null);
+  const [librisUrl, setLibrisUrl] = useState("");
+  const [lookupNote, setLookupNote] = useState<{ key: string; value?: string } | null>(null);
+  const lookupEpoch = useRef(0);
   const [draft, setDraft] = useState<Draft>(emptyDraft);
   const [duplicates, setDuplicates] = useState<WorkSummary[] | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
@@ -135,27 +137,49 @@ export default function AddBookDialog({
   const set = (patch: Partial<Draft>) => setDraft((d) => ({ ...d, ...patch }));
 
   const lookup = useMutation({
-    mutationFn: (raw: string) => api.lookupIsbn(raw),
-    onSuccess: (result) => {
+    mutationFn: (request: { isbn: string; url?: string; epoch: number }) =>
+      request.url
+        ? api.lookupLibrisBook(request.url, request.isbn.trim() || null)
+        : api.lookupIsbn(request.isbn),
+    onSuccess: (result, request) => {
+      if (request.epoch !== lookupEpoch.current) return;
       if (result) {
         setDraft((d) => applyLookup(d, result));
-        setLookupNote(
-          result.cached
-            ? "Found in local cache (Open Library data)."
-            : "Metadata fetched from Open Library — review and correct as needed.",
-        );
+        setIsbnInput(result.isbn13 ?? result.isbn10 ?? request.isbn);
+        setLookupNote({
+          key: result.cached
+            ? "Found in local cache ({value}). Review the metadata before saving."
+            : "Metadata fetched from {value}. Review and correct it before saving.",
+          value: ({ openlibrary: "Open Library", googlebooks: "Google Books", libris: "Libris" } as Record<string, string>)[result.source] ?? result.source,
+        });
       } else {
-        setLookupNote("No provider match. Fill the fields in manually.");
+        setLookupNote({ key: request.url
+          ? "No book metadata found, or online lookup is disabled. Enter the details manually."
+          : "No match in Open Library or Google Books. Try a Libris book link or enter the details manually." });
       }
     },
-    onError: (err) => {
+    onError: (err, request) => {
+      if (request.epoch !== lookupEpoch.current) return;
       const msg =
         err instanceof CommandError && err.kind === "network"
-          ? "Lookup failed (offline?). Enter the book manually."
+          ? "Lookup failed (offline or provider unavailable). Try a Libris book link or enter the details manually."
           : (err as Error).message;
-      setLookupNote(msg);
+      setLookupNote({ key: msg });
     },
   });
+
+  function updateIsbn(raw: string) {
+    lookupEpoch.current++;
+    setIsbnInput(raw);
+    setLookupNote(null);
+    const parsed = parseIsbn(raw);
+    setDraft((d) => ({ ...d, isbn13: parsed?.isbn13 ?? "", isbn10: parsed?.isbn10 ?? "" }));
+  }
+
+  function startLookup(raw: string, url?: string) {
+    setLookupNote(null);
+    lookup.mutate({ isbn: raw, url, epoch: ++lookupEpoch.current });
+  }
 
   // Filled by the barcode scanner; auto-lookup follows so the user sees
   // metadata immediately (plan: "I scan an ISBN and see the metadata …
@@ -163,9 +187,8 @@ export default function AddBookDialog({
   const applyScan = (result: ScanResult) => {
     const thirteen = result.isbn13 ?? "";
     const ten = result.isbn10 ?? "";
-    setIsbnInput(thirteen || ten);
-    setDraft((d) => ({ ...d, isbn13: thirteen, isbn10: ten }));
-    lookup.mutate(thirteen || ten);
+    updateIsbn(thirteen || ten);
+    startLookup(thirteen || ten);
   };
 
   const save = useMutation({
@@ -264,7 +287,9 @@ export default function AddBookDialog({
   });
 
   function reset() {
+    lookupEpoch.current++;
     setIsbnInput("");
+    setLibrisUrl("");
     setLookupNote(null);
     setDraft(emptyDraft);
     setDuplicates(null);
@@ -272,10 +297,10 @@ export default function AddBookDialog({
     setSaveResult(null);
   }
 
-  const canSave = draft.title.trim().length > 0;
   const isbnValid =
     isbnInput.trim() === "" ||
-    (parseIsbn(isbnInput) !== null && !lookup.isPending);
+    parseIsbn(isbnInput) !== null;
+  const canSave = draft.title.trim().length > 0 && isbnValid && !lookup.isPending;
 
   return (
     <>
@@ -291,7 +316,7 @@ export default function AddBookDialog({
             <DialogTitle>{tx("Add Book")}</DialogTitle>
             <DialogDescription>
               {tx(
-                "Look up by ISBN (Open Library, works offline via cache or manual entry), then record the owned copy.",
+                "Look up an ISBN with Open Library and Google Books, or import a Libris book link. Offline, use cached data or enter details manually.",
               )}
             </DialogDescription>
           </DialogHeader>
@@ -304,13 +329,13 @@ export default function AddBookDialog({
                   id="isbn"
                   placeholder="978-0-306-40615-7"
                   value={isbnInput}
-                  onChange={(e) => setIsbnInput(e.target.value)}
+                  onChange={(e) => updateIsbn(e.target.value)}
                 />
               </div>
               <Button
                 variant="secondary"
                 disabled={!isbnInput.trim() || !isbnValid || lookup.isPending}
-                onClick={() => lookup.mutate(isbnInput)}
+                onClick={() => startLookup(isbnInput)}
               >
                 {lookup.isPending ? (
                   <Loader2 className="animate-spin" />
@@ -333,8 +358,23 @@ export default function AddBookDialog({
                 {tx("That ISBN checksum is not valid.")}
               </p>
             )}
+            <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-end">
+              <div className="min-w-0 flex-1 space-y-1">
+                <Label htmlFor="libris-url">{tx("Libris book link (optional)")}</Label>
+                <Input id="libris-url" type="url" placeholder="https://www.libris.ro/carte/..."
+                  value={librisUrl} onChange={(e) => {
+                    lookupEpoch.current++;
+                    setLookupNote(null);
+                    setLibrisUrl(e.target.value);
+                  }} />
+              </div>
+              <Button variant="secondary" disabled={!librisUrl.trim() || !isbnValid || lookup.isPending}
+                onClick={() => startLookup(isbnInput, librisUrl.trim())}>
+                {tx("Import from Libris")}
+              </Button>
+            </div>
             {lookupNote && (
-              <p className="text-xs text-muted-foreground">{tx(lookupNote)}</p>
+              <p className="text-xs text-muted-foreground" role="status">{tx(lookupNote.key, lookupNote.value ? { value: lookupNote.value } : undefined)}</p>
             )}
 
             {duplicates && duplicates.length > 0 && (

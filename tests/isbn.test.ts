@@ -35,6 +35,9 @@ describe("isValidIsbn10", () => {
 });
 
 describe("parseIsbn", () => {
+  it("accepts the Romanian edition of Mitologie nordica", () => {
+    expect(parseIsbn("978-606-788-262-9")).toEqual({ isbn13: "9786067882629", isbn10: "6067882620" });
+  });
   it("accepts a valid ISBN-13 and derives ISBN-10", () => {
     expect(parseIsbn("978-0-306-40615-7")).toEqual({
       isbn13: "9780306406157",
