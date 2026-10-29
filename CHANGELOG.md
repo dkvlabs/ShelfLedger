@@ -4,6 +4,15 @@ All notable changes to ShelfLedger are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning is
 [SemVer](https://semver.org/).
 
+## [0.2.1](https://github.com/dkvlabs/ShelfLedger/compare/v0.2.0...v0.2.1) (2026-10-29)
+
+
+### Fixes
+
+* **catalog:** distinguish offline lookup from missing metadata ([01588de](https://github.com/dkvlabs/ShelfLedger/commit/01588deccedc3600d3e44287c70d48d9bba54793))
+* **catalog:** expand ISBN lookup and import Libris metadata ([1118458](https://github.com/dkvlabs/ShelfLedger/commit/1118458b24a2b5159d680643583db0b8ab59837a))
+* **release:** preserve authorization when drafts become public ([04291b9](https://github.com/dkvlabs/ShelfLedger/commit/04291b95060da808219d0bc9a95d79300182eb6b))
+
 ## [0.2.0](https://github.com/dkvlabs/ShelfLedger/compare/v0.1.1...v0.2.0) (2026-10-29)
 
 
