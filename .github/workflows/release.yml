@@ -6,12 +6,19 @@ on:
   workflow_dispatch:
     inputs:
       retry_tag:
-        description: 'Retry an existing draft release (for example v0.1.0); leave empty to update the release PR'
+        description: 'Build installers for an existing release (for example v0.1.1); empty updates the release PR'
         required: false
         type: string
+      repair_published:
+        description: Add missing installers to a public release without replacing existing binaries
+        type: boolean
+        default: false
 
 permissions:
   contents: read
+
+env:
+  RELEASE_ROOT: ${{ github.workspace }}
 
 # A new push must not cancel installers or publishing for an earlier release.
 concurrency:
@@ -52,12 +59,13 @@ jobs:
       sha: ${{ steps.release.outputs.sha }}
       release_id: ${{ steps.release.outputs.release_id }}
     steps:
-      - name: Resolve the draft release and immutable source commit
+      - name: Resolve the release and immutable source commit
         id: release
         uses: actions/github-script@v7
         env:
           RETRY_TAG: ${{ inputs.retry_tag }}
           RELEASE_ID: ${{ needs.release-please.outputs.release_id }}
+          REPAIR_PUBLISHED: ${{ inputs.repair_published }}
         with:
           script: |
             const { owner, repo } = context.repo;
@@ -72,7 +80,11 @@ jobs:
             } else {
               release = (await github.rest.repos.getRelease({ owner, repo, release_id: Number(process.env.RELEASE_ID) })).data;
             }
-            if (!release?.draft) throw new Error('Only an existing draft release can be built or retried');
+            if (!release) throw new Error('Release not found');
+            if (release.immutable) throw new Error('Release is immutable; create a patch release');
+            if (!release.draft && process.env.REPAIR_PUBLISHED !== 'true') {
+              throw new Error('Enable repair_published to add missing public release assets');
+            }
             if (!/^v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(release.tag_name)) {
               throw new Error('Release tag must be stable SemVer');
             }
@@ -92,18 +104,29 @@ jobs:
         with:
           ref: ${{ needs.prepare.outputs.sha }}
           persist-credentials: false
+      # Use the fixed packaging helpers from this workflow commit, while all
+      # application code and dependency locks remain at the immutable tag SHA.
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: .release-tools
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /scripts/
+            /.github/workflows/release.yml
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm release:check
-      - run: pnpm test:release
+      - run: node .release-tools/scripts/release.mjs check
+      - run: node --test .release-tools/scripts/release.test.mjs .release-tools/scripts/release-github.test.mjs
       - run: pnpm lint
       - run: pnpm test:web
       - name: Validate the release description before building
-        run: node scripts/release.mjs notes
+        run: node .release-tools/scripts/release.mjs notes
 
   installers:
     needs: [prepare, checks]
@@ -116,9 +139,11 @@ jobs:
           - platform: macos-arm64
             os: macos-15
           - platform: macos-x64
-            os: macos-15-intel
+            os: macos-15
           - platform: windows-x64
             os: windows-2022
+          - platform: linux-arm64
+            os: ubuntu-22.04-arm
           - platform: linux-x64
             os: ubuntu-22.04
     runs-on: ${{ matrix.os }}
@@ -129,11 +154,22 @@ jobs:
         with:
           ref: ${{ needs.prepare.outputs.sha }}
           persist-credentials: false
+      # Use the fixed packaging helpers from this workflow commit, while all
+      # application code and dependency locks remain at the immutable tag SHA.
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: .release-tools
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /scripts/
+            /.github/workflows/release.yml
       - name: Install Linux bundle dependencies
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev patchelf libfuse2
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev patchelf libfuse2 xdg-utils
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
@@ -142,17 +178,18 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
+          targets: ${{ runner.os == 'macOS' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: src-tauri
           key: release-${{ matrix.platform }}
       - run: pnpm install --frozen-lockfile
-      - run: pnpm release:check
+      - run: node .release-tools/scripts/release.mjs check
       - run: cargo fmt --manifest-path src-tauri/Cargo.toml -- --check
       - run: cargo clippy --manifest-path src-tauri/Cargo.toml --locked --all-targets -- -D warnings
       - run: cargo test --manifest-path src-tauri/Cargo.toml --locked
       - name: Build installers
-        run: node scripts/release.mjs build "$RELEASE_PLATFORM"
+        run: node .release-tools/scripts/release.mjs build "$RELEASE_PLATFORM"
         shell: bash
         env:
           RELEASE_PLATFORM: ${{ matrix.platform }}
@@ -163,7 +200,7 @@ jobs:
           APPLE_PASSWORD: ${{ runner.os == 'macOS' && secrets.APPLE_PASSWORD || '' }}
           APPLE_TEAM_ID: ${{ runner.os == 'macOS' && secrets.APPLE_TEAM_ID || '' }}
       - name: Stage versioned installers
-        run: node scripts/release.mjs stage "$RELEASE_PLATFORM"
+        run: node .release-tools/scripts/release.mjs stage "$RELEASE_PLATFORM"
         shell: bash
         env:
           RELEASE_PLATFORM: ${{ matrix.platform }}
@@ -184,11 +221,23 @@ jobs:
       RELEASE_TAG: ${{ needs.prepare.outputs.tag }}
       RELEASE_ID: ${{ needs.prepare.outputs.release_id }}
       RELEASE_SHA: ${{ needs.prepare.outputs.sha }}
+      REPAIR_PUBLISHED: ${{ inputs.repair_published }}
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ needs.prepare.outputs.sha }}
           persist-credentials: false
+      # Use the fixed packaging helpers from this workflow commit, while all
+      # application code and dependency locks remain at the immutable tag SHA.
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: .release-tools
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /scripts/
+            /.github/workflows/release.yml
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -198,36 +247,23 @@ jobs:
           path: release-assets
           merge-multiple: true
       - name: Require every installer and generate SHA-256 checksums
-        run: node scripts/release.mjs checksums
+        run: node .release-tools/scripts/release.mjs checksums
       - name: Generate categorized notes and download links
-        run: node scripts/release.mjs notes
-      - name: Upload all assets, then publish the draft
+        run: node .release-tools/scripts/release.mjs notes
+      - name: Upload installers and complete the release
         uses: actions/github-script@v7
         with:
           script: |
             const fs = require('node:fs');
-            const { owner, repo } = context.repo;
-            const release_id = Number(process.env.RELEASE_ID);
-            const { data: release } = await github.rest.repos.getRelease({ owner, repo, release_id });
-            if (!release.draft || release.tag_name !== process.env.RELEASE_TAG) {
-              throw new Error('Refusing to modify a public release or a different tag');
-            }
-            const commit = await github.rest.repos.getCommit({ owner, repo, ref: `tags/${release.tag_name}` });
-            if (commit.data.sha !== process.env.RELEASE_SHA) throw new Error('Release tag moved during the build');
-            const existing = await github.paginate(github.rest.repos.listReleaseAssets, { owner, repo, release_id, per_page: 100 });
-            const names = fs.readdirSync('release-assets').sort();
-            if (existing.some(asset => !names.includes(asset.name))) throw new Error('Draft contains unexpected assets');
-            for (const name of names) {
-              const old = existing.find(asset => asset.name === name);
-              if (old) await github.rest.repos.deleteReleaseAsset({ owner, repo, asset_id: old.id });
-              await github.rest.repos.uploadReleaseAsset({
-                owner, repo, release_id, name,
-                data: fs.readFileSync(`release-assets/${name}`),
-                headers: { 'content-type': 'application/octet-stream' },
-              });
-            }
-            await github.rest.repos.updateRelease({
-              owner, repo, release_id, draft: false, prerelease: false, make_latest: 'true',
-              body: fs.readFileSync('release-notes.md', 'utf8'),
+            const { pathToFileURL } = require('node:url');
+            const { publishRelease } = await import(pathToFileURL(`${process.env.GITHUB_WORKSPACE}/.release-tools/scripts/release-github.mjs`).href);
+            const names = await publishRelease({
+              github, ...context.repo,
+              releaseId: process.env.RELEASE_ID,
+              tag: process.env.RELEASE_TAG,
+              sha: process.env.RELEASE_SHA,
+              directory: 'release-assets',
+              notes: fs.readFileSync('release-notes.md', 'utf8'),
+              allowPublished: process.env.REPAIR_PUBLISHED === 'true',
             });
-            core.notice(`Published ${release.tag_name} with ${names.length} assets`);
+            core.notice(`Completed ${process.env.RELEASE_TAG} with ${names.length} assets`);

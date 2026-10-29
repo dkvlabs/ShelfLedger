@@ -74,10 +74,11 @@ test('installer staging requires exactly one nonempty installer per bundle', (t)
   assert.throws(() => stageAssets(root, 'unsupported', output), /Unknown/);
 });
 
-test('checksums require the complete five-installer matrix and deterministic SHA-256 values', (t) => {
+test('checksums require the complete seven-installer matrix and deterministic SHA-256 values', (t) => {
   const root = fixture(t);
   const names = assetNames('0.1.0');
   assert.deepEqual(names, [
+    'ShelfLedger_0.1.0_linux-arm64.AppImage', 'ShelfLedger_0.1.0_linux-arm64.deb',
     'ShelfLedger_0.1.0_linux-x64.AppImage', 'ShelfLedger_0.1.0_linux-x64.deb',
     'ShelfLedger_0.1.0_macos-arm64.dmg', 'ShelfLedger_0.1.0_macos-x64.dmg',
     'ShelfLedger_0.1.0_windows-x64.exe',
@@ -149,4 +150,15 @@ test('empty Apple secrets allow ad-hoc builds and partial distribution credentia
   assert.throws(() => signingEnvironment({ APPLE_ID: 'private' }), /all six/);
   const complete = Object.fromEntries(['APPLE_CERTIFICATE', 'APPLE_CERTIFICATE_PASSWORD', 'APPLE_SIGNING_IDENTITY', 'APPLE_ID', 'APPLE_PASSWORD', 'APPLE_TEAM_ID'].map((key) => [key, 'secret']));
   assert.deepEqual(signingEnvironment(complete), complete);
+});
+
+// release-please links version headings after the first release. This exact
+// shape stopped v0.1.1 before any installers were built.
+test('linked release-please headings and CRLF select the exact version', () => {
+  const changelog = '# Changelog\r\n## [0.1.10](https://github.com/o/r/compare/v0.1.1...v0.1.10) (2026-10-29)\r\n### Fixes\r\n- Later fix.\r\n## [0.1.1](https://github.com/o/r/compare/v0.1.0...v0.1.1) (2026-10-27)\r\n### Fixes\r\n- Correct fix.\r\n';
+  const notes = releaseNotes(changelog, '0.1.1', 'dkvlabs/ShelfLedger');
+  assert.match(notes, /Correct fix/);
+  assert.doesNotMatch(notes, /Later fix/);
+  assert.match(notes, /ShelfLedger_0.1.1_macos-arm64.dmg/);
+  assert.match(notes, /ShelfLedger_0.1.1_linux-arm64.AppImage/);
 });
