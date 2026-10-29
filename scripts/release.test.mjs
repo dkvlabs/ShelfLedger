@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { assetNames, checksumAssets, releaseNotes, signingEnvironment, stageAssets, validateVersions } from './release.mjs';
+import { assetNames, buildArguments, checksumAssets, releaseNotes, signingEnvironment, stageAssets, validateVersions } from './release.mjs';
 
 function fixture(t) {
   const root = mkdtempSync(join(tmpdir(), 'shelfledger-release-'));
@@ -17,6 +17,17 @@ function fixture(t) {
   writeFileSync(join(root, 'src-tauri/Cargo.lock'), 'version = 4\n[[package]]\nname = "dependency"\nversion = "9.8.7"\n[[package]]\nname = "shelfledger"\nversion = "0.1.0"\n');
   return root;
 }
+
+test('Mac builds retain the app for signature checks while published assets remain DMGs', () => {
+  for (const platform of ['macos-arm64', 'macos-x64']) {
+    const args = buildArguments(platform);
+    assert.equal(args[args.indexOf('--bundles') + 1], 'app,dmg');
+    assert.ok(args.includes('--locked'));
+  }
+  assert.ok(assetNames('0.1.1').every(name => !name.endsWith('.app')));
+  assert.ok(buildArguments('windows-x64').includes('nsis'));
+  assert.throws(() => buildArguments('other'), /Unknown release platform/);
+});
 
 test('draft release preparation has write access while build jobs remain read-only', () => {
   const workflow = readFileSync(new URL('../.github/workflows/release.yml', import.meta.url), 'utf8');
