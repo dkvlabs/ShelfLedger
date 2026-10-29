@@ -4,6 +4,13 @@ All notable changes to ShelfLedger are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning is
 [SemVer](https://semver.org/).
 
+## [0.4.0](https://github.com/dkvlabs/ShelfLedger/compare/v0.3.0...v0.4.0) (2026-10-29)
+
+
+### Features
+
+* **catalog:** add ISBN fallback and improve library loading ([db6cf12](https://github.com/dkvlabs/ShelfLedger/commit/db6cf12ca3cf5f1af92ac7725660265677d0a38a))
+
 ## [0.3.0](https://github.com/dkvlabs/ShelfLedger/compare/v0.2.1...v0.3.0) (2026-10-29)
 
 
