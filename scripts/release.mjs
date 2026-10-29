@@ -110,6 +110,15 @@ export function signingEnvironment(environment) {
   return result;
 }
 
+export function buildArguments(platform) {
+  const spec = platforms[platform];
+  if (!spec) throw new Error(`Unknown release platform: ${platform}`);
+  // Tauri deletes the intermediate .app after a DMG-only build. Retain it so
+  // signature/notarization verification can inspect the packaged application.
+  const bundles = platform.startsWith('macos-') ? ['app', ...spec.bundles] : spec.bundles;
+  return ['tauri', 'build', '--ci', '--target', spec.target, '--bundles', bundles.join(','), '--', '--locked'];
+}
+
 function run(command, args, env = process.env) {
   const result = spawnSync(command, args, { env, stdio: 'inherit', shell: process.platform === 'win32' });
   if (result.error) throw result.error;
@@ -130,7 +139,7 @@ function main() {
     const spec = platforms[argument];
     if (!spec) throw new Error(`Unknown release platform: ${argument}`);
     const env = process.platform === 'darwin' ? signingEnvironment(process.env) : process.env;
-    run('pnpm', ['tauri', 'build', '--ci', '--target', spec.target, '--bundles', spec.bundles.join(','), '--', '--locked'], env);
+    run('pnpm', buildArguments(argument), env);
     if (process.platform === 'darwin') {
       const app = join(root, 'src-tauri/target', spec.target, 'release/bundle/macos/ShelfLedger.app');
       run('codesign', ['--verify', '--deep', '--strict', app]);

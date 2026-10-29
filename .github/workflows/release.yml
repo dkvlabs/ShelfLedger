@@ -183,6 +183,7 @@ jobs:
         with:
           workspaces: src-tauri
           key: release-${{ matrix.platform }}
+          cache-on-failure: true
       - run: pnpm install --frozen-lockfile
       - run: node .release-tools/scripts/release.mjs check
       - run: cargo fmt --manifest-path src-tauri/Cargo.toml -- --check
