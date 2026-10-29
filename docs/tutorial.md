@@ -163,7 +163,7 @@ when adding or editing a physical copy.
 ## 7. Add your first book
 
 1. Open **Library** and choose **Add book**.
-2. Enter an ISBN and choose **Look up** to try Open Library and Google Books.
+2. Enter an ISBN and choose **Look up** to try Open Library, Google Books and ISBN Search.
    If neither has the edition, paste its `https://www.libris.ro/carte/...` link
    in **Libris book link (optional)** and choose **Import from Libris**. If you
    entered an ISBN, the linked book must match it. You can also enter details

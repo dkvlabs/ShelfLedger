@@ -4,14 +4,7 @@
 // otherwise a pure-JS ZXing reader over canvas pixels. ISBN extraction is
 // pure and unit-tested (tests/barcode.test.ts).
 
-import {
-  BarcodeFormat,
-  BinaryBitmap,
-  DecodeHintType,
-  HybridBinarizer,
-  MultiFormatReader,
-  RGBLuminanceSource,
-} from "@zxing/library";
+import type { MultiFormatReader } from "@zxing/library";
 
 import { normalizeIsbn, parseIsbn, type NormalizedIsbn } from "@/lib/isbn";
 
@@ -56,10 +49,11 @@ function nativeDetector(): NativeDetector | null {
 
 let zxing: MultiFormatReader | null = null;
 
-function zxingReader(): MultiFormatReader {
+function zxingReader(library: typeof import("@zxing/library")): MultiFormatReader {
   if (!zxing) {
+    const { MultiFormatReader, DecodeHintType, BarcodeFormat } = library;
     zxing = new MultiFormatReader();
-    const hints = new Map<DecodeHintType, unknown>();
+    const hints = new Map<import("@zxing/library").DecodeHintType, unknown>();
     hints.set(DecodeHintType.POSSIBLE_FORMATS, [
       BarcodeFormat.EAN_13,
       BarcodeFormat.EAN_8,
@@ -90,12 +84,16 @@ export async function decodeBarcodeFromCanvas(
     const ctx = canvas.getContext("2d", { willReadFrequently: true });
     if (!ctx || canvas.width === 0 || canvas.height === 0) return null;
     const image = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    // Keep the large decoder off the library's initial load. The bundled chunk
+    // also works offline and is only needed when native detection cannot decode.
+    const library = await import("@zxing/library");
+    const { RGBLuminanceSource, BinaryBitmap, HybridBinarizer } = library;
     const source = new RGBLuminanceSource(image.data, canvas.width, canvas.height);
     const bitmap = new BinaryBitmap(new HybridBinarizer(source));
-    return zxingReader().decode(bitmap).getText();
+    return zxingReader(library).decode(bitmap).getText();
   } catch {
     // NotFoundException and friends: no barcode in this frame.
-    zxingReader().reset();
+    zxing?.reset();
     return null;
   }
 }

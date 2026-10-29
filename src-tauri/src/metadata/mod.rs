@@ -1,6 +1,7 @@
 //! User-requested metadata only. Cache before network; manual entry stays available.
 
 mod googlebooks;
+mod isbnsearch;
 pub mod libris;
 mod openlibrary;
 
@@ -25,7 +26,7 @@ fn allowed_url(url: &reqwest::Url) -> bool {
         && url.port_or_known_default() == Some(443)
         && matches!(
             url.host_str(),
-            Some("openlibrary.org" | "www.googleapis.com" | "www.libris.ro")
+            Some("openlibrary.org" | "www.googleapis.com" | "www.libris.ro" | "isbnsearch.org")
         )
 }
 
@@ -162,10 +163,51 @@ pub async fn lookup_isbn(pool: &SqlitePool, raw: &str) -> AppResult<Option<Looku
     lookup_with_providers(
         pool,
         requested,
-        openlibrary::fetch(requested),
-        googlebooks::fetch(requested),
+        provider_with_timeout(
+            "Open Library",
+            openlibrary::fetch(requested),
+            Duration::from_secs(12),
+        ),
+        first_match(
+            provider_with_timeout(
+                "Google Books",
+                googlebooks::fetch(requested),
+                Duration::from_secs(12),
+            ),
+            provider_with_timeout(
+                "ISBN Search",
+                isbnsearch::fetch(requested),
+                Duration::from_secs(12),
+            ),
+        ),
     )
     .await
+}
+
+// Bound the whole provider operation, including any secondary requests. A slow
+// provider must not prevent an alternative catalog from being tried.
+async fn provider_with_timeout(
+    name: &str,
+    request: impl Future<Output = AppResult<Option<LookupIsbnResult>>>,
+    budget: Duration,
+) -> AppResult<Option<LookupIsbnResult>> {
+    tokio::time::timeout(budget, request)
+        .await
+        .map_err(|_| AppError::Network(format!("{name} lookup timed out")))?
+}
+
+async fn first_match(
+    primary: impl Future<Output = AppResult<Option<LookupIsbnResult>>>,
+    secondary: impl Future<Output = AppResult<Option<LookupIsbnResult>>>,
+) -> AppResult<Option<LookupIsbnResult>> {
+    match primary.await {
+        matched @ Ok(Some(_)) => matched,
+        first => match secondary.await {
+            // An outage is not a definitive catalog miss.
+            Ok(None) => first,
+            result => result,
+        },
+    }
 }
 
 async fn lookup_with_providers(
@@ -197,14 +239,7 @@ async fn lookup_with_providers(
         }
     }
     require_online(pool).await?;
-    let result = match primary.await {
-        Ok(Some(result)) => Some(result),
-        first => match secondary.await {
-            Ok(Some(result)) => Some(result),
-            Ok(None) => return first,
-            Err(error) => return Err(error),
-        },
-    };
+    let result = first_match(primary, secondary).await?;
     if let Some(result) = &result {
         cache_put(pool, &key, result).await?;
     }
@@ -214,6 +249,64 @@ async fn lookup_with_providers(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[tokio::test]
+    async fn third_provider_handles_misses_errors_and_caches_offline() {
+        for primary in [Ok(None), Err(AppError::Network("timeout".into()))] {
+            let pool = crate::db::connect_memory().await.unwrap();
+            let mut alternative = book();
+            alternative.source = "isbnsearch".into();
+            let found = lookup_with_providers(
+                &pool,
+                "9786067882629",
+                async { primary },
+                first_match(async { Err(AppError::Network("HTTP 429".into())) }, async {
+                    Ok(Some(alternative))
+                }),
+            )
+            .await
+            .unwrap()
+            .unwrap();
+            assert_eq!(found.source, "isbnsearch");
+            settings::set_json(&pool, SETTING_ENABLED, &serde_json::json!(false))
+                .await
+                .unwrap();
+            let cached = lookup_isbn(&pool, "6067882620").await.unwrap().unwrap();
+            assert!(cached.cached);
+            assert_eq!(cached.source, "isbnsearch");
+        }
+    }
+
+    #[tokio::test]
+    async fn slow_provider_yields_to_fallback_and_matches_skip_later_providers() {
+        let found = first_match(
+            provider_with_timeout("slow", std::future::pending(), Duration::from_millis(1)),
+            async { Ok(Some(book())) },
+        )
+        .await
+        .unwrap()
+        .unwrap();
+        assert_eq!(found.isbn13.as_deref(), Some("9786067882629"));
+        assert!(first_match(async { Ok(Some(book())) }, async {
+            panic!("unnecessary request")
+        })
+        .await
+        .unwrap()
+        .is_some());
+        let missing = first_match(
+            async { Ok(None) },
+            first_match(async { Ok(None) }, async { Ok(None) }),
+        )
+        .await
+        .unwrap();
+        assert!(missing.is_none());
+        assert!(first_match(
+            async { Err(AppError::Network("quota".into())) },
+            first_match(async { Ok(None) }, async { Ok(None) })
+        )
+        .await
+        .is_err());
+    }
+
     fn book() -> LookupIsbnResult {
         serde_json::from_value(
             serde_json::json!({"source":"googlebooks", "isbn13":"9786067882629",
@@ -354,6 +447,8 @@ mod tests {
             "https://127.0.0.1/",
             "https://user@www.libris.ro/",
             "https://www.libris.ro:444/",
+            "https://isbnsearch.org.evil.test/isbn/9786067882629",
+            "http://isbnsearch.org/isbn/9786067882629",
         ] {
             assert!(!allowed_url(&reqwest::Url::parse(url).unwrap()));
         }

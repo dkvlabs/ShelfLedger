@@ -4,15 +4,21 @@ A valid ISBN does not guarantee that a provider has catalogued its edition.
 For example, ISBN **9786067882629** is checksum-valid and identifies
 *Mitologie nordica* by Neil Gaiman on
 [Libris](https://www.libris.ro/carte/mitologie-nordica-neil-gaiman/1258850).
-On 29.10.2026 Open Library returned 404 for it; Libris's public ISBN search also
-returned no results despite the product page existing. ShelfLedger does not
-guess a title or substitute another edition to hide missing coverage.
+On 29.10.2026 Open Library returned 404 and Google Books returned HTTP 429.
+The alternative [ISBN Search page](https://isbnsearch.org/isbn/9786067882629)
+returned an exact ISBN match. Its spelling is `Mitologie Nordiča`, publisher
+Arthur, publication year 2017; it does not supply a page count or language.
+ShelfLedger preserves the source data for review rather than silently guessing
+corrections. The [publisher](https://www.editura-art.ro/info/carte/mitologie-nordica)
+lists `Mitologie nordică`, 256 pages and January 2018. Catalog metadata can
+conflict even for the same ISBN; review the physical edition before saving.
 
 ## Add the book
 
 1. In **Add book**, type or scan the ISBN, then press **Look up**. Desktop/web
-   tries Open Library, then Google Books if the first provider misses or fails.
-   Related search results with a different ISBN are rejected.
+   tries Open Library → Google Books → ISBN Search, continuing after misses,
+   quota errors or network failures. Related results with a different ISBN are
+   rejected. A match stops further requests; there is no request while typing.
 2. If the edition is missing, paste its Libris product-page URL into
    **Libris book link (optional)** and press **Import from Libris**. For the
    example above, use the link in this document. A typed ISBN must match the
@@ -58,19 +64,31 @@ manual entry; no unverified title-based match is substituted.
 
 Libris import reads only Book JSON-LD from the requested page. It does not execute
 scripts, load tracking resources or covers, or import reviews and sale prices.
-Requests have timeouts and a 2 MiB body limit; cross-provider redirects and
+ISBN Search is a bounded HTML fallback, not an official API contract. Only its
+book-information block is parsed, with an exact checksum-valid ISBN-13 or
+equivalent ISBN-10 required. Missing fields remain empty. A challenge or changed
+page layout reports provider unavailability; the app does not bypass challenges.
+HTTP 404 is a catalog miss. A failure from any provider is preserved when no
+later source succeeds, so an outage is not presented as a definitive no-match.
+
+Each automatic provider operation has a 12-second budget (at most 36 seconds
+across all three); individual requests retain their 10-second timeout. Optional
+Open Library author enrichment stops before that deadline, preserving the
+already-matched edition and any author names resolved so far.
+Requests have a 2 MiB body limit; cross-provider redirects and
 arbitrary URL hosts are rejected. See [privacy policy](../PRIVACY.md).
 
 ## Verification
 
 Deterministic Rust tests cover exact ISBN matching, Romanian Book JSON-LD,
-fallback after provider failure/no match, disabled providers, legacy/new caches,
+three-provider fallback after failure/no match, timeout fallback, disabled providers, legacy/new caches,
 publication dates and URL restrictions. Frontend tests cover source attribution,
 typed ISBN retention, stale results, loading validation and Libris import/save.
 
 The optional live regression makes a real request to the supplied Libris page:
 
 ```sh
+cargo test --manifest-path src-tauri/Cargo.toml live_isbn_fallback_and_offline_cache -- --ignored
 cargo test --manifest-path src-tauri/Cargo.toml live_user_supplied_libris_book -- --ignored
 ```
 

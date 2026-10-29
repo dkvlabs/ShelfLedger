@@ -91,14 +91,25 @@ fn parse_isbn_response(body: &Value) -> Option<ParsedEdition> {
     })
 }
 
-async fn fetch_author_names(keys: &[String]) -> Vec<String> {
+async fn fetch_author_names<F, Fut>(
+    keys: &[String],
+    deadline: tokio::time::Instant,
+    fetch: F,
+) -> Vec<String>
+where
+    F: Fn(String) -> Fut,
+    Fut: std::future::Future<Output = AppResult<Option<String>>>,
+{
     let mut names = Vec::new();
     for key in keys.iter().take(3) {
+        if tokio::time::Instant::now() >= deadline {
+            break;
+        }
         let url = format!("{BASE_URL}/authors/{key}.json");
         if !key.chars().all(|c| c.is_ascii_alphanumeric()) {
             continue;
         }
-        if let Ok(Some(text)) = fetch_text(&url, "Open Library").await {
+        if let Ok(Ok(Some(text))) = tokio::time::timeout_at(deadline, fetch(url)).await {
             if let Ok(body) = serde_json::from_str::<Value>(&text) {
                 if let Some(name) = first_str(&body, "name") {
                     names.push(name);
@@ -112,6 +123,9 @@ async fn fetch_author_names(keys: &[String]) -> Vec<String> {
 }
 
 pub(super) async fn fetch(requested: &str) -> AppResult<Option<LookupIsbnResult>> {
+    // Leave time to return an already-matched edition before the 12-second
+    // provider deadline, even if optional author enrichment stalls.
+    let author_deadline = tokio::time::Instant::now() + std::time::Duration::from_secs(11);
     let Some(text) =
         fetch_text(&format!("{BASE_URL}/isbn/{requested}.json"), "Open Library").await?
     else {
@@ -140,13 +154,35 @@ pub(super) async fn fetch(requested: &str) -> AppResult<Option<LookupIsbnResult>
     let isbn = super::parse_requested(requested)?;
     result.isbn13 = isbn.isbn13;
     result.isbn10 = isbn.isbn10;
-    result.author_names = fetch_author_names(&parsed.author_keys).await;
+    result.author_names =
+        fetch_author_names(&parsed.author_keys, author_deadline, |url| async move {
+            fetch_text(&url, "Open Library").await
+        })
+        .await;
     Ok(Some(result))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[tokio::test]
+    async fn optional_author_timeout_preserves_completed_names() {
+        let keys = vec!["OL1A".into(), "OL2A".into(), "OL3A".into()];
+        let names = fetch_author_names(
+            &keys,
+            tokio::time::Instant::now() + std::time::Duration::from_millis(10),
+            |url| async move {
+                if url.ends_with("/OL1A.json") {
+                    Ok(Some(r#"{"name":"First author"}"#.into()))
+                } else {
+                    std::future::pending().await
+                }
+            },
+        )
+        .await;
+        assert_eq!(names, vec!["First author"]);
+    }
 
     #[test]
     fn parses_full_openlibrary_body() {

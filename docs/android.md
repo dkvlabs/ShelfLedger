@@ -27,7 +27,7 @@ Live camera hardware and vendor-specific document providers still need testing
 on physical phones.
 
 **The release APK has no INTERNET permission**, disables Android cloud backup,
-and never fetches online metadata from Open Library, Google Books or Libris,
+and never fetches online metadata from Open Library, Google Books, ISBN Search or Libris,
 even after importing desktop settings. Import a desktop ZIP to reuse its
 metadata cache, or enter the book manually.
 Metadata already cached in a transferred library remains available. A new ISBN

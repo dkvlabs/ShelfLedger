@@ -19,9 +19,12 @@ Only what you explicitly trigger:
 
 - **ISBN metadata lookup:** when you press "Look up", the app sends the ISBN
   you typed to openlibrary.org, then www.googleapis.com (Google Books) if Open
-  Library has no match or fails. Only checksum-valid matching editions are used.
+  Library has no match or fails, then isbnsearch.org (ISBN Search) if both
+  catalogs miss or fail. Only checksum-valid matching editions are used.
   Requests identify ShelfLedger in the User-Agent. Successful responses are
   cached locally so repeat lookups work offline. No requests run while typing.
+  ISBN Search reads only the book information on its public ISBN page; it does
+  not execute scripts or load ads, tracking, images, offers or prices.
 - **Libris metadata import:** only when you press "Import from Libris", the app
   fetches the supplied HTTPS book page from www.libris.ro. It reads factual Book
   metadata (ISBN, title, authors, publisher, publication date, language, pages),
@@ -67,7 +70,7 @@ cover images, so anyone receiving an export can see those images too.
 
 ## Third-party content
 
-Metadata fetched from Open Library, Google Books, or Libris remains subject to
+Metadata fetched from Open Library, Google Books, ISBN Search, or Libris remains subject to
 the respective provider’s terms. The app caches factual metadata locally for
 your personal use; your explicit library exports include these caches.
 

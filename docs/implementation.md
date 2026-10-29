@@ -21,7 +21,7 @@ offline launch works. Windows/Linux workflows are configured; this local audit d
       metadata cache, editable tags, activity events, FTS5)
 - [x] CRUD for works, editions, owned copies (typed Tauri commands)
 - [x] Local search (FTS5 prefix matching) and sorting; typographic book grid and table view
-- [x] ISBN lookup with cache (Open Library → Google Books), explicit Libris product-link import, and manual fallback; Android remains offline
+- [x] ISBN lookup with cache (Open Library → Google Books → ISBN Search), explicit Libris product-link import, and manual fallback; Android remains offline
 - [x] Duplicate detection by ISBN and title+author with user confirmation
 - [x] Multiple owned copies with locations; purchase amount, currency, date, condition
 
@@ -184,3 +184,9 @@ See [localization.md](localization.md) for extension and maintenance instruction
 - [x] Phone touch targets, safe-area layout, drawer dismissal and Android Back.
 
 Build/install instructions and verification scope: [android.md](android.md).
+
+## Project audit — 29.10.2026
+
+See [audit-2026-10-29.md](audit-2026-10-29.md) for reproducible integrity
+findings, library-size benchmarks, measured bundle changes, and a prioritized
+feature backlog. Phase checkmarks above do not mean those findings are resolved.

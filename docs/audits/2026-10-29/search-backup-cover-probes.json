@@ -1,0 +1,35 @@
+{
+  "L'Étranger": {
+    "exactSearchMatches": 0,
+    "componentSearchMatches": 1
+  },
+  "Audit alpha/beta": {
+    "exactSearchMatches": 0,
+    "componentSearchMatches": 1
+  },
+  "searchCap": {
+    "created": 201,
+    "returned": 200
+  },
+  "safetyBackup": {
+    "exists": true,
+    "downloadStatus": 404,
+    "restoreMessage": "Library restored. Previous library saved at /tmp/shelfledger-audit-20261029/data/shelfledger.pre-restore-8ab7fb2d-9f92-4cab-8770-a35cf5642f97.zip."
+  },
+  "coverPlan": [
+    [
+      2,
+      0,
+      216,
+      "SCAN edition_covers"
+    ]
+  ],
+  "indexedCoverPlan": [
+    [
+      3,
+      0,
+      39,
+      "SEARCH edition_covers USING INDEX sqlite_autoindex_edition_covers_1 (id=?)"
+    ]
+  ]
+}

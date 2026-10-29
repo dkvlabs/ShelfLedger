@@ -1,0 +1,52 @@
+{
+  "progress": {
+    "lastSubmittedPage": 150,
+    "dashboard": [
+      {
+        "latestPage": 200,
+        "sessionId": "bbbbf491-98f7-4cca-9651-b89a27e72df4",
+        "startedAt": "2026-10-28",
+        "workId": "baf2ec8a-ac4a-4c1d-939b-5d57cd770b85",
+        "workTitle": "Audit specimen: reading progress"
+      }
+    ]
+  },
+  "returnBeforeLent": [
+    200,
+    {
+      "contactId": "9cfbc09c-a406-4d17-9f7f-7eb9834e8d7b",
+      "contactName": "Audit borrower",
+      "copyId": "5f4d51f5-58b0-4356-9324-cdd7efcca747",
+      "dueAt": "2026-11-01",
+      "editionLabel": "1e625588-1aa9-42fb-9a79-c76a2a82b1ca",
+      "id": "97256978-babc-42c5-9612-994ea4effcf5",
+      "lentAt": "2026-10-28",
+      "notes": null,
+      "overdue": false,
+      "returnedAt": "2026-10-01",
+      "workTitle": "Audit specimen: reading progress"
+    }
+  ],
+  "atomicLoanFailure": [
+    500,
+    "{\"kind\":\"database\",\"message\":\"database error: error returned from database: (code: 1811) audit injected copy write failure\"}"
+  ],
+  "afterLoanFailure": {
+    "copyState": "owned",
+    "activeLoans": 1
+  },
+  "cycleImport": [
+    200,
+    {
+      "errors": [],
+      "importedCopies": 0,
+      "importedEditions": 0,
+      "importedWorks": 0,
+      "rows": [],
+      "skipped": 0
+    }
+  ],
+  "cyclePersisted": [
+    1
+  ]
+}

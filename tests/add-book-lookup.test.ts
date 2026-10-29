@@ -44,7 +44,7 @@ it("keeps a typed Romanian ISBN after no match and when skipping lookup", async 
   openDialog();
   enterIsbn("978-606-788-262-9");
   fireEvent.click(screen.getByRole("button", { name: "Look up" }));
-  await screen.findByText(/No match in Open Library or Google Books/);
+  await screen.findByText(/No exact ISBN match found/);
   await saveManually();
 });
 it("keeps a typed ISBN when saving directly without any provider request", async () => {
@@ -68,7 +68,7 @@ it("does not show an invalid-checksum warning while a valid lookup is pending", 
   await waitFor(() => expect(complete).toBeDefined());
   expect(screen.queryByText("That ISBN checksum is not valid.")).not.toBeInTheDocument();
   await act(async () => complete(null));
-  await screen.findByText(/No match in Open Library or Google Books/);
+  await screen.findByText(/No exact ISBN match found/);
 });
 it("does not apply a stale result after the ISBN changes", async () => {
   let complete!: (book: LookupIsbnResult) => void;
@@ -115,6 +115,17 @@ it.each(["isbn", "libris"])("explains a disabled %s lookup without claiming a pr
   }
   fireEvent.click(screen.getByRole("button", { name: provider === "isbn" ? "Look up" : "Import from Libris" }));
   await screen.findByText("Online lookup is disabled on this device and no cached metadata was found. Enter details manually or import a library backup with cached metadata.");
-  expect(screen.queryByText(/No match in Open Library or Google Books/)).not.toBeInTheDocument();
+  expect(screen.queryByText(/No exact ISBN match found/)).not.toBeInTheDocument();
   await saveManually();
+});
+
+it.each([false, true])("attributes ISBN Search metadata (cached: %s) and preserves missing fields", async (cached) => {
+  vi.mocked(api.lookupIsbn).mockResolvedValue({ ...book, source: "isbnsearch", cached, pageCount: null, language: null });
+  openDialog(); enterIsbn(); fireEvent.click(screen.getByRole("button", { name: "Look up" }));
+  await screen.findByText(cached
+    ? "Found in local cache (ISBN Search). Review the metadata before saving."
+    : "Metadata fetched from ISBN Search. Review and correct it before saving.");
+  expect(screen.getByLabelText("Title *")).toHaveValue("Mitologie nordica");
+  fireEvent.click(screen.getByRole("button", { name: "Save book" }));
+  await waitFor(() => expect(api.addBook).toHaveBeenCalledWith(expect.objectContaining({ isbn13: ISBN, pageCount: null, language: null })));
 });

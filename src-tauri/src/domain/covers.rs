@@ -317,6 +317,15 @@ mod tests {
         .is_err());
         assert!(save_photo(&pool, "missing", photo()).await.is_err());
         assert!(covers::get(&pool, "../../secret").await.unwrap().is_none());
+        for invalid_path in [
+            format!("../{path}"),
+            format!("{path}/../secret"),
+            path.replace("covers/", "covers/../"),
+            format!("{path}?query=1"),
+            "covers/not-a-uuid.jpg".into(),
+        ] {
+            assert!(covers::get(&pool, &invalid_path).await.unwrap().is_none());
+        }
         assert!(
             fetch_with_provider(&pool, &book.edition_id, |isbn| async move {
                 assert_eq!(isbn, "9780385533225");

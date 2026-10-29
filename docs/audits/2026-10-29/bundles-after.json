@@ -1,0 +1,25 @@
+{
+  "chunks": [
+    {
+      "file": "LibraryView-DZtJbLZV.js",
+      "bytes": 27264,
+      "gzipBytes": 8923
+    },
+    {
+      "file": "index-Ck2yJus5.js",
+      "bytes": 699,
+      "gzipBytes": 425
+    },
+    {
+      "file": "index-CrJSj4VD.js",
+      "bytes": 705969,
+      "gzipBytes": 212046
+    },
+    {
+      "file": "index-CsutwzSh.js",
+      "bytes": 416490,
+      "gzipBytes": 109474
+    }
+  ],
+  "allJsBytes": 1353133
+}

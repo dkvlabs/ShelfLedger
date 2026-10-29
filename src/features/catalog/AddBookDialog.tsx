@@ -150,12 +150,12 @@ export default function AddBookDialog({
           key: result.cached
             ? "Found in local cache ({value}). Review the metadata before saving."
             : "Metadata fetched from {value}. Review and correct it before saving.",
-          value: ({ openlibrary: "Open Library", googlebooks: "Google Books", libris: "Libris" } as Record<string, string>)[result.source] ?? result.source,
+          value: ({ openlibrary: "Open Library", googlebooks: "Google Books", isbnsearch: "ISBN Search", libris: "Libris" } as Record<string, string>)[result.source] ?? result.source,
         });
       } else {
         setLookupNote({ key: request.url
           ? "No book metadata found on this Libris page. Enter the details manually."
-          : "No match in Open Library or Google Books. Try a Libris book link or enter the details manually." });
+          : "No exact ISBN match found in the available catalogs. Try a Libris book link or enter the details manually." });
       }
     },
     onError: (err, request) => {
@@ -318,7 +318,7 @@ export default function AddBookDialog({
             <DialogTitle>{tx("Add Book")}</DialogTitle>
             <DialogDescription>
               {tx(
-                "Look up an ISBN with Open Library and Google Books, or import a Libris book link. Offline, use cached data or enter details manually.",
+                "Look up an ISBN with Open Library, Google Books and ISBN Search, or import a Libris book link. Offline, use cached data or enter details manually.",
               )}
             </DialogDescription>
           </DialogHeader>

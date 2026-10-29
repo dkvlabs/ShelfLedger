@@ -1,0 +1,134 @@
+[
+  {
+    "seededWorks": 100,
+    "oneMatchSearch": {
+      "medianMs": 2.2,
+      "count": 1,
+      "samplesMs": [
+        3.48,
+        2.2,
+        2.12
+      ]
+    },
+    "allWorks": {
+      "medianMs": 3.41,
+      "count": 101,
+      "samplesMs": [
+        3.07,
+        3.41,
+        3.41
+      ]
+    },
+    "sellQueue": {
+      "medianMs": 22.44,
+      "count": 101,
+      "samplesMs": [
+        22.44,
+        21.89,
+        23.6
+      ]
+    },
+    "readingSessions": {
+      "medianMs": 10.62,
+      "count": 101,
+      "samplesMs": [
+        10.82,
+        10.46,
+        10.62
+      ]
+    },
+    "importFiveRows": {
+      "elapsedMs": 770.43,
+      "importedWorks": 5,
+      "errors": []
+    }
+  },
+  {
+    "seededWorks": 1000,
+    "oneMatchSearch": {
+      "medianMs": 17.0,
+      "count": 1,
+      "samplesMs": [
+        19.7,
+        17.0,
+        16.71
+      ]
+    },
+    "allWorks": {
+      "medianMs": 24.13,
+      "count": 1006,
+      "samplesMs": [
+        27.4,
+        24.13,
+        22.27
+      ]
+    },
+    "sellQueue": {
+      "medianMs": 396.37,
+      "count": 1001,
+      "samplesMs": [
+        389.37,
+        396.37,
+        431.65
+      ]
+    },
+    "readingSessions": {
+      "medianMs": 100.61,
+      "count": 1001,
+      "samplesMs": [
+        99.87,
+        160.18,
+        100.61
+      ]
+    },
+    "importFiveRows": {
+      "elapsedMs": 8787.55,
+      "importedWorks": 5,
+      "errors": []
+    }
+  },
+  {
+    "seededWorks": 5000,
+    "oneMatchSearch": {
+      "medianMs": 69.66,
+      "count": 1,
+      "samplesMs": [
+        75.46,
+        69.55,
+        69.66
+      ]
+    },
+    "allWorks": {
+      "medianMs": 117.93,
+      "count": 5011,
+      "samplesMs": [
+        115.16,
+        117.93,
+        171.52
+      ]
+    },
+    "sellQueue": {
+      "medianMs": 5240.86,
+      "count": 5001,
+      "samplesMs": [
+        5457.97,
+        5240.86,
+        5069.3
+      ]
+    },
+    "readingSessions": {
+      "medianMs": 521.5,
+      "count": 5001,
+      "samplesMs": [
+        521.5,
+        523.21,
+        504.01
+      ]
+    },
+    "importFiveRows": {
+      "elapsedMs": 75003.21,
+      "importedWorks": 5,
+      "errors": []
+    }
+  }
+]

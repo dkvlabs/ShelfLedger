@@ -5,9 +5,18 @@ use crate::{
 };
 
 pub async fn get(pool: &SqlitePool, path: &str) -> AppResult<Option<CoverImage>> {
-    let row: Option<(String, String, String)> = sqlx::query_as(
-        "SELECT data_url, source, created_at FROM edition_covers WHERE 'covers/' || id || '.jpg' = ?1")
-        .bind(path).fetch_optional(pool).await?;
+    let Some(id) = path
+        .strip_prefix("covers/")
+        .and_then(|value| value.strip_suffix(".jpg"))
+        .filter(|id| uuid::Uuid::parse_str(id).is_ok())
+    else {
+        return Ok(None);
+    };
+    let row: Option<(String, String, String)> =
+        sqlx::query_as("SELECT data_url, source, created_at FROM edition_covers WHERE id = ?1")
+            .bind(id)
+            .fetch_optional(pool)
+            .await?;
     Ok(row.map(|(data_url, source, created_at)| CoverImage {
         data_url,
         source,

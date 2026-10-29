@@ -25,7 +25,7 @@ themes; eleven interface languages (the initial global top ten plus Romanian); g
 
 | Your library | What ShelfLedger keeps track of |
 | --- | --- |
-| **Catalog your books** | Camera/photo ISBN scanning, manual entry, cached Open Library/Google Books lookups and Libris book-link import, editable metadata and tags, duplicate detection, and full-text search. |
+| **Catalog your books** | Camera/photo ISBN scanning, manual entry, cached Open Library/Google Books/ISBN Search lookups and Libris book-link import, editable metadata and tags, duplicate detection, and full-text search. |
 | **Find every copy** | Multiple editions and physical copies, condition, notes, acquisition costs, and a room → bookcase → shelf → box hierarchy. Archive and restore inventory while keeping its history. |
 | **Keep a reading journal** | Want-to-read, reading, finished, paused, and DNF sessions; progress, dates, ratings, reviews, and rereads. Reading stays separate from ownership. |
 | **Lend with confidence** | Contacts, due dates, returns, and a per-copy loan history. |
@@ -89,7 +89,7 @@ Select **Scan ISBN** in the library and allow camera access when your browser or
 operating system requests it. Live scanning requires permission; photo scanning
 and manual ISBN entry remain available if access is unavailable or denied.
 Camera frames are processed on your device. Metadata lookup is a separate,
-user-initiated request. ISBN lookup tries Open Library, then Google Books. If a
+user-initiated request. ISBN lookup tries Open Library, Google Books, then ISBN Search. If a
 Romanian edition is missing, paste its Libris product link in **Add book** and
 choose **Import from Libris**. Review the details before saving. Cached results
 work offline; Android only uses transferred caches and manual entry.
