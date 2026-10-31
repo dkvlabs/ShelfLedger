@@ -325,7 +325,7 @@ fn ids_now() -> String {
     chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, true)
 }
 
-fn sha256_hex(bytes: &[u8]) -> String {
+pub(crate) fn sha256_hex(bytes: &[u8]) -> String {
     // Small dependency-free SHA-256 so backups self-verify without adding a
     // crypto crate for one hash.
     let mut h = Sha256::new();

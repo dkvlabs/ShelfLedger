@@ -34,7 +34,7 @@ pub const TABLES: &[&str] = &[
     "attachments",
 ];
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct Snapshot {
     pub format_version: u32,
@@ -43,10 +43,16 @@ pub struct Snapshot {
 
 pub async fn export(pool: &SqlitePool) -> AppResult<Snapshot> {
     let mut tx = pool.begin().await?;
+    let snapshot = export_transaction(&mut tx).await?;
+    tx.commit().await?;
+    Ok(snapshot)
+}
+
+async fn export_transaction(tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>) -> AppResult<Snapshot> {
     let mut tables = BTreeMap::new();
     for &table in TABLES {
-        let rows = sqlx::query(&format!("SELECT * FROM \"{table}\""))
-            .fetch_all(&mut *tx)
+        let rows = sqlx::query(&format!("SELECT * FROM \"{table}\" ORDER BY rowid"))
+            .fetch_all(&mut **tx)
             .await?;
         let mut records = Vec::new();
         for row in rows {
@@ -71,17 +77,50 @@ pub async fn export(pool: &SqlitePool) -> AppResult<Snapshot> {
         }
         tables.insert(table.into(), records);
     }
-    tx.commit().await?;
     Ok(Snapshot {
         format_version: 4,
         tables,
     })
 }
 
+pub async fn export_for_profile(pool: &SqlitePool, profile: &str) -> AppResult<Snapshot> {
+    let mut tx = pool.begin().await?;
+    if active_profile(&mut tx).await? != profile {
+        return Err(AppError::Conflict(
+            "library changed during sync; try again".into(),
+        ));
+    }
+    let snapshot = export_transaction(&mut tx).await?;
+    tx.commit().await?;
+    Ok(snapshot)
+}
+
+async fn active_profile(tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>) -> AppResult<String> {
+    let active: Option<String> =
+        sqlx::query_scalar("SELECT value_json FROM settings WHERE key='_active_profile'")
+            .fetch_optional(&mut **tx)
+            .await?;
+    Ok(active
+        .map(|s| serde_json::from_str(&s))
+        .transpose()?
+        .unwrap_or_else(|| "main".into()))
+}
+
 /// Replace in a transaction on the live database. WAL and pooled connections
 /// remain valid; readers observe either the old library or the committed one.
 pub async fn apply(pool: &SqlitePool, snapshot: &Snapshot, replace: bool) -> AppResult<()> {
-    apply_inner(pool, snapshot, replace, true).await
+    apply_inner(pool, snapshot, replace, true, None).await
+}
+
+/// Sync must not replace edits made while an external request was in flight.
+/// Reading and writing in one SQLite transaction also catches concurrent commits.
+pub async fn apply_if_unchanged(
+    pool: &SqlitePool,
+    snapshot: &Snapshot,
+    expected: &Snapshot,
+    profile: &str,
+) -> AppResult<()> {
+    apply_inner(pool, snapshot, true, true, Some((expected, profile))).await
 }
 
 /// Import staging copies already persisted local data, including legacy values
@@ -90,7 +129,7 @@ pub async fn apply(pool: &SqlitePool, snapshot: &Snapshot, replace: bool) -> App
 pub(crate) async fn stage_local(pool: &SqlitePool) -> AppResult<(SqlitePool, Snapshot)> {
     let baseline = export(pool).await?;
     let staged = crate::db::connect_memory().await?;
-    if let Err(error) = apply_inner(&staged, &baseline, true, false).await {
+    if let Err(error) = apply_inner(&staged, &baseline, true, false, None).await {
         staged.close().await;
         return Err(error);
     }
@@ -120,6 +159,7 @@ async fn apply_inner(
     snapshot: &Snapshot,
     replace: bool,
     validate_incoming: bool,
+    expected: Option<(&Snapshot, &str)>,
 ) -> AppResult<()> {
     if ![1, 2, 3, 4].contains(&snapshot.format_version)
         || snapshot
@@ -141,6 +181,15 @@ async fn apply_inner(
         return Err(AppError::Validation("incomplete library snapshot".into()));
     }
     let mut tx = pool.begin().await?;
+    if let Some((expected, profile)) = expected {
+        if active_profile(&mut tx).await? != profile
+            || export_transaction(&mut tx).await? != *expected
+        {
+            return Err(AppError::Conflict(
+                "Library changed during sync. Try Sync now again.".into(),
+            ));
+        }
+    }
     sqlx::query("PRAGMA defer_foreign_keys = ON")
         .execute(&mut *tx)
         .await?;

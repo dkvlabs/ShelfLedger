@@ -100,7 +100,7 @@ async fn fetch_text(url: &str, provider: &str) -> AppResult<Option<String>> {
 }
 
 pub(crate) async fn require_online(pool: &SqlitePool) -> AppResult<()> {
-    // Even restored desktop preferences cannot enable Android networking.
+    // Even restored desktop preferences cannot enable Android metadata networking.
     if !cfg!(target_os = "android")
         && settings::get_json(pool, SETTING_ENABLED)
             .await

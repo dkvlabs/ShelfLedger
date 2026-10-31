@@ -26,6 +26,7 @@ themes; eleven interface languages (the initial global top ten plus Romanian); g
 | Your library | What ShelfLedger keeps track of |
 | --- | --- |
 | **Catalog your books** | Camera/photo ISBN scanning, manual entry, cached Open Library/Google Books/ISBN Search lookups and Libris book-link import, editable metadata and tags, duplicate detection, and full-text search. |
+| **Cloud backups** | Manual Google Drive snapshot sync, conflict review and version history; iCloud/other providers through ZIP file backups. [Google setup and recovery](docs/cloud-sync.md). |
 | **Find every copy** | Multiple editions and physical copies, condition, notes, acquisition costs, and a room → bookcase → shelf → box hierarchy. Archive and restore inventory while keeping its history. |
 | **Keep a reading journal** | Want-to-read, reading, finished, paused, and DNF sessions; progress, dates, ratings, reviews, and rereads. Reading stays separate from ownership. |
 | **Lend with confidence** | Contacts, due dates, returns, and a per-copy loan history. |
@@ -38,13 +39,19 @@ themes; eleven interface languages (the initial global top ten plus Romanian); g
 ### Take your library offline on Android
 
 The Android app shares the desktop library and domain model, with touch-sized
-controls and native file pickers. The release APK has no internet permission;
-books, reading, loans, finances, barcode decoding, translations and backup/restore
-stay on the device. Uncached ISBN metadata requires manual entry on Android.
+controls and native file pickers. Books, reading, loans, finances, barcode
+decoding, translations and backup/restore stay on the device. Internet access is
+used for explicit update checks and optional Google Drive sync; the library works
+offline. Uncached ISBN metadata requires manual entry on Android.
 
 Use **Settings → Data → Export for another device**, copy the ZIP by USB, then
 **Import from another device** on the receiver. Restore requires confirmation;
-transfers are manual snapshots. See [Android installation, build and transfer](docs/android.md).
+transfers are manual snapshots.
+
+On desktop and Android, **Settings → About ShelfLedger** shows the installed
+version. **Check for updates** checks the latest stable GitHub release only when
+pressed, then offers its download page. Updates are downloaded and installed
+manually. See [Android installation, build and transfer](docs/android.md).
 
 | Android collection, in airplane mode | Native device-transfer controls |
 | --- | --- |

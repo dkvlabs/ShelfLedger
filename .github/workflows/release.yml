@@ -194,6 +194,8 @@ jobs:
         run: node .release-tools/scripts/release.mjs build "$RELEASE_PLATFORM"
         shell: bash
         env:
+          SHELFLEDGER_GOOGLE_CLIENT_ID: ${{ vars.SHELFLEDGER_GOOGLE_CLIENT_ID }}
+          SHELFLEDGER_GOOGLE_CLIENT_SECRET: ${{ secrets.SHELFLEDGER_GOOGLE_CLIENT_SECRET }}
           RELEASE_PLATFORM: ${{ matrix.platform }}
           APPLE_CERTIFICATE: ${{ runner.os == 'macOS' && secrets.APPLE_CERTIFICATE || '' }}
           APPLE_CERTIFICATE_PASSWORD: ${{ runner.os == 'macOS' && secrets.APPLE_CERTIFICATE_PASSWORD || '' }}

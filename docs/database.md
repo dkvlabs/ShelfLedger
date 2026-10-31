@@ -58,6 +58,12 @@ The snapshot contains the 24 logical tables above (excluding derived FTS and
 migration bookkeeping). Full reading, loan and finance fixture round trips are
 covered in `src-tauri/src/audit_regressions.rs`. See [import-format.md](import-format.md).
 
+Exports preserve SQLite row order, including valuation tie-breaking order.
+Cloud sync uses the same format-4 tables with settings excluded; sync links and
+tokens are never stored in the database. A guarded replacement checks the active
+profile and complete captured snapshot inside the write transaction before
+applying remote records, so intervening local changes cannot be overwritten.
+
 Migration 0005 corrects sixteen formerly zero-decimal currencies, preserving their
 previously displayed major-unit amounts across every money-bearing table. Unsafe
 multiplication rolls back. Migration 0005 introduced snapshot format 2; importing format 1

@@ -26,14 +26,14 @@ for camera permission when opened; denial leaves photo/manual entry available.
 Live camera hardware and vendor-specific document providers still need testing
 on physical phones.
 
-**The release APK has no INTERNET permission**, disables Android cloud backup,
+**The release APK uses INTERNET for explicit update checks and optional Google Drive sync**, disables Android cloud backup,
 and never fetches online metadata from Open Library, Google Books, ISBN Search or Libris,
 even after importing desktop settings. Import a desktop ZIP to reuse its
 metadata cache, or enter the book manually.
 Metadata already cached in a transferred library remains available. A new ISBN
 can be entered/scanned offline; fill in uncached book details manually. OLX
 links explicitly open another app/browser and require its connection. Debug
-builds permit INTERNET for the optional Vite development server; the library
+builds also use INTERNET for the optional Vite development server; the library
 still works in airplane mode and Android metadata fetching remains disabled.
 
 Edition covers can be selected from JPEG/PNG/WebP photos or captured with
@@ -81,6 +81,15 @@ CSV is for spreadsheet/Goodreads interoperability; it is not a full backup.
 JSON snapshots are also portable through the existing preview/confirm importer.
 Use ZIP for the complete-library transfer described above.
 
+## Optional cloud backups and sync
+
+**Settings → Cloud sync & backup** offers manual Google Drive sync and file
+backups through installed document providers. Google authorization requires
+Google Play services and an Android OAuth registration matching this APK's
+package and signing certificate. Use the same Cloud project as the desktop app.
+See [cloud-sync.md](cloud-sync.md) for setup, conflict recovery and iCloud limits.
+Core library features still work without Google services or a connection.
+
 ## Build locally
 
 Install Node/pnpm and Rust from the [main tutorial](tutorial.md), plus JDK 21,
@@ -102,7 +111,7 @@ pnpm android:build:debug
 ```
 
 The native project is committed under `src-tauri/gen/android`; **do not run
-`tauri android init` over it**, since that can replace its offline manifest and
+`tauri android init` over it**, since that can replace its restricted manifest and
 navigation customizations. Tauri regenerates its ignored dependency glue at
 build time. SDK locations and signing material are never committed.
 
@@ -152,13 +161,27 @@ node scripts/check-android-apk.mjs path/to/app-universal-release.apk release
 For GitHub Actions set `ANDROID_KEYSTORE_BASE64` (base64 of the keystore),
 `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, and `ANDROID_KEY_PASSWORD` as
 repository secrets. Run **Android → Run workflow → signed_release**. The workflow
-builds the release, checks that no network/storage permissions were added,
+builds the release, checks that only camera, internet and the app-scoped AndroidX
+receiver permission are present (no broad storage permissions),
 verifies the APK signature and uploads the APK plus SHA-256 checksums as an
 Actions artifact. This workflow does not publish to Google Play or change the
 existing desktop release. Signing secrets are not required for pull-request
 checks or ordinary debug builds.
 
+## App version and updates
+
+**Settings → About ShelfLedger** displays the running binary version offline.
+**Check for updates** manually checks the latest stable GitHub release. No library
+data is sent, no automatic checks run, and metadata fetching stays disabled.
+Offline/service failures show a retryable error. If the release has no Android
+APK, the card says so and offers the Android workflow builds page. Downloads
+and installation are manual; installing over an existing app requires the same
+signing identity.
+
 ## Verification — 29.10.2026
+
+This historical verification predates the explicit update-check feature and its
+INTERNET permission.
 
 - ARM64 debug and optimized release APKs compiled on macOS. The release was
   signed with a development certificate for local installation; this is a

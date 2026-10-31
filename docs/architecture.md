@@ -6,12 +6,13 @@ transport, reviewed 27.10.2026. Release acceptance is tracked separately in
 
 ShelfLedger stores the library on this device. The desktop application uses Tauri
 2 and named, typed commands. The optional `shelfledger-web` binary serves the same
-Rust domain over **127.0.0.1 only**; there is no cloud service, account or remote
-access feature. Both transports validate Rust DTOs before writes. Neither accepts
+Rust domain over **127.0.0.1 only**; ShelfLedger operates no hosted service or account
+server. Native apps optionally sync through the user's Google Drive. Both transports validate Rust DTOs before writes. Neither accepts
 SQL from the frontend.
 
 The Android application shares these typed commands and SQLite database. Its
-release manifest has no INTERNET permission and disables OS cloud backups.
+release manifest permits INTERNET for explicit update checks and Drive sync and disables OS
+cloud backups.
 All online metadata providers are always disabled on Android, while imported caches
 remain readable. React Query uses `networkMode: always` for local IPC operations.
 Native document commands stage bounded content-provider streams under app data;
@@ -49,6 +50,20 @@ lookups regardless of restored settings. Manual entry retains typed ISBNs after
 failed lookups. See [metadata.md](metadata.md). Covers are fetched only through
 an explicit edition action, or supplied as a local photo. Validated, resized JPEGs
 live in SQLite and display offline without remote image URLs. See [covers.md](covers.md).
+Settings reads the running binary version locally through `get_app_info`. Only
+pressing Check for updates calls `check_for_updates`: a bounded (1 MiB), ten-second
+HTTPS request to the fixed official GitHub latest-release endpoint, without
+redirects, credentials or library data. Stable SemVer precedence determines
+availability; matching platform/architecture assets determine download availability.
+`open_update_page` accepts an enum of fixed project-owned browser destinations.
+Downloads and installation remain manual.
+
+Google Drive authorization and sync run only through native typed commands.
+Desktop uses the system browser, PKCE and a state-checked loopback callback;
+Android uses Google's AuthorizationClient. Tokens stay in native memory, with
+no refresh token persistence. Only `drive.appdata` is requested. Cloud operations
+are serialized; opening Settings never initiates them. See [cloud-sync.md](cloud-sync.md).
+
 Display fonts and decorative artwork are bundled.
 Camera scanning requests video only when opened, preserves platform consent,
 handles denied/missing/busy cameras and releases streams when closed. No scanning
@@ -82,6 +97,16 @@ consistent safety ZIP, then replaces records in a transaction on the live pool:
 **the open database, WAL and SHM files are never overwritten or removed**. No
 restart is required. Separate restore creates a selectable library profile.
 
+Drive sync stores immutable format-4 logical snapshots, excluding settings.
+Parent revision IDs describe history; multiple heads or changes on both devices
+require a whole-library choice. No remote version is overwritten or deleted.
+Cloud history can restore an older revision by publishing a new revision.
+Pulls save a local recovery ZIP and compare the captured snapshot and active
+profile inside the replacement transaction, rejecting intervening edits. Valuation
+row order is preserved. Profile links/checkpoints live outside library exports;
+device preferences and profile identity remain local. iCloud backups use the
+existing native file picker and ZIP restore, with no CloudKit integration.
+
 CSV and legacy-array imports stage trusted local records without revalidating
 old values, then validate and atomically merge only newly created records.
 An unrelated legacy timestamp cannot block new rows. Incoming snapshots retain
@@ -94,7 +119,7 @@ in JSON and ZIP backups; general attachment files and receipts remain deferred.
 
 ## Deliberate limits
 
-One local operator per running library is the supported deployment. Sync,
-accounts, remote hosting, e-books, receipt management, automated marketplace collection
+One local operator per running library is the supported deployment. Automatic
+sync, per-record merging, end-to-end encrypted sync, ShelfLedger accounts, remote hosting, e-books, receipt management, automated marketplace collection
 and very-large-library virtualization remain outside the current phase. See
 [implementation.md](implementation.md) for verified coverage and remaining gates.

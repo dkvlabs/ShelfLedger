@@ -6,6 +6,9 @@
 
 import { invoke } from "@tauri-apps/api/core";
 import type {
+  CloudLibrary, CloudStatus, CloudSyncResult, CloudResolution, CloudHistory,
+  AppInfo,
+  UpdateCheck,
   CoverImage,
   MarketReport,
   SaveMarketComparableInput,
@@ -142,6 +145,16 @@ export async function call<T>(
 }
 
 export const api = {
+  getCloudStatus: () => call<CloudStatus>("get_cloud_status"),
+  listCloudBackups: () => call<CloudHistory>("list_cloud_backups"),
+  connectGoogleDrive: () => call<CloudLibrary[]>("connect_google_drive"),
+  listCloudLibraries: () => call<CloudLibrary[]>("list_cloud_libraries"),
+  createCloudLibrary: (name: string) => call<CloudLibrary>("create_cloud_library", { name }),
+  linkCloudLibrary: (libraryId: string) => call<void>("link_cloud_library", { libraryId }),
+  syncCloudLibrary: (resolution: CloudResolution | null = null) => call<CloudSyncResult>("sync_cloud_library", { resolution }),
+  disconnectCloudLibrary: () => call<void>("disconnect_cloud_library"),
+  getAppInfo: () => call<AppInfo>("get_app_info"),
+  checkForUpdates: () => call<UpdateCheck>("check_for_updates"),
   listMarketComparisons: (editionId: string) =>
     call<MarketReport>("list_market_comparisons", { editionId }),
   saveMarketComparison: (input: SaveMarketComparableInput) =>

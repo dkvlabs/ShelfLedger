@@ -27,6 +27,9 @@ vi.mock("@/lib/files", () => ({ pickFile: vi.fn(), saveExport: vi.fn() }));
 vi.mock("@/lib/api", () => ({
   isDesktop: () => false,
   api: {
+    getCloudStatus: vi.fn(async () => ({ nativeAvailable: false, configured: false, signedIn: false, link: null })),
+    getAppInfo: vi.fn(async () => ({ version: "0.4.0", platform: "android" })),
+    checkForUpdates: vi.fn(),
     getSettings: vi.fn(async () => ({})),
     listLibraries: vi.fn(async () => []),
     listLocations: vi.fn(async () => []),

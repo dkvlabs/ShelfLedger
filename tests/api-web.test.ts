@@ -51,6 +51,16 @@ describe("web transport (browser mode)", () => {
     expect(JSON.parse(String(init.body))).toEqual({ localToday: "2026-10-27" });
   });
 
+  it("reads app info and checks updates through named commands without library payloads", async () => {
+    const fn = mockFetch(200, { version: "0.4.0", platform: "macos" });
+    await expect(api.getAppInfo()).resolves.toEqual({ version: "0.4.0", platform: "macos" });
+    await api.checkForUpdates();
+    for (const command of ["get_app_info", "check_for_updates"]) {
+      const [, init] = fn.mock.calls.find(([url]) => url === `/api/${command}`)!;
+      expect(JSON.parse(String(init?.body))).toEqual({});
+    }
+  });
+
   it("sends the Libris URL and optional expected ISBN through typed IPC", async () => {
     const fn = mockFetch(200, null);
     await api.lookupLibrisBook("https://www.libris.ro/carte/book/1", "9786067882629");

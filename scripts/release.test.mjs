@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { verifyAndroidApkPolicy } from './android-apk-policy.mjs';
 import { assetNames, buildArguments, checksumAssets, macPackagingSteps, releaseNotes, signingEnvironment, stageAssets, validateVersions } from './release.mjs';
 
 function fixture(t) {
@@ -17,6 +18,24 @@ function fixture(t) {
   writeFileSync(join(root, 'src-tauri/Cargo.lock'), 'version = 4\n[[package]]\nname = "dependency"\nversion = "9.8.7"\n[[package]]\nname = "shelfledger"\nversion = "0.1.0"\n');
   return root;
 }
+
+test('Android permits explicit update checks while retaining camera and storage restrictions', () => {
+  const permissions = [
+    'android.permission.CAMERA',
+    'android.permission.INTERNET',
+    'io.github.shelfledger.app.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION',
+  ].map(name => `uses-permission: name='${name}'`).join('\n');
+  const manifest = 'android:allowBackup=false\nandroid:usesCleartextTraffic=false';
+  for (const variant of ['debug', 'release']) {
+    assert.doesNotThrow(() => verifyAndroidApkPolicy(permissions, manifest, variant));
+    for (const required of ['CAMERA', 'INTERNET']) {
+      assert.throws(() => verifyAndroidApkPolicy(permissions.replace(`android.permission.${required}`, 'removed'), manifest, variant));
+    }
+    assert.throws(() => verifyAndroidApkPolicy(`${permissions}\nuses-permission: name='android.permission.READ_EXTERNAL_STORAGE'`, manifest, variant), /Unexpected permission/);
+    assert.throws(() => verifyAndroidApkPolicy(permissions, manifest.replace('allowBackup=false', 'allowBackup=true'), variant), /backup/);
+  }
+  assert.throws(() => verifyAndroidApkPolicy(permissions, manifest.replace('usesCleartextTraffic=false', 'usesCleartextTraffic=true'), 'release'), /cleartext/);
+});
 
 test('Mac builds sign both executables before bundling and retain the app for signature checks', () => {
   for (const platform of ['macos-arm64', 'macos-x64']) {

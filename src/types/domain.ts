@@ -611,3 +611,31 @@ export interface SaveMarketComparableInput {
 export interface SaveMarketEstimateInput {
   editionId: string; copyId: string; currency: string; confidence: "low" | "medium" | "high";
 }
+export interface AppInfo {
+  version: string;
+  platform: string;
+}
+
+export interface CloudLibrary { id: string; name: string }
+export interface CloudLink {
+  libraryId: string; libraryName: string; revision: string | null;
+  digest: string | null; lastSynced: string | null;
+}
+export interface CloudStatus { nativeAvailable: boolean; configured: boolean; signedIn: boolean; link: CloudLink | null }
+export interface SyncConflict { localDigest: string; heads: { id: string; createdAt: string }[] }
+export interface CloudHistory { localDigest: string; expectedHeads: string[]; backups: { id: string; createdAt: string }[] }
+export interface CloudSyncResult {
+  status: "synced" | "conflict"; lastSynced: string | null;
+  localBackupPath: string | null; conflict: SyncConflict | null; pendingLocalChanges: boolean;
+}
+export interface CloudResolution {
+  choice: { kind: "keep_device" } | { kind: "use_cloud"; revision: string };
+  localDigest: string; expectedHeads: string[];
+}
+
+export interface UpdateCheck {
+  currentVersion: string;
+  latestVersion: string;
+  updateAvailable: boolean;
+  downloadAvailable: boolean;
+}

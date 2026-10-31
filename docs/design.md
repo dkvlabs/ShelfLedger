@@ -46,6 +46,11 @@ banner height. Motion is limited to brief entrance/hover transitions and respect
   Arabic and Urdu use right-to-left layouts. See [localization.md](localization.md). User data,
   provider data and raw diagnostic errors are preserved as supplied.
 - Dates display DD.MM.YYYY; money uses the record's currency-specific minor units.
+- Settings exposes offline version information and an explicit update check.
+  Cloud sync & backup keeps Google sign-in, cloud library selection and Sync now
+  separate. Conflicts and historical restores require a confirmation dialog;
+  whole-library choices preserve recovery versions. iCloud/file backups use the
+  system picker and an explicit separate-library/replace restore choice.
 
 Components live under `src/components/ui`, features under `src/features/*`, and
 formatting/localization under `src/lib`. Query invalidation refreshes relevant

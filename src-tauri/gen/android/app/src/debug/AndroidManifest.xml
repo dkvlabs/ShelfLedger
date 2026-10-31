@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- Vite development server only. Release builds have no network permission. -->
+    <!-- Debug also uses this permission for the optional Vite development server. -->
     <uses-permission android:name="android.permission.INTERNET" />
 </manifest>

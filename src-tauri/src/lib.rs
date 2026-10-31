@@ -28,6 +28,8 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_opener::init())
+        .plugin(commands::cloud_auth::init())
+        .manage(commands::cloud_auth::CloudRuntime::default())
         // Preserve the platform's consent prompt rather than granting webview capture.
         .on_permission_request(|_, _| tauri::webview::PermissionResponse::Default)
         .setup(|app| {
@@ -46,6 +48,17 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            commands::cloud::get_cloud_status,
+            commands::cloud::connect_google_drive,
+            commands::cloud::list_cloud_libraries,
+            commands::cloud::list_cloud_backups,
+            commands::cloud::create_cloud_library,
+            commands::cloud::link_cloud_library,
+            commands::cloud::sync_cloud_library,
+            commands::cloud::disconnect_cloud_library,
+            commands::updates::get_app_info,
+            commands::updates::check_for_updates,
+            commands::updates::open_update_page,
             commands::covers::get_cover,
             commands::covers::save_cover_photo,
             commands::covers::fetch_cover,

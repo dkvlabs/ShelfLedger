@@ -4,18 +4,43 @@ ShelfLedger is **local-first**: your library, reading history, contacts, and
 financial records live in a SQLite database and media files inside your operating
 system's user-data directory on your own computer or Android device.
 
-The Android release has no INTERNET permission and disables Android's automatic
-cloud backup. All online metadata fetching is disabled on Android; transferred metadata
+The Android release disables Android's automatic cloud backup. Its INTERNET
+permission supports explicit update checks and optional Google Drive sync. All online metadata fetching is disabled on Android; transferred metadata
 caches remain usable offline. Development builds allow a local Vite server.
 
 ## What we collect
 
-**Nothing.** There is no account, no server, no analytics, no telemetry, no ads,
-and no tracking of any kind.
+ShelfLedger operates no account server and collects no analytics or telemetry.
+There are no ads or tracking. Optional Google Drive sync uses your Google account
+and Google's services; file backups use the provider you choose.
 
 ## What leaves your computer
 
 Only what you explicitly trigger:
+
+- **Google Drive sync:** sign-in opens Google's consent flow. Choosing/creating a
+  cloud library accesses its name and identifiers. **Sync now**, conflict choices
+  and restoring cloud history transfer complete library snapshots, including
+  contacts, loans, finances, saved covers and metadata caches, to/from Google's
+  app-specific Drive storage over HTTPS. Device preferences remain local. Only
+  `drive.appdata` permission is requested; the app cannot browse ordinary Drive
+  files. Access tokens stay in native memory, expire, and are never included in
+  exports. No background sync runs. Disconnect clears the local link and token;
+  it does not delete cloud history or revoke Google's authorization. Manage
+  authorization/data through your Google account. Cloud snapshots have no
+  additional ShelfLedger encryption. See [setup and recovery](docs/cloud-sync.md).
+- **Cloud file backups:** the system file picker can save/open ZIPs through
+  iCloud Drive or another installed provider. That provider manages transfer and
+  account access. Backups include preferences, contacts and financial history
+  and are not encrypted by ShelfLedger. Picking a restore file does not apply it
+  until you confirm a restore choice.
+
+- **Update checks:** pressing "Check for updates" in Settings requests the latest
+  stable release from api.github.com. GitHub receives your IP address and an
+  application User-Agent containing the installed version. No library records,
+  identifiers or credentials are sent. No check runs at startup or in the
+  background. Download buttons open the official GitHub release or Android
+  builds page in your browser; downloads and installation are manual.
 
 - **ISBN metadata lookup:** when you press "Look up", the app sends the ISBN
   you typed to openlibrary.org, then www.googleapis.com (Google Books) if Open
@@ -54,8 +79,8 @@ manual ISBN entry without camera access.
 
 Cover photography separately requests video only after **Photograph cover** is
 opened. It stops the camera on preview or close. Only **Save photo** stores the
-captured image. Selected/captured photos stay local and are never uploaded to a
-provider. JPEG/PNG/WebP input is normalized to a bounded JPEG, correcting phone
+captured image. Selected/captured photos stay local unless included in an explicit
+export, cloud backup or Drive sync. JPEG/PNG/WebP input is normalized to a bounded JPEG, correcting phone
 orientation and removing EXIF/GPS metadata. JSON and ZIP exports include saved
 cover images, so anyone receiving an export can see those images too.
 
@@ -65,8 +90,8 @@ cover images, so anyone receiving an export can see those images too.
   Settings. Native exports are copied only to a location chosen in the system
   save dialog. You can transfer a full-library ZIP by USB between PC and Android.
   These archives are not encrypted; they include contacts and financial history.
-- **Deletion:** delete the app's data directory to remove everything. Backups you
-  create are ordinary files you control.
+- **Deletion:** deleting the app's data directory removes local data. Copies in
+  Google Drive, iCloud or other exported locations must be removed separately.
 
 ## Third-party content
 

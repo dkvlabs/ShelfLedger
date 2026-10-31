@@ -266,7 +266,7 @@ function Shell() {
           ))}
           <div className="mt-auto border-t px-3 pt-6 text-xs leading-relaxed text-muted-foreground">
             <span className="me-2 text-primary">●</span>
-            {t("Offline — all data on this device")}
+            {t("Works offline. Cloud sync is optional.")}
             <p className="ms-5 mt-1 opacity-70">
               {t("Your library stays private.")}
             </p>

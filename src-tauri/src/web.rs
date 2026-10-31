@@ -80,6 +80,14 @@ fn ok<T: serde::Serialize>(value: T) -> AppResult<Value> {
 pub async fn dispatch(ctx: &WebCtx, cmd: &str, args: &Value) -> AppResult<Value> {
     let pool = &ctx.pool;
     match cmd {
+        "get_cloud_status" => ok(commands::cloud::CloudStatus {
+            native_available: false,
+            configured: false,
+            signed_in: false,
+            link: domain::cloud::load_link(&ctx.data_dir, &domain::cloud::profile(pool).await?)?,
+        }),
+        "get_app_info" => ok(domain::updates::app_info()),
+        "check_for_updates" => ok(domain::updates::check_for_updates().await?),
         "get_cover" => ok(repositories::covers::get(pool, &arg::<String>(args, "path")?).await?),
         "save_cover_photo" => ok(domain::covers::save_photo(
             pool,
@@ -721,6 +729,15 @@ mod tests {
 
     fn cleanup(ctx: WebCtx) {
         let _ = std::fs::remove_dir_all(&ctx.data_dir);
+    }
+
+    #[tokio::test]
+    async fn app_info_dispatch_reads_the_running_binary_version_without_network() {
+        let ctx = make_ctx().await;
+        let info = dispatch(&ctx, "get_app_info", &json!({})).await.unwrap();
+        assert_eq!(info["version"], env!("CARGO_PKG_VERSION"));
+        assert_eq!(info["platform"], std::env::consts::OS);
+        cleanup(ctx);
     }
 
     #[tokio::test]

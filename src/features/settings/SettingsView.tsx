@@ -25,6 +25,8 @@ import {
 } from "@/types/domain";
 
 import { CurrencySelect } from "@/components/ui/currency-select";
+import AppUpdates from "./AppUpdates";
+import CloudBackups from "./CloudBackups";
 
 export default function SettingsView() {
   const tx = useT();
@@ -158,6 +160,9 @@ export default function SettingsView() {
   return (
     <div className="max-w-3xl space-y-6 p-6">
       <h1 className="text-xl font-semibold">{tx("Settings")}</h1>
+
+      <AppUpdates />
+      <CloudBackups key={libraries?.find(l => l.active)?.id ?? "main"} profileId={libraries?.find(l => l.active)?.id ?? "main"} />
 
       <Card>
         <CardHeader>

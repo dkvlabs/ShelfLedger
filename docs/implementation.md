@@ -91,9 +91,9 @@ import, lend, sell, and back up without a terminal. Signed installers, cross-OS 
 
 ## Phase 6 — After feedback ⬜ (non-MVP)
 
-Receipts, automated marketplace collection, ebooks and optional sync remain
-deferred. Barcode scanning and manual OLX comparisons were pulled forward on
-request — see below.
+Receipts, automated marketplace collection, ebooks, automatic sync and encrypted
+sync remain deferred. Barcode scanning, manual OLX comparisons and manual Drive
+snapshot sync were pulled forward on explicit request — see below.
 
 ## User-requested follow-ups ✅ (2026-10-27)
 
@@ -174,7 +174,7 @@ See [localization.md](localization.md) for extension and maintenance instruction
 
 - [x] Committed native Android project sharing typed Rust IPC and SQLite, ARM64
       build scripts and Android CI APK artifacts, optional production signing.
-- [x] Offline release manifest (no INTERNET), disabled OS cloud backup and Android
+- [x] Restricted release manifest (INTERNET for explicit update checks and optional Drive sync), disabled OS cloud backup and Android
       network metadata provider; all fonts, translations and decoding bundled.
 - [x] Local queries and mutations execute even when the device reports offline.
 - [x] Native document-provider streams staged under app data with size/format
@@ -185,8 +185,36 @@ See [localization.md](localization.md) for extension and maintenance instruction
 
 Build/install instructions and verification scope: [android.md](android.md).
 
+## App version and manual update checks — 31.10.2026
+
+- [x] Shared desktop/Android Settings card reads the running binary version offline.
+- [x] User-triggered stable GitHub release check, SemVer comparison and platform
+      download availability; no background checks or library data transmission.
+- [x] Loading, current/new version, missing download and retryable failure states;
+      fixed official browser links for manual download and installation.
+- [x] All eleven locales; Android metadata fetching remains disabled.
+
 ## Project audit — 29.10.2026
 
 See [audit-2026-10-29.md](audit-2026-10-29.md) for reproducible integrity
 findings, library-size benchmarks, measured bundle changes, and a prioritized
 feature backlog. Phase checkmarks above do not mean those findings are resolved.
+
+## Manual cloud backups — 31.10.2026
+
+Explicitly requested scope beyond the original phase plan:
+
+- [x] Native desktop/Android Google Drive authorization and manual snapshot sync,
+      app-data-only access, per-profile local links and in-memory tokens.
+- [x] Immutable revision history, explicit whole-library conflict choices,
+      historical restore and pre-replacement recovery ZIPs; transaction guards
+      reject intervening local edits/profile changes. Preferences stay local.
+- [x] iCloud/other provider ZIP backups through native file pickers, with confirmed
+      separate/replace restore and cancelled-save retry.
+- [x] Eleven-language settings UI and Google project/signing setup instructions.
+
+**Validation:** local mock-Drive integration tests and frontend interaction tests
+pass; the Android authorization bridge compiles. Real consent, cross-device
+Google access and iCloud provider transfers remain account/build acceptance
+checks. No automatic sync, record merge, cloud deletion or additional encryption.
+See [cloud-sync.md](cloud-sync.md).
