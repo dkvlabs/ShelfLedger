@@ -142,7 +142,7 @@ async fn work(pool: &SqlitePool, title: &str) {
 }
 async fn dispose(root: PathBuf, pool: SqlitePool) {
     pool.close().await;
-    std::fs::remove_dir_all(root).unwrap();
+    crate::file_cleanup::remove_dir_all(&root).await.unwrap();
 }
 
 #[tokio::test]

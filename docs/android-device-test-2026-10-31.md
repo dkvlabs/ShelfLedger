@@ -1,5 +1,31 @@
 # Physical Android verification — 31.10.2026
 
+## Follow-up: fresh installation of 0.4.0
+
+After the user removed the old installation, the ARM64 debug APK from Android
+CI run `41151651605`, source commit
+`0b2e48335e792b9519ae144a8a186b80da971e55`, was installed on the same Pixel.
+The downloaded artifact matched its SHA-256 manifest and passed the packaged
+permission/OS-backup policy check. It was signed with this Mac's existing Android
+debug key, which was not uploaded or committed. Future USB updates can use the
+same key. Installed version: **0.4.0**, version code **4000**.
+
+The initial incremental installation produced a blank first-launch screen.
+A streamed installation (`adb install --no-incremental -r`) and cold launch
+rendered the library successfully. The cause of the first blank screen was not
+established. No application data was cleared during these installation checks.
+
+On the actual phone, Settings displayed version 0.4.0, Check for updates,
+personal Google Drive sign-in and file backup/restore controls. Pressing Check
+for updates completed with “You're up to date,” latest release 0.4.0, and the
+notice that the release has no published Android APK. Google authorization and
+real cross-device backup remain unverified pending publisher OAuth registration;
+no Google account was connected during this installation check.
+
+The detailed core-workflow audit below still describes the earlier 0.2.0 build.
+
+## Earlier 0.2.0 audit
+
 Result: the exercised core workflows passed on the connected phone, but this
 does not certify every feature or the latest Android build. One date-default
 defect was reproduced, and updating to the current CI APK was blocked by a
