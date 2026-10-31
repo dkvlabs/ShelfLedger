@@ -4,6 +4,19 @@ All notable changes to ShelfLedger are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning is
 [SemVer](https://semver.org/).
 
+## [0.5.0](https://github.com/dkvlabs/ShelfLedger/compare/v0.4.0...v0.5.0) (2026-10-31)
+
+
+### Features
+
+* add manual cloud backups and app update settings ([be218d9](https://github.com/dkvlabs/ShelfLedger/commit/be218d97377923bb0cd920fb5f6244bc5545fe55))
+* simplify personal Google Drive backup setup ([0b2e483](https://github.com/dkvlabs/ShelfLedger/commit/0b2e48335e792b9519ae144a8a186b80da971e55))
+
+
+### Fixes
+
+* enable Android ISBN lookup with all provider fallbacks ([7741cdb](https://github.com/dkvlabs/ShelfLedger/commit/7741cdb432d1c10238fc4a0e288dd30c43d1bef7))
+
 ## [0.4.0](https://github.com/dkvlabs/ShelfLedger/compare/v0.3.0...v0.4.0) (2026-10-29)
 
 
