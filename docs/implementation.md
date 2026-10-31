@@ -21,7 +21,7 @@ offline launch works. Windows/Linux workflows are configured; this local audit d
       metadata cache, editable tags, activity events, FTS5)
 - [x] CRUD for works, editions, owned copies (typed Tauri commands)
 - [x] Local search (FTS5 prefix matching) and sorting; typographic book grid and table view
-- [x] ISBN lookup with cache (Open Library → Google Books → ISBN Search), explicit Libris product-link import, and manual fallback; Android remains offline
+- [x] ISBN lookup with cache (Open Library → Google Books → ISBN Search), explicit Libris product-link import, and manual fallback on desktop and Android
 - [x] Duplicate detection by ISBN and title+author with user confirmation
 - [x] Multiple owned copies with locations; purchase amount, currency, date, condition
 
@@ -103,7 +103,7 @@ Scope beyond the original plan, implemented on explicit request:
       photo selection, camera preview/capture/retake/save, offline display in the
       library and edition details, removal, orientation correction and metadata
       stripping. SQLite storage, migration 0007 and JSON format 4 preserve images
-      in JSON/ZIP transfers. Android remains offline. See [covers.md](covers.md).
+      in JSON/ZIP transfers. Explicit online fetch is also available on Android. See [covers.md](covers.md).
 
 - [x] OLX Romania comparison workflow per edition: external ISBN/title searches,
       user-verified listing URLs and prices, observation dates, condition notes,
@@ -174,8 +174,9 @@ See [localization.md](localization.md) for extension and maintenance instruction
 
 - [x] Committed native Android project sharing typed Rust IPC and SQLite, ARM64
       build scripts and Android CI APK artifacts, optional production signing.
-- [x] Restricted release manifest (INTERNET for explicit update checks and optional Drive sync), disabled OS cloud backup and Android
-      network metadata provider; all fonts, translations and decoding bundled.
+- [x] Restricted release manifest (INTERNET for explicit metadata/cover requests,
+      update checks and optional Drive sync), disabled OS cloud backup;
+      all fonts, translations and decoding bundled.
 - [x] Local queries and mutations execute even when the device reports offline.
 - [x] Native document-provider streams staged under app data with size/format
       checks; generated exports copied through an OS-selected save destination.
@@ -192,7 +193,7 @@ Build/install instructions and verification scope: [android.md](android.md).
       download availability; no background checks or library data transmission.
 - [x] Loading, current/new version, missing download and retryable failure states;
       fixed official browser links for manual download and installation.
-- [x] All eleven locales; Android metadata fetching remains disabled.
+- [x] All eleven locales; Android metadata requests use the shared provider policy.
 
 ## Project audit — 29.10.2026
 

@@ -41,8 +41,9 @@ themes; eleven interface languages (the initial global top ten plus Romanian); g
 The Android app shares the desktop library and domain model, with touch-sized
 controls and native file pickers. Books, reading, loans, finances, barcode
 decoding, translations and backup/restore stay on the device. Internet access is
-used for explicit update checks and optional Google Drive sync; the library works
-offline. Uncached ISBN metadata requires manual entry on Android.
+used for explicit ISBN lookup, cover fetches, update checks and optional Google
+Drive sync; the library works offline. ISBN lookup uses the same provider fallback
+as desktop, with cached metadata and manual entry available offline.
 
 Use **Settings → Data → Export for another device**, copy the ZIP by USB, then
 **Import from another device** on the receiver. Restore requires confirmation;

@@ -5,8 +5,9 @@ financial records live in a SQLite database and media files inside your operatin
 system's user-data directory on your own computer or Android device.
 
 The Android release disables Android's automatic cloud backup. Its INTERNET
-permission supports explicit update checks and optional Google Drive sync. All online metadata fetching is disabled on Android; transferred metadata
-caches remain usable offline. Development builds allow a local Vite server.
+permission supports explicit metadata lookups, cover fetches, update checks and
+optional Google Drive sync. Metadata caches remain usable offline.
+Development builds allow a local Vite server.
 
 ## What we collect
 
@@ -42,7 +43,8 @@ Only what you explicitly trigger:
   background. Download buttons open the official GitHub release or Android
   builds page in your browser; downloads and installation are manual.
 
-- **ISBN metadata lookup:** when you press "Look up", the app sends the ISBN
+- **ISBN metadata lookup:** when you press "Look up" or finish scanning an ISBN,
+  the app sends the ISBN
   you typed to openlibrary.org, then www.googleapis.com (Google Books) if Open
   Library has no match or fails, then isbnsearch.org (ISBN Search) if both
   catalogs miss or fail. Only checksum-valid matching editions are used.
@@ -57,15 +59,15 @@ Only what you explicitly trigger:
   load images, execute page scripts, fetch tracking resources, or import reviews
   and prices from the page.
   Manual entry always works offline. The `metadata.lookup_enabled` setting
-  disables all provider requests; Android enforces this regardless of settings.
+  disables all provider requests on desktop and Android.
 - **OLX links:** clicking a comparison search or listing opens OLX in your
   browser, sharing the chosen ISBN/title/author or URL with OLX. Saved comparisons
   remain local; no pages are fetched or monitored in the background.
 - **Cover fetch:** only when you press "Fetch cover", the edition ISBN is sent
   to covers.openlibrary.org. Its image may be served through archive.org and
   Internet Archive image servers. Saved images display from SQLite with no
-  subsequent provider request. Android and disabled metadata settings block
-  this fetch. There are no background or bulk cover downloads.
+  subsequent provider request. Disabled metadata settings block this fetch on
+  every platform. There are no background or bulk cover downloads.
 
 Contacts, loans, saved valuations and financial records are never automatically
 transmitted. There is no automatic message sending.

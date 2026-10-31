@@ -28,8 +28,8 @@ Changes do not alter existing backup files.
 
 Saved covers display locally. Viewing a collection, opening a book, choosing a
 photo and using the camera never requests a remote cover. Fetch is an explicit
-action on desktop/web and obeys the metadata provider setting. Android keeps its
-no-INTERNET release manifest; choose/take a photo or transfer a saved cover instead.
+action on Android/desktop/web and obeys the metadata provider setting. Choosing
+or taking a photo and transferring a saved cover remain available offline.
 
 Normalized JPEG bytes live in SQLite, inside app data. Logical cover identifiers
 are not file paths, and arbitrary remote image URLs are never rendered. Full

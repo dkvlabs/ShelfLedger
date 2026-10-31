@@ -26,20 +26,23 @@ for camera permission when opened; denial leaves photo/manual entry available.
 Live camera hardware and vendor-specific document providers still need testing
 on physical phones.
 
-**The release APK uses INTERNET for explicit update checks and optional Google Drive sync**, disables Android cloud backup,
-and never fetches online metadata from Open Library, Google Books, ISBN Search or Libris,
-even after importing desktop settings. Import a desktop ZIP to reuse its
-metadata cache, or enter the book manually.
+**The release APK uses INTERNET for explicit metadata lookup, cover fetches,
+update checks and optional Google Drive sync**, and disables Android cloud backup.
+ISBN lookup checks Open Library → Google Books → ISBN Search, continuing after
+misses, errors and timeouts until an exact edition is found. Libris import uses
+the book link you provide. All providers obey `metadata.lookup_enabled` and
+successful metadata lookups are cached locally.
 Metadata already cached in a transferred library remains available. A new ISBN
 can be entered/scanned offline; fill in uncached book details manually. OLX
 links explicitly open another app/browser and require its connection. Debug
 builds also use INTERNET for the optional Vite development server; the library
-still works in airplane mode and Android metadata fetching remains disabled.
+still works in airplane mode, using cached metadata or manual entry.
 
 Edition covers can be selected from JPEG/PNG/WebP photos or captured with
 **Photograph cover → Take photo → Save photo**. Saved covers display offline and
-are included in full-library JSON/ZIP transfers. Android does not fetch remote
-covers; desktop-fetched covers transfer with the library. See [covers.md](covers.md).
+are included in full-library JSON/ZIP transfers. **Fetch cover** explicitly
+downloads by ISBN when online; there are no background cover requests.
+See [covers.md](covers.md).
 
 ## Transfer a complete library between PC and phone
 
@@ -172,7 +175,7 @@ checks or ordinary debug builds.
 
 **Settings → About ShelfLedger** displays the running binary version offline.
 **Check for updates** manually checks the latest stable GitHub release. No library
-data is sent, no automatic checks run, and metadata fetching stays disabled.
+data is sent and no automatic checks run.
 Offline/service failures show a retryable error. If the release has no Android
 APK, the card says so and offers the Android workflow builds page. Downloads
 and installation are manual; installing over an existing app requires the same

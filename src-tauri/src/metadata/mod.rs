@@ -100,14 +100,12 @@ async fn fetch_text(url: &str, provider: &str) -> AppResult<Option<String>> {
 }
 
 pub(crate) async fn require_online(pool: &SqlitePool) -> AppResult<()> {
-    // Even restored desktop preferences cannot enable Android metadata networking.
-    if !cfg!(target_os = "android")
-        && settings::get_json(pool, SETTING_ENABLED)
-            .await
-            .ok()
-            .flatten()
-            .and_then(|v| v.as_bool())
-            .unwrap_or(true)
+    // Explicit metadata actions share the same preference on every platform.
+    // Local caches are read before this gate and remain usable offline.
+    if settings::get_json(pool, SETTING_ENABLED)
+        .await?
+        .and_then(|v| v.as_bool())
+        .unwrap_or(true)
     {
         Ok(())
     } else {
@@ -249,6 +247,79 @@ async fn lookup_with_providers(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[tokio::test]
+    async fn online_metadata_is_available_by_default_and_obeys_the_device_preference() {
+        let pool = crate::db::connect_memory().await.unwrap();
+        require_online(&pool).await.unwrap();
+        settings::set_json(&pool, SETTING_ENABLED, &serde_json::json!(false))
+            .await
+            .unwrap();
+        assert!(matches!(
+            require_online(&pool).await,
+            Err(AppError::MetadataDisabled)
+        ));
+        settings::set_json(&pool, SETTING_ENABLED, &serde_json::json!(true))
+            .await
+            .unwrap();
+        require_online(&pool).await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn uncached_lookup_checks_all_three_sources_after_misses_errors_or_timeouts() {
+        use std::sync::Mutex;
+        for failure in ["miss", "error", "timeout"] {
+            let pool = crate::db::connect_memory().await.unwrap();
+            let checked = Mutex::new(Vec::new());
+            let lookup = |source: &'static str| {
+                let checked = &checked;
+                async move {
+                    checked.lock().unwrap().push(source);
+                    match failure {
+                        "miss" => Ok(None),
+                        "error" => Err(AppError::Network(format!("{source} unavailable"))),
+                        _ => {
+                            provider_with_timeout(
+                                source,
+                                std::future::pending(),
+                                Duration::from_millis(1),
+                            )
+                            .await
+                        }
+                    }
+                }
+            };
+            let mut expected = book();
+            expected.source = "isbnsearch".into();
+            let result = lookup_with_providers(
+                &pool,
+                "9786067882629",
+                lookup("openlibrary"),
+                first_match(lookup("googlebooks"), async {
+                    checked.lock().unwrap().push("isbnsearch");
+                    Ok(Some(expected.clone()))
+                }),
+            )
+            .await
+            .unwrap()
+            .unwrap();
+            assert_eq!(
+                serde_json::to_value(result).unwrap(),
+                serde_json::to_value(expected).unwrap()
+            );
+            assert_eq!(
+                *checked.lock().unwrap(),
+                ["openlibrary", "googlebooks", "isbnsearch"]
+            );
+            settings::set_json(&pool, SETTING_ENABLED, &serde_json::json!(false))
+                .await
+                .unwrap();
+            let cached = lookup_isbn(&pool, "6067882620").await.unwrap().unwrap();
+            assert!(cached.cached);
+            assert_eq!(cached.source, "isbnsearch");
+        }
+    }
+
     #[tokio::test]
     async fn third_provider_handles_misses_errors_and_caches_offline() {
         for primary in [Ok(None), Err(AppError::Network("timeout".into()))] {

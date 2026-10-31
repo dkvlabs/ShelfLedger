@@ -11,10 +11,10 @@ server. Native apps optionally sync through the user's Google Drive. Both transp
 SQL from the frontend.
 
 The Android application shares these typed commands and SQLite database. Its
-release manifest permits INTERNET for explicit update checks and Drive sync and disables OS
+release manifest permits INTERNET for explicit metadata lookups, cover fetches, update checks and Drive sync and disables OS
 cloud backups.
-All online metadata providers are always disabled on Android, while imported caches
-remain readable. React Query uses `networkMode: always` for local IPC operations.
+Android uses the same metadata provider fallback as desktop; successful lookups
+are cached for offline use. React Query uses `networkMode: always` for local IPC operations.
 Native document commands stage bounded content-provider streams under app data;
 only generated export/backup files may be copied to a destination chosen through
 the OS save dialog. This explicit user-directed transfer is the only external
@@ -40,13 +40,13 @@ and a validated ISO currency; reports group by currency and never invent rates.
 
 ## Offline and privacy
 
-All core workflows use SQLite without network. ISBN lookup tries Open Library
-then Google Books on explicit request, with exact edition matching. A separate
+All core workflows use SQLite without network. ISBN lookup tries Open Library,
+Google Books, then ISBN Search on explicit request, with exact edition matching. A separate
 user-supplied Libris product link imports Book JSON-LD and rejects ISBN mismatches.
 Shared bounded HTTPS requests restrict providers and redirects; all successful
 results are cached, including compatibility with older Open Library cache keys.
-Every provider obeys `metadata.lookup_enabled`, and Android blocks network
-lookups regardless of restored settings. Manual entry retains typed ISBNs after
+Every provider obeys `metadata.lookup_enabled` on desktop and Android.
+Manual entry retains typed ISBNs after
 failed lookups. See [metadata.md](metadata.md). Covers are fetched only through
 an explicit edition action, or supplied as a local photo. Validated, resized JPEGs
 live in SQLite and display offline without remote image URLs. See [covers.md](covers.md).

@@ -15,7 +15,7 @@ conflict even for the same ISBN; review the physical edition before saving.
 
 ## Add the book
 
-1. In **Add book**, type or scan the ISBN, then press **Look up**. Desktop/web
+1. In **Add book**, type or scan the ISBN, then press **Look up**. Android/desktop/web
    tries Open Library → Google Books → ISBN Search, continuing after misses,
    quota errors or network failures. Related results with a different ISBN are
    rejected. A match stops further requests; there is no request while typing.
@@ -40,17 +40,18 @@ metadata, including offline. Existing Open Library caches remain compatible.
 Complete-library ZIP and JSON exports preserve caches for transfer to another
 device. The source displayed in Add book reflects the actual provider.
 
-The Android distribution has no INTERNET permission. It uses transferred caches
-and manual entry only, including when desktop settings are restored. Setting
-`metadata.lookup_enabled` to false blocks all online providers on desktop too;
-already-cached results remain readable.
+Android and desktop use the same three-provider fallback for uncached ISBNs.
+Setting `metadata.lookup_enabled` to false blocks all online providers on every
+platform; already-cached results remain readable. An exact match stops further
+requests. Libris is a separate explicit product-link import, not an automatic
+ISBN search provider.
 
 An uncached ISBN or Libris link with online providers disabled reports that lookup
 is disabled on this device, rather than claiming the providers have no match.
-On Android, fetch/import the metadata on desktop first and transfer a complete
-library ZIP through **Settings → Export for another device**, then import it on
-the phone. Scanning reads the ISBN; book details require cached metadata or manual
-entry when offline.
+Scanning reads the ISBN on-device, then requests metadata through the same
+fallback. When offline, book details require cached metadata or manual entry.
+You can also transfer cached metadata in a complete library ZIP through
+**Settings → Export for another device**.
 
 ## Provider limits and privacy
 
