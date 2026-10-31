@@ -547,5 +547,11 @@
   "Use this device as the cloud version? Existing cloud backups are kept.": "اس آلے کی لائبریری کو کلاؤڈ نسخہ بنائیں؟ موجودہ کلاؤڈ بیک اپ محفوظ رہیں گے۔",
   "Cloud backup history": "کلاؤڈ بیک اپ کی تاریخ",
   "Choose a cloud backup": "کلاؤڈ بیک اپ منتخب کریں",
-  "Works offline. Cloud sync is optional.": "آف لائن کام کرتا ہے۔ کلاؤڈ ہم وقت سازی اختیاری ہے۔"
+  "Works offline. Cloud sync is optional.": "آف لائن کام کرتا ہے۔ کلاؤڈ ہم وقت سازی اختیاری ہے۔",
+  "Choose your Google account. Backups belong to your account and can be restored on your other devices.": "اپنا Google اکاؤنٹ منتخب کریں۔ بیک اپ آپ کے اکاؤنٹ میں رہتے ہیں اور آپ کے دوسرے آلات پر بحال ہو سکتے ہیں۔",
+  "Find my backup": "میرا بیک اپ تلاش کریں",
+  "No backup yet. Sync now will create one in your Google Drive.": "ابھی کوئی بیک اپ نہیں۔ ابھی ہم وقت سازی کریں سے آپ کے Google Drive میں بیک اپ بنے گا۔",
+  "Backup found: {value}": "بیک اپ مل گیا: {value}",
+  "Restore from Google Drive": "Google Drive سے بحال کریں",
+  "Use a separate cloud backup": "الگ کلاؤڈ بیک اپ استعمال کریں"
 }

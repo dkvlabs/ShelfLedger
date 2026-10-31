@@ -55,6 +55,7 @@ pub fn run() {
             commands::cloud::create_cloud_library,
             commands::cloud::link_cloud_library,
             commands::cloud::sync_cloud_library,
+            commands::cloud::start_cloud_sync,
             commands::cloud::disconnect_cloud_library,
             commands::updates::get_app_info,
             commands::updates::check_for_updates,

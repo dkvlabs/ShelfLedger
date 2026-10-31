@@ -47,8 +47,9 @@ banner height. Motion is limited to brief entrance/hover transitions and respect
   provider data and raw diagnostic errors are preserved as supplied.
 - Dates display DD.MM.YYYY; money uses the record's currency-specific minor units.
 - Settings exposes offline version information and an explicit update check.
-  Cloud sync & backup keeps Google sign-in, cloud library selection and Sync now
-  separate. Conflicts and historical restores require a confirmation dialog;
+  Cloud sync & backup uses a personal-account flow: Google sign-in, Sync now,
+  last sync, and Restore from Google Drive. The first Sync now creates a backup
+  or finds the account's sole backup; multiple libraries require a choice. Conflicts and historical restores require a confirmation dialog;
   whole-library choices preserve recovery versions. iCloud/file backups use the
   system picker and an explicit separate-library/replace restore choice.
 

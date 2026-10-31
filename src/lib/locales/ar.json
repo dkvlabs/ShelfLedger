@@ -547,5 +547,11 @@
   "Use this device as the cloud version? Existing cloud backups are kept.": "هل تريد استخدام مكتبة هذا الجهاز كإصدار سحابي؟ ستُحفظ النسخ الاحتياطية السحابية الحالية.",
   "Cloud backup history": "سجل النسخ الاحتياطية السحابية",
   "Choose a cloud backup": "اختيار نسخة احتياطية سحابية",
-  "Works offline. Cloud sync is optional.": "يعمل دون اتصال. المزامنة السحابية اختيارية."
+  "Works offline. Cloud sync is optional.": "يعمل دون اتصال. المزامنة السحابية اختيارية.",
+  "Choose your Google account. Backups belong to your account and can be restored on your other devices.": "اختر حساب Google الخاص بك. النسخ الاحتياطية تخص حسابك ويمكن استعادتها على أجهزتك الأخرى.",
+  "Find my backup": "العثور على نسختي الاحتياطية",
+  "No backup yet. Sync now will create one in your Google Drive.": "لا توجد نسخة احتياطية بعد. ستُنشئ المزامنة الآن نسخة في Google Drive الخاص بك.",
+  "Backup found: {value}": "تم العثور على نسخة احتياطية: {value}",
+  "Restore from Google Drive": "استعادة من Google Drive",
+  "Use a separate cloud backup": "استخدام نسخة سحابية منفصلة"
 }

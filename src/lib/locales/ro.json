@@ -547,5 +547,11 @@
   "Use this device as the cloud version? Existing cloud backups are kept.": "Folosești biblioteca acestui dispozitiv ca versiune din cloud? Backupurile existente în cloud sunt păstrate.",
   "Cloud backup history": "Istoric backupuri în cloud",
   "Choose a cloud backup": "Alege un backup din cloud",
-  "Works offline. Cloud sync is optional.": "Funcționează offline. Sincronizarea cloud este opțională."
+  "Works offline. Cloud sync is optional.": "Funcționează offline. Sincronizarea cloud este opțională.",
+  "Choose your Google account. Backups belong to your account and can be restored on your other devices.": "Alege contul tău Google. Copiile de siguranță aparțin contului tău și pot fi restaurate pe celelalte dispozitive.",
+  "Find my backup": "Găsește copia mea",
+  "No backup yet. Sync now will create one in your Google Drive.": "Nu există încă o copie. Sincronizează acum va crea una în Google Drive-ul tău.",
+  "Backup found: {value}": "Copie găsită: {value}",
+  "Restore from Google Drive": "Restaurează din Google Drive",
+  "Use a separate cloud backup": "Folosește o copie cloud separată"
 }

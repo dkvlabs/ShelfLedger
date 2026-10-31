@@ -547,5 +547,11 @@
   "Use this device as the cloud version? Existing cloud backups are kept.": "Use this device as the cloud version? Existing cloud backups are kept.",
   "Cloud backup history": "Cloud backup history",
   "Choose a cloud backup": "Choose a cloud backup",
-  "Works offline. Cloud sync is optional.": "Works offline. Cloud sync is optional."
+  "Works offline. Cloud sync is optional.": "Works offline. Cloud sync is optional.",
+  "Choose your Google account. Backups belong to your account and can be restored on your other devices.": "Choose your Google account. Backups belong to your account and can be restored on your other devices.",
+  "Find my backup": "Find my backup",
+  "No backup yet. Sync now will create one in your Google Drive.": "No backup yet. Sync now will create one in your Google Drive.",
+  "Backup found: {value}": "Backup found: {value}",
+  "Restore from Google Drive": "Restore from Google Drive",
+  "Use a separate cloud backup": "Use a separate cloud backup"
 }

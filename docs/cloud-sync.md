@@ -4,7 +4,17 @@ Open **Settings → Cloud sync & backup** in the installed desktop or Android ap
 Core features work offline without a Google account. Cloud operations run only
 when requested; nothing syncs at startup or in the background.
 
-## Set up Google Drive
+## Users back up to their own account
+
+Every user signs into their own Google account. ShelfLedger stores that user's
+backup in that account's app-specific Drive storage. There is no shared Drive
+account, developer-owned backup folder or service account. Users never enter
+OAuth client IDs/secrets or create Cloud projects. The app publisher configures
+registration once when building ShelfLedger, like other installed apps with
+Google authorization. The GitHub Actions values below identify the app; they do
+not authenticate a Google user or grant the publisher access to user backups.
+
+## Publisher setup (once per app)
 
 Use **one Google Cloud project** for desktop and Android registrations.
 
@@ -66,17 +76,21 @@ See [Android authorization setup](https://developer.android.com/identity/authori
 
 ## Sync two devices
 
-1. On the device containing your library, choose **Sign in to Google Drive**.
-   Authorize app-data access with your test account. Create a named cloud library;
-   this creates its descriptor without uploading books yet.
-2. Press **Sync now** to upload the active library.
-3. On another configured device, sign in with the same Google account, select
-   that cloud library and choose **Use selected library**.
-4. Press **Sync now**. An empty local library receives the cloud version. Different
-   existing records require a choice of which complete library to use. To keep
-   local libraries separate, first create/switch to an empty one under
-   **Settings → Libraries**.
+1. Choose **Sign in to Google Drive** and select your own Google account.
+   Signing in finds your backups without uploading your library.
+2. Press **Sync now**. If your account has no backup, the app creates one and
+   uploads the active library. If there is one backup, the app uses it without
+   asking you to create or name a cloud container.
+3. On another device, sign in with the same Google account. Use **Restore from
+   Google Drive** to select a version and confirm restoration, or **Sync now**
+   to synchronize an empty library with that backup.
+4. If several backups exist, choose the intended library first. **Use a separate
+   cloud backup** lets you explicitly create another named backup when needed.
 5. After editing a device, press **Sync now** there, then on the other device.
+
+Different existing local records still require a whole-library conflict choice.
+To keep a local library separate, first create/switch to an empty one under
+**Settings → Libraries**. No automatic schedule is enabled.
 
 Connections are local to each library profile. Preferences, language and selected
 profile remain local. Books, editions, copies, covers, reading/loan history,
@@ -96,8 +110,7 @@ cloud version after creating a local recovery ZIP. Confirm in the dialog.
 Individual records are not merged. A stale choice cannot overwrite intervening
 edits: review the current versions and try again.
 
-Uploads create immutable revisions; older versions are retained. Use **Cloud
-backup history**, select a version, then **Use cloud version** and confirm.
+Uploads create immutable revisions; older versions are retained. Use **Restore from Google Drive**, select a version, then **Use cloud version** and confirm.
 Restoring history publishes a new revision while preserving the later ones.
 **Recovery backup** saves the pre-replacement ZIP through the system picker.
 Recovery ZIPs also remain in the app-data `backups` directory.

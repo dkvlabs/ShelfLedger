@@ -93,6 +93,28 @@ pub async fn link_cloud_library(
 }
 
 #[tauri::command]
+pub async fn start_cloud_sync(
+    app: tauri::AppHandle,
+    state: State<'_, AppState>,
+    runtime: State<'_, CloudRuntime>,
+    profile_id: String,
+    library_id: Option<String>,
+) -> AppResult<SyncResult> {
+    let _operation = runtime
+        .operation
+        .try_lock()
+        .map_err(|_| AppError::Conflict("another cloud operation is running".into()))?;
+    cloud::start_sync(
+        &state.pool,
+        &root(&app)?,
+        &Drive::new(runtime.access_token().await?)?,
+        &profile_id,
+        library_id.as_deref(),
+    )
+    .await
+}
+
+#[tauri::command]
 pub async fn sync_cloud_library(
     app: tauri::AppHandle,
     state: State<'_, AppState>,

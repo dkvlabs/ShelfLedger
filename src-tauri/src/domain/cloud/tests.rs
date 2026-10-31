@@ -146,6 +146,53 @@ async fn dispose(root: PathBuf, pool: SqlitePool) {
 }
 
 #[tokio::test]
+async fn first_sync_creates_a_personal_backup_and_another_device_finds_it() {
+    let server = server().await;
+    let drive = Drive::test_server(server.url.clone());
+    let (a, pa) = device().await;
+    let (b, pb) = device().await;
+    work(&pa, "Personal book").await;
+    start_sync(&pa, &a, &drive, "main", None).await.unwrap();
+    assert_eq!(libraries(&drive).await.unwrap().len(), 1);
+    start_sync(&pb, &b, &drive, "main", None).await.unwrap();
+    assert_eq!(
+        snapshot::export(&pb).await.unwrap().tables["works"].len(),
+        1
+    );
+    assert_eq!(
+        load_link(&a, "main").unwrap().unwrap().library_id,
+        load_link(&b, "main").unwrap().unwrap().library_id
+    );
+    let file_count = server.store.lock().await.files.len();
+    assert!(start_sync(&pb, &b, &drive, &crate::ids::new_id(), None)
+        .await
+        .is_err());
+    assert_eq!(server.store.lock().await.files.len(), file_count);
+    dispose(a, pa).await;
+    dispose(b, pb).await;
+}
+
+#[tokio::test]
+async fn multiple_backups_require_a_choice_and_other_accounts_never_receive_a_linked_library() {
+    let account_a = server().await;
+    let account_b = server().await;
+    let drive_a = Drive::test_server(account_a.url.clone());
+    let drive_b = Drive::test_server(account_b.url.clone());
+    let first = create_library(&drive_a, "First").await.unwrap();
+    create_library(&drive_a, "Second").await.unwrap();
+    let (a, pa) = device().await;
+    work(&pa, "Belongs to account A").await;
+    assert!(start_sync(&pa, &a, &drive_a, "main", None).await.is_err());
+    assert!(load_link(&a, "main").unwrap().is_none());
+    start_sync(&pa, &a, &drive_a, "main", Some(&first.id))
+        .await
+        .unwrap();
+    assert!(start_sync(&pa, &a, &drive_b, "main", None).await.is_err());
+    assert!(account_b.store.lock().await.files.is_empty());
+    dispose(a, pa).await;
+}
+
+#[tokio::test]
 async fn two_devices_push_pull_reconnect_offline_and_preserve_local_preferences() {
     let server = server().await;
     let drive = Drive::test_server(server.url.clone());

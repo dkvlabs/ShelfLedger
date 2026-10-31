@@ -35,8 +35,7 @@ export default function CloudBackups({ profileId }: { profileId: string }) {
     onSettled: () => { void client.invalidateQueries({ queryKey: ["cloud-status"] }); },
   });
   const busy = work.isPending;
-  const runSync = async (resolution: CloudResolution | null = null) => {
-    const next = await api.syncCloudLibrary(resolution);
+  const acceptResult = (next: CloudSyncResult) => {
     setResult(next);
     setHistory(null);
     setSelectedHead("");
@@ -46,12 +45,20 @@ export default function CloudBackups({ profileId }: { profileId: string }) {
       void client.invalidateQueries();
     }
   };
+  const runSync = async (resolution: CloudResolution | null = null) => acceptResult(await api.syncCloudLibrary(resolution));
   const choose = (choice: CloudResolution["choice"]) => {
     if (!result?.conflict) return;
     setConfirmation({ choice, localDigest: result.conflict.localDigest, expectedHeads: result.conflict.heads.map(h => h.id) });
   };
   const cloudHeads = result?.conflict?.heads ?? [];
   const head = selectedHead || cloudHeads[0]?.id || "";
+  const backupId = selectedLibrary || (libraries?.length === 1 ? libraries[0].id : "");
+  const findBackups = async () => {
+    setLibraries(await api.connectGoogleDrive()); setSelectedLibrary("");setResult(null);setHistory(null);
+  };
+  const showHistory = async () => {
+    setHistory(await api.listCloudBackups());setHistoryRevision("");
+  };
   const save = async (path: string) => {
     setNote(await saveExport(path) ? "Backup saved. Your file provider manages the cloud upload." : "Save cancelled. Your backup is ready; use Save file to try again.");
   };
@@ -63,24 +70,32 @@ export default function CloudBackups({ profileId }: { profileId: string }) {
       <section className="space-y-3" aria-label={t("Google Drive")}>
         <h3 className="text-sm font-semibold">{t("Google Drive")}</h3>
         <p className="text-sm text-muted-foreground">{t("Sync only when you press Sync now. Your complete library, including contacts and finances, is stored in your Google Drive. Device preferences stay local.")}</p>
+        <p className="text-sm text-muted-foreground">{t("Choose your Google account. Backups belong to your account and can be restored on your other devices.")}</p>
         {status.data && !status.data.nativeAvailable && <p className="text-sm text-muted-foreground">{t("Google Drive sync requires the installed app.")}</p>}
         {status.data?.nativeAvailable && !status.data.configured && <p className="text-sm text-muted-foreground">{t("Google Drive sign-in is not configured in this build.")}</p>}
         {status.data?.configured && <div className="flex flex-wrap gap-2">
-          <Button variant="outline" disabled={busy} onClick={() => work.mutate(async () => {
-            setLibraries(await api.connectGoogleDrive()); setResult(null);
-          })}>{t("Sign in to Google Drive")}</Button>
-          {status.data.signedIn && !status.data.link && libraries === null && <Button variant="outline" disabled={busy} onClick={() => work.mutate(async () => setLibraries(await api.listCloudLibraries()))}>{t("Choose a cloud library")}</Button>}
+          <Button variant="outline" disabled={busy} onClick={() => work.mutate(findBackups)}>{t("Sign in to Google Drive")}</Button>
+          {status.data.signedIn && !status.data.link && libraries === null && <Button variant="outline" disabled={busy} onClick={() => work.mutate(async () => setLibraries(await api.listCloudLibraries()))}>{t("Find my backup")}</Button>}
         </div>}
         {status.data?.signedIn && libraries !== null && !status.data.link && <div className="space-y-3 rounded-md border p-3">
-          {libraries.length > 0 && <div className="space-y-2">
+          {libraries.length === 0 && <p className="text-sm text-muted-foreground">{t("No backup yet. Sync now will create one in your Google Drive.")}</p>}
+          {libraries.length === 1 && <p className="break-words text-sm">{t("Backup found: {value}", {value:libraries[0].name})}</p>}
+          {libraries.length > 1 && <div className="space-y-2">
             <Label htmlFor="cloud-library">{t("Cloud library")}</Label>
             <select id="cloud-library" className="flex h-12 w-full rounded-md border bg-background px-3 text-base" value={selectedLibrary} disabled={busy} onChange={e => setSelectedLibrary(e.target.value)}>
               <option value="">{t("Choose a cloud library")}</option>
               {libraries.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
             </select>
-            <Button variant="secondary" disabled={busy || !selectedLibrary} onClick={() => work.mutate(() => api.linkCloudLibrary(selectedLibrary))}>{t("Use selected library")}</Button>
           </div>}
-          <div className="space-y-2">
+          <div className="flex flex-wrap gap-2">
+            <Button disabled={busy || (libraries.length > 1 && !backupId)} onClick={() => work.mutate(async () => acceptResult(await api.startCloudSync(profileId,backupId || null)))}><RefreshCw />{t("Sync now")}</Button>
+            {libraries.length > 0 && <Button variant="outline" disabled={busy || !backupId} onClick={() => work.mutate(async () => {
+              await api.linkCloudLibrary(backupId);await showHistory();
+            })}>{t("Restore from Google Drive")}</Button>}
+          </div>
+          <details className="space-y-2">
+            <summary className="cursor-pointer text-sm text-muted-foreground">{t("Use a separate cloud backup")}</summary>
+            <div className="space-y-2 pt-2">
             <Label htmlFor="new-cloud-library">{t("New cloud library")}</Label>
             <Input id="new-cloud-library" maxLength={80} value={name} disabled={busy} onChange={e => setName(e.target.value)} />
             <Button variant="outline" disabled={busy || !name.trim()} onClick={() => work.mutate(async () => {
@@ -88,7 +103,8 @@ export default function CloudBackups({ profileId }: { profileId: string }) {
               setLibraries([...(libraries ?? []), created]); setName("");
               await api.linkCloudLibrary(created.id);
             })}>{t("Create cloud library")}</Button>
-          </div>
+            </div>
+          </details>
         </div>}
         {status.data?.link && <div className="space-y-3 rounded-md border p-3">
           <p className="break-words text-sm font-medium">{status.data.link.libraryName}</p>
@@ -99,9 +115,7 @@ export default function CloudBackups({ profileId }: { profileId: string }) {
               await api.disconnectCloudLibrary(); setLibraries(null); setResult(null); setHistory(null); setSelectedLibrary("");
             })}>{t("Disconnect sync")}</Button>
           </div>
-          <Button variant="outline" disabled={busy || !status.data.signedIn} onClick={() => work.mutate(async () => {
-            setHistory(await api.listCloudBackups()); setHistoryRevision("");
-          })}>{t("Cloud backup history")}</Button>
+          <Button variant="outline" disabled={busy || !status.data.signedIn} onClick={() => work.mutate(showHistory)}>{t("Restore from Google Drive")}</Button>
         </div>}
         {history && <div className="space-y-2 rounded-md border p-3">
           <Label htmlFor="cloud-history">{t("Cloud backup")}</Label>

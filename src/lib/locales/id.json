@@ -547,5 +547,11 @@
   "Use this device as the cloud version? Existing cloud backups are kept.": "Gunakan pustaka perangkat ini sebagai versi cloud? Cadangan cloud yang ada tetap disimpan.",
   "Cloud backup history": "Riwayat cadangan cloud",
   "Choose a cloud backup": "Pilih cadangan cloud",
-  "Works offline. Cloud sync is optional.": "Bekerja luring. Sinkronisasi cloud bersifat opsional."
+  "Works offline. Cloud sync is optional.": "Bekerja luring. Sinkronisasi cloud bersifat opsional.",
+  "Choose your Google account. Backups belong to your account and can be restored on your other devices.": "Pilih akun Google Anda. Cadangan milik akun Anda dan dapat dipulihkan di perangkat Anda yang lain.",
+  "Find my backup": "Cari cadangan saya",
+  "No backup yet. Sync now will create one in your Google Drive.": "Belum ada cadangan. Sinkronkan sekarang akan membuatnya di Google Drive Anda.",
+  "Backup found: {value}": "Cadangan ditemukan: {value}",
+  "Restore from Google Drive": "Pulihkan dari Google Drive",
+  "Use a separate cloud backup": "Gunakan cadangan cloud terpisah"
 }

@@ -547,5 +547,11 @@
   "Use this device as the cloud version? Existing cloud backups are kept.": "使用此设备的书库作为云端版本？现有云端备份将会保留。",
   "Cloud backup history": "云端备份历史",
   "Choose a cloud backup": "选择云端备份",
-  "Works offline. Cloud sync is optional.": "支持离线使用。云同步为可选功能。"
+  "Works offline. Cloud sync is optional.": "支持离线使用。云同步为可选功能。",
+  "Choose your Google account. Backups belong to your account and can be restored on your other devices.": "选择您的 Google 帐号。备份属于您的帐号，可在您的其他设备上恢复。",
+  "Find my backup": "查找我的备份",
+  "No backup yet. Sync now will create one in your Google Drive.": "尚无备份。点击立即同步即可在您的 Google 云端硬盘中创建备份。",
+  "Backup found: {value}": "找到备份：{value}",
+  "Restore from Google Drive": "从 Google 云端硬盘恢复",
+  "Use a separate cloud backup": "使用单独的云备份"
 }

@@ -152,6 +152,7 @@ export const api = {
   createCloudLibrary: (name: string) => call<CloudLibrary>("create_cloud_library", { name }),
   linkCloudLibrary: (libraryId: string) => call<void>("link_cloud_library", { libraryId }),
   syncCloudLibrary: (resolution: CloudResolution | null = null) => call<CloudSyncResult>("sync_cloud_library", { resolution }),
+  startCloudSync: (profileId: string, libraryId: string | null = null) => call<CloudSyncResult>("start_cloud_sync", { profileId, libraryId }),
   disconnectCloudLibrary: () => call<void>("disconnect_cloud_library"),
   getAppInfo: () => call<AppInfo>("get_app_info"),
   checkForUpdates: () => call<UpdateCheck>("check_for_updates"),

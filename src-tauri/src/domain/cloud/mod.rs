@@ -425,6 +425,61 @@ pub async fn sync(
     resolution: Option<Resolution>,
 ) -> AppResult<SyncResult> {
     let active_profile = profile(pool).await?;
+    sync_for_profile(pool, root, drive, resolution, &active_profile).await
+}
+
+/// First backup needs no user-created cloud container. Reuse the only existing
+/// backup in this account; require a choice if several libraries are present.
+pub async fn start_sync(
+    pool: &SqlitePool,
+    root: &Path,
+    drive: &Drive,
+    expected_profile: &str,
+    library_id: Option<&str>,
+) -> AppResult<SyncResult> {
+    if profile(pool).await? != expected_profile {
+        return Err(AppError::Conflict("library changed; try again".into()));
+    }
+    if load_link(root, expected_profile)?.is_none() {
+        let available = libraries(drive).await?;
+        let selected = match library_id {
+            Some(id) => available
+                .into_iter()
+                .find(|l| l.id == id)
+                .ok_or_else(|| AppError::NotFound("backup is not in this Google account".into()))?,
+            None if available.is_empty() => create_library(drive, "ShelfLedger backup").await?,
+            None if available.len() == 1 => available.into_iter().next().unwrap(),
+            None => return Err(AppError::Validation("choose a cloud backup first".into())),
+        };
+        if profile(pool).await? != expected_profile {
+            return Err(AppError::Conflict("library changed; try again".into()));
+        }
+        save_link(
+            root,
+            expected_profile,
+            &Link {
+                library_id: selected.id,
+                library_name: selected.name,
+                revision: None,
+                digest: None,
+                last_synced: None,
+            },
+        )?;
+    }
+    sync_for_profile(pool, root, drive, None, expected_profile).await
+}
+
+async fn sync_for_profile(
+    pool: &SqlitePool,
+    root: &Path,
+    drive: &Drive,
+    resolution: Option<Resolution>,
+    expected_profile: &str,
+) -> AppResult<SyncResult> {
+    let active_profile = expected_profile.to_owned();
+    if profile(pool).await? != active_profile {
+        return Err(AppError::Conflict("library changed; try again".into()));
+    }
     let mut link = load_link(root, &active_profile)?
         .ok_or_else(|| AppError::Validation("choose a cloud library first".into()))?;
     // Check account membership even when no revision exists: wrong accounts must

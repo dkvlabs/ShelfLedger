@@ -547,5 +547,11 @@
   "Use this device as the cloud version? Existing cloud backups are kept.": "Usar a biblioteca deste dispositivo como versão da nuvem? As cópias existentes na nuvem são preservadas.",
   "Cloud backup history": "Histórico de cópias na nuvem",
   "Choose a cloud backup": "Escolher uma cópia na nuvem",
-  "Works offline. Cloud sync is optional.": "Funciona offline. A sincronização na nuvem é opcional."
+  "Works offline. Cloud sync is optional.": "Funciona offline. A sincronização na nuvem é opcional.",
+  "Choose your Google account. Backups belong to your account and can be restored on your other devices.": "Escolha sua conta Google. Os backups pertencem à sua conta e podem ser restaurados nos seus outros dispositivos.",
+  "Find my backup": "Encontrar meu backup",
+  "No backup yet. Sync now will create one in your Google Drive.": "Ainda não há backup. Sincronizar agora criará um no seu Google Drive.",
+  "Backup found: {value}": "Backup encontrado: {value}",
+  "Restore from Google Drive": "Restaurar do Google Drive",
+  "Use a separate cloud backup": "Usar um backup separado na nuvem"
 }

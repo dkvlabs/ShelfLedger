@@ -547,5 +547,11 @@
   "Use this device as the cloud version? Existing cloud backups are kept.": "এই ডিভাইসের লাইব্রেরি ক্লাউড সংস্করণ হিসেবে ব্যবহার করবেন? বিদ্যমান ক্লাউড ব্যাকআপ সংরক্ষিত থাকবে।",
   "Cloud backup history": "ক্লাউড ব্যাকআপের ইতিহাস",
   "Choose a cloud backup": "ক্লাউড ব্যাকআপ বেছে নিন",
-  "Works offline. Cloud sync is optional.": "অফলাইনে কাজ করে। ক্লাউড সিঙ্ক ঐচ্ছিক।"
+  "Works offline. Cloud sync is optional.": "অফলাইনে কাজ করে। ক্লাউড সিঙ্ক ঐচ্ছিক।",
+  "Choose your Google account. Backups belong to your account and can be restored on your other devices.": "আপনার Google অ্যাকাউন্ট বেছে নিন। ব্যাকআপ আপনার অ্যাকাউন্টের অন্তর্গত এবং আপনার অন্য ডিভাইসে পুনরুদ্ধার করা যায়।",
+  "Find my backup": "আমার ব্যাকআপ খুঁজুন",
+  "No backup yet. Sync now will create one in your Google Drive.": "এখনও ব্যাকআপ নেই। এখন সিঙ্ক করুন চাপলে আপনার Google Drive-এ একটি তৈরি হবে।",
+  "Backup found: {value}": "ব্যাকআপ পাওয়া গেছে: {value}",
+  "Restore from Google Drive": "Google Drive থেকে পুনরুদ্ধার করুন",
+  "Use a separate cloud backup": "আলাদা ক্লাউড ব্যাকআপ ব্যবহার করুন"
 }

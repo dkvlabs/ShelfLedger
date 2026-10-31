@@ -8,7 +8,7 @@ import { pickFile, saveExport } from "@/lib/files";
 import type { CloudStatus, CloudSyncResult } from "@/types/domain";
 
 vi.mock("@/lib/api", () => ({ api: {
-  getCloudStatus: vi.fn(), connectGoogleDrive: vi.fn(), listCloudLibraries: vi.fn(), createCloudLibrary: vi.fn(),
+  startCloudSync: vi.fn(), getCloudStatus: vi.fn(), connectGoogleDrive: vi.fn(), listCloudLibraries: vi.fn(), createCloudLibrary: vi.fn(),
   linkCloudLibrary: vi.fn(), syncCloudLibrary: vi.fn(), disconnectCloudLibrary: vi.fn(), createBackup: vi.fn(), restoreBackup: vi.fn(), listCloudBackups: vi.fn(),
 } }));
 vi.mock("@/lib/files", () => ({ pickFile: vi.fn(), saveExport: vi.fn() }));
@@ -23,6 +23,7 @@ beforeEach(() => {
   client = new QueryClient({defaultOptions:{queries:{retry:false},mutations:{retry:false}}});
   vi.mocked(api.getCloudStatus).mockResolvedValue(linked);
   vi.mocked(api.syncCloudLibrary).mockResolvedValue(synced);
+  vi.mocked(api.startCloudSync).mockResolvedValue(synced);
   vi.mocked(api.connectGoogleDrive).mockResolvedValue([{id:"library-1",name:"Shared books"}]);
   vi.mocked(api.createBackup).mockResolvedValue({path:"/app/backups/cloud.zip"});
   vi.mocked(saveExport).mockResolvedValue(true);
@@ -44,17 +45,46 @@ it("explains an unconfigured build while keeping file backups available", async 
   expect(screen.getByRole("button",{name:"Back up to cloud file"})).toBeEnabled();
 });
 
-it("connects and chooses an existing cloud library without sending library content automatically", async () => {
+it("finds an existing account backup on sign-in and syncs only after the user presses Sync now", async () => {
   vi.mocked(api.getCloudStatus).mockResolvedValue({...linked,link:null,signedIn:false});
   mount();fireEvent.click(await screen.findByRole("button",{name:"Sign in to Google Drive"}));
   await waitFor(() => expect(api.connectGoogleDrive).toHaveBeenCalledTimes(1));
+  vi.mocked(api.getCloudStatus).mockResolvedValue({...linked,link:null});await client.invalidateQueries();
+  await screen.findByText("Backup found: Shared books");
+  expect(api.startCloudSync).not.toHaveBeenCalled();expect(api.createCloudLibrary).not.toHaveBeenCalled();
+  fireEvent.click(await syncButton());
+  await waitFor(() => expect(api.startCloudSync).toHaveBeenCalledWith("main","library-1"));
+});
+
+it("creates the first account backup with Sync now without asking the user to name a cloud library", async () => {
   vi.mocked(api.getCloudStatus).mockResolvedValue({...linked,link:null});
-  await client.invalidateQueries();
+  vi.mocked(api.listCloudLibraries).mockResolvedValue([]);
+  mount();fireEvent.click(await screen.findByRole("button",{name:"Find my backup"}));
+  await screen.findByText("No backup yet. Sync now will create one in your Google Drive.");
+  expect(api.startCloudSync).not.toHaveBeenCalled();
+  fireEvent.click(await syncButton());
+  await waitFor(() => expect(api.startCloudSync).toHaveBeenCalledWith("main",null));
+});
+
+it("requires an explicit selection if the account contains several backups", async () => {
+  vi.mocked(api.getCloudStatus).mockResolvedValue({...linked,link:null});
+  vi.mocked(api.listCloudLibraries).mockResolvedValue([{id:"one",name:"First library"},{id:"two",name:"Second library"}]);
+  mount();fireEvent.click(await screen.findByRole("button",{name:"Find my backup"}));
   const select = await screen.findByLabelText("Cloud library");
-  fireEvent.change(select,{target:{value:"library-1"}});
-  fireEvent.click(screen.getByRole("button",{name:"Use selected library"}));
-  await waitFor(() => expect(api.linkCloudLibrary).toHaveBeenCalledWith("library-1"));
-  expect(api.syncCloudLibrary).not.toHaveBeenCalled();
+  expect(await syncButton()).toBeDisabled();
+  fireEvent.change(select,{target:{value:"two"}});fireEvent.click(await syncButton());
+  await waitFor(() => expect(api.startCloudSync).toHaveBeenCalledWith("main","two"));
+});
+
+it("finds a backup on a new device and stages restore without automatically replacing records", async () => {
+  vi.mocked(api.getCloudStatus).mockResolvedValue({...linked,link:null});
+  vi.mocked(api.listCloudLibraries).mockResolvedValue([{id:"library-1",name:"Shared books"}]);
+  vi.mocked(api.listCloudBackups).mockResolvedValue({localDigest:"hash",expectedHeads:["rev-1"],backups:[{id:"rev-1",createdAt:"2026-10-30T12:00:00Z"}]});
+  mount();fireEvent.click(await screen.findByRole("button",{name:"Find my backup"}));
+  fireEvent.click(await screen.findByRole("button",{name:"Restore from Google Drive"}));
+  await screen.findByLabelText("Cloud backup",{exact:true});
+  expect(api.linkCloudLibrary).toHaveBeenCalledWith("library-1");
+  expect(api.syncCloudLibrary).not.toHaveBeenCalled();expect(api.startCloudSync).not.toHaveBeenCalled();
 });
 
 it("syncs only on request and allows a new attempt after an offline failure", async () => {
@@ -92,7 +122,7 @@ it("cancelled conflict review leaves all versions unchanged", async () => {
 
 it("restores an older cloud backup only after review against the current versions", async () => {
   vi.mocked(api.listCloudBackups).mockResolvedValue({localDigest:"current-hash",expectedHeads:["rev-3"],backups:[{id:"rev-1",createdAt:"2026-10-30T12:00:00Z"}]});
-  mount();fireEvent.click(await screen.findByRole("button",{name:"Cloud backup history"}));
+  mount();fireEvent.click(await screen.findByRole("button",{name:"Restore from Google Drive"}));
   fireEvent.change(await screen.findByLabelText("Cloud backup",{exact:true}),{target:{value:"rev-1"}});
   fireEvent.click(screen.getByRole("button",{name:"Use cloud version"}));
   expect(api.syncCloudLibrary).not.toHaveBeenCalled();
